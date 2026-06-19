@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@a5a6597/cdn/base-href.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Swagger Viewer — Jeff-Aporta</title>
+  <meta name="description" content="Visor OpenAPI reutilizable — React, MUI, CodeMirror, export Postman/OpenAPI." />
+  <meta name="keywords" content="openapi, swagger, api, documentación, MUI, jeff-aporta, CDN" />
+  <meta name="application-name" content="Swagger Viewer" />
+  <meta name="theme-color" content="#1e90ff" />
+  <meta name="app-theme-ls-key" content="jeffaporta:swagger-ui-theme" />
+  <meta name="app-icon" content="mdi:api" />
+  <link rel="canonical" href="https://jeff-aporta.github.io/swagger-viewer/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="es_CO" />
+  <meta property="og:site_name" content="Jeff-Aporta" />
+  <meta property="og:title" content="Swagger Viewer — Jeff-Aporta" />
+  <meta property="og:description" content="Visor OpenAPI reutilizable — React, MUI, CodeMirror, export Postman/OpenAPI." />
+  <meta property="og:url" content="https://jeff-aporta.github.io/swagger-viewer/" />
+  <meta property="og:image" content="https://api.iconify.design/mdi/api.svg?color=%231e90ff&width=512&height=512" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Demo swagger-viewer con tabs, ejemplos y Try it out" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Swagger Viewer — Jeff-Aporta" />
+  <meta name="twitter:description" content="Visor OpenAPI reutilizable — React, MUI, CodeMirror, export Postman/OpenAPI." />
+  <meta name="twitter:image" content="https://api.iconify.design/mdi/api.svg?color=%231e90ff&width=512&height=512" />
+  <meta name="twitter:image:alt" content="Demo swagger-viewer con tabs, ejemplos y Try it out" />
+  <link rel="icon" href="https://api.iconify.design/mdi/api.svg?color=%231e90ff&width=32&height=32" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="https://api.iconify.design/mdi/api.svg?color=%231e90ff&width=180&height=180" />
+  <script>
+    (function () {
+      var k = "jeffaporta:swagger-ui-theme";
+      var m = "dark";
+      try {
+        var v = localStorage.getItem(k);
+        if (v === "light" || v === "dark") m = v;
+      } catch (e) { /* ignore */ }
+      document.documentElement.setAttribute("data-mui-color-scheme", m);
+      document.documentElement.style.colorScheme = m;
+    })();
+  </script>
+  <script>window.__ISA_DIST__=true;</script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://code.iconify.design" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@a5a6597/cdn/isa/css/base.css" />
+  <link rel="stylesheet" href="_dist/css/theme.css" />
+  <link rel="stylesheet" href="_dist/css/demo.css" />
+  <link rel="stylesheet" href="cdn/swagger-viewer.min.css" />
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?external=react",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "@emotion/react": "https://esm.sh/@emotion/react@11.14.0?external=react,react-dom",
+    "@emotion/styled": "https://esm.sh/@emotion/styled@11.14.1?external=react,react-dom,@emotion/react",
+    "@mui/material": "https://esm.sh/@mui/material@9.1.0?external=react,react-dom,@emotion/react,@emotion/styled",
+    "@mui/material/": "https://esm.sh/@mui/material@9.1.0/"
+  }
+}
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.26.9/babel.min.js"></script>
+  <script defer src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  <script type="module" src="_dist/js/boot/loader.mjs"></script>
+</head>
+
+<body>
+  <div id="root">
+    <style>
+      html {
+        color-scheme: dark;
+        background: #0b1220;
+      }
+
+      html[data-mui-color-scheme="light"] {
+        color-scheme: light;
+        background: #f0f6ff;
+      }
+
+      body {
+        margin: 0;
+        height: 100%;
+        background: inherit;
+      }
+
+      #root {
+        height: 100%;
+        min-height: 100vh;
+      }
+
+      .isa-app-boot {
+        height: 100%;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        font-family: "IBM Plex Sans", system-ui, sans-serif;
+        background: #0b1220;
+        color: #94a3b8;
+      }
+
+      html[data-mui-color-scheme="light"] .isa-app-boot {
+        background: #f0f6ff;
+        color: #64748b;
+      }
+
+      .isa-app-boot__mesh {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse 90% 55% at 15% -8%, rgba(99, 102, 241, 0.22), transparent 52%),
+          radial-gradient(ellipse 70% 45% at 92% 5%, rgba(0, 229, 255, 0.1), transparent 48%),
+          radial-gradient(ellipse 50% 30% at 50% 100%, rgba(30, 144, 255, 0.08), transparent 55%);
+      }
+
+      html[data-mui-color-scheme="light"] .isa-app-boot__mesh {
+        background:
+          radial-gradient(ellipse 90% 55% at 15% -8%, rgba(30, 144, 255, 0.14), transparent 52%),
+          radial-gradient(ellipse 70% 45% at 92% 5%, rgba(99, 102, 241, 0.08), transparent 48%);
+      }
+
+      .isa-app-boot__card {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 1.65rem 2rem 1.45rem;
+        min-width: min(17.5rem, 88vw);
+        max-width: 22rem;
+        border-radius: 14px;
+        border: 1px solid rgba(0, 229, 255, 0.24);
+        background: linear-gradient(165deg, rgba(11, 18, 32, 0.94), rgba(15, 23, 42, 0.82));
+        box-shadow:
+          0 0 0 1px rgba(30, 144, 255, 0.08),
+          0 10px 36px rgba(30, 144, 255, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        text-align: center;
+      }
+
+      html[data-mui-color-scheme="light"] .isa-app-boot__card {
+        border-color: rgba(30, 144, 255, 0.2);
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.98), rgba(240, 247, 255, 0.92));
+        box-shadow: 0 8px 28px rgba(30, 144, 255, 0.1);
+      }
+
+      .isa-app-boot__icon-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.1rem;
+        height: 3.1rem;
+        margin-bottom: 0.15rem;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 229, 255, 0.38);
+        background: rgba(14, 165, 233, 0.12);
+        box-shadow: 0 0 18px rgba(0, 229, 255, 0.16);
+        color: #7dd3fc;
+        animation: isa-boot-icon-pulse 2.4s ease-in-out infinite;
+      }
+
+      html[data-mui-color-scheme="light"] .isa-app-boot__icon-wrap {
+        border-color: rgba(30, 144, 255, 0.28);
+        background: rgba(224, 242, 254, 0.95);
+        color: #0369a1;
+        box-shadow: 0 0 14px rgba(30, 144, 255, 0.12);
+      }
+
+      .isa-app-boot__title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: #e2e8f0;
+        line-height: 1.25;
+      }
+
+      html[data-mui-color-scheme="light"] .isa-app-boot__title {
+        color: #0f172a;
+      }
+
+      .isa-app-boot__label {
+        margin: 0;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #94a3b8;
+        line-height: 1.35;
+      }
+
+      html[data-mui-color-scheme="light"] .isa-app-boot__label {
+        color: #64748b;
+      }
+
+      .isa-app-boot__bar {
+        width: 100%;
+        height: 3px;
+        margin-top: 0.45rem;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.2);
+        overflow: hidden;
+      }
+
+      html[data-mui-color-scheme="light"] .isa-app-boot__bar {
+        background: rgba(148, 163, 184, 0.28);
+      }
+
+      .isa-app-boot__bar-fill {
+        display: block;
+        height: 100%;
+        width: 36%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #1e90ff, #6366f1, #00e5ff);
+        box-shadow: 0 0 10px rgba(30, 144, 255, 0.4);
+        animation: isa-boot-bar-slide 1.75s ease-in-out infinite;
+      }
+
+      .isa-app-boot-watermark {
+        position: fixed;
+        right: 1.25rem;
+        bottom: 1.25rem;
+        width: min(100px, 16vw);
+        height: auto;
+        opacity: 0.16;
+        filter: grayscale(1) brightness(1.15);
+        pointer-events: none;
+        user-select: none;
+        z-index: 0;
+      }
+
+      html[data-mui-color-scheme="light"] .isa-app-boot-watermark {
+        opacity: 0.12;
+        filter: grayscale(1) brightness(0.85);
+      }
+
+      @keyframes isa-boot-icon-pulse {
+        0%, 100% {
+          transform: translateY(0);
+          box-shadow: 0 0 18px rgba(0, 229, 255, 0.16);
+        }
+        50% {
+          transform: translateY(-2px);
+          box-shadow: 0 0 26px rgba(0, 229, 255, 0.28);
+        }
+      }
+
+      @keyframes isa-boot-bar-slide {
+        0% { transform: translateX(-130%); }
+        100% { transform: translateX(330%); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .isa-app-boot__icon-wrap,
+        .isa-app-boot__bar-fill {
+          animation: none !important;
+        }
+      }
+    </style>
+    <div class="isa-app-boot">
+      <div class="isa-app-boot__mesh" aria-hidden="true"></div>
+      <div class="isa-app-boot__card" role="status" aria-live="polite" aria-busy="true">
+        <div class="isa-app-boot__icon-wrap">
+          <iconify-icon icon="mdi:api" width="1.85em" height="1.85em"></iconify-icon>
+        </div>
+        <p class="isa-app-boot__title">Swagger Viewer</p>
+        <p class="isa-app-boot__label">Cargando Swagger Viewer…</p>
+        <div class="isa-app-boot__bar" aria-hidden="true"><span class="isa-app-boot__bar-fill"></span></div>
+      </div>
+      <img class="isa-app-boot-watermark" src="https://pub-1c290cc606c8478899f5764899278571.r2.dev/brand/logo-insoft.png" alt="" aria-hidden="true" decoding="async" />
+    </div>
+  </div>
+</body>
+
+</html>

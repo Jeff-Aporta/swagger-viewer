@@ -1,0 +1,9 @@
+{
+  "componentId": "swagger",
+  "slug": "swagger-viewer",
+  "repo": "Jeff-Aporta/swagger-viewer",
+  "cdnPath": "cdn",
+  "componentRef": "main",
+  "refExport": "SWAGGER_VIEWER_REF",
+  "note": "Pin jsDelivr swagger-viewer@componentRef. Actualizar con sync-component-refs.mjs --from-git --component swagger"
+}

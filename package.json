@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Visor OpenAPI — app React/MUI reutilizable por CDN",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
+}

@@ -1,0 +1,7 @@
+html[data-mui-color-scheme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-mui-color-scheme="light"] {
+  color-scheme: light;
+}

@@ -1,0 +1,393 @@
+/**
+ * Visor OpenAPI — estilos complementarios (glass cards, operaciones).
+ * Fondo de página: neon-glass-page.css (tk-doc mesh estándar).
+ */
+.isa-sw-viewer {
+  font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --isa-sw-radius: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-viewer .isa-sw-glass,
+html.dark-mode .isa-sw-viewer .isa-sw-glass {
+  background: linear-gradient(145deg, rgba(15, 34, 54, 0.78), rgba(11, 18, 32, 0.9)) !important;
+  border: 1px solid rgba(30, 144, 255, 0.22) !important;
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(30, 144, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-viewer .isa-sw-glass {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(240, 247, 255, 0.9)) !important;
+  border: 1px solid rgba(30, 144, 255, 0.16) !important;
+  box-shadow: 0 6px 28px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.isa-sw-viewer .MuiPaper-root,
+.isa-sw-viewer .MuiButton-root,
+.isa-sw-viewer .MuiChip-root,
+.isa-sw-viewer .MuiAccordion-root,
+.isa-sw-viewer .MuiOutlinedInput-root,
+.isa-sw-viewer .MuiAlert-root,
+.isa-sw-viewer .isa-sw-json-block {
+  border-radius: var(--isa-sw-radius);
+}
+
+.isa-sw-tag-group:last-of-type {
+  margin-bottom: 0;
+}
+
+.isa-sw-tag-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 0 0 0 12px;
+  margin-bottom: 14px;
+  border: none;
+  border-left: 3px solid var(--isa-sw-tag-accent, var(--isa-sw-neon-blue));
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.dark-mode .isa-sw-tag-head,
+html[data-mui-color-scheme="dark"] .isa-sw-tag-head {
+  border-left-color: rgba(30, 144, 255, 0.55);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-tag-head {
+  border-left-color: rgba(30, 144, 255, 0.45);
+}
+
+.isa-sw-tag-head__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 0.5rem;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--isa-sw-tag-accent, var(--isa-sw-neon-blue));
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-tag-head__icon,
+html.dark-mode .isa-sw-tag-head__icon {
+  background: rgba(30, 144, 255, 0.14);
+}
+
+.isa-sw-tag-head__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.isa-sw-tag-head__eyebrow {
+  display: block;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  opacity: 0.72;
+}
+
+.isa-sw-tag-head__title {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+}
+
+.isa-sw-tag-head__desc {
+  margin: 6px 0 0;
+  opacity: 0.82;
+  line-height: 1.45;
+}
+
+.isa-sw-tag-head__count {
+  flex-shrink: 0;
+  align-self: center;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.isa-sw-tag-group__ops {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.isa-sw-operation--get { --isa-sw-accent: 30, 144, 255; }
+.isa-sw-operation--post { --isa-sw-accent: 34, 197, 94; }
+.isa-sw-operation--put { --isa-sw-accent: 245, 158, 11; }
+.isa-sw-operation--patch { --isa-sw-accent: 168, 85, 247; }
+.isa-sw-operation--delete { --isa-sw-accent: 239, 68, 68; }
+.isa-sw-operation--head,
+.isa-sw-operation--options { --isa-sw-accent: 148, 163, 184; }
+
+html[data-mui-color-scheme="dark"] .isa-sw-viewer .isa-sw-operation,
+html.dark-mode .isa-sw-viewer .isa-sw-operation {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-viewer .isa-sw-operation:hover,
+html.dark-mode .isa-sw-viewer .isa-sw-operation:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 24px rgba(var(--isa-sw-accent, 30, 144, 255), 0.16) !important;
+}
+
+.isa-sw-operation .MuiAccordionSummary-root {
+  min-height: 48px;
+  border-left: 4px solid rgb(var(--isa-sw-accent, 30, 144, 255));
+}
+
+.isa-sw-viewer .isa-sw-auth-lock {
+  line-height: 0;
+}
+
+.isa-sw-viewer .isa-sw-auth-lock iconify-icon {
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.35));
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-operation .MuiAccordionSummary-root,
+html.dark-mode .isa-sw-operation .MuiAccordionSummary-root {
+  background: linear-gradient(
+    90deg,
+    rgba(var(--isa-sw-accent, 30, 144, 255), 0.18),
+    transparent 72%
+  );
+  border-bottom: 1px solid rgba(30, 144, 255, 0.14);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-operation .MuiAccordionSummary-root {
+  background: rgba(var(--isa-sw-accent, 30, 144, 255), 0.08);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.isa-sw-operation.Mui-expanded .MuiAccordionSummary-root {
+  border-bottom: 1px solid rgba(30, 144, 255, 0.2);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-operation.Mui-expanded,
+html.dark-mode .isa-sw-operation.Mui-expanded {
+  box-shadow:
+    0 4px 28px rgba(0, 0, 0, 0.32),
+    0 0 20px rgba(var(--isa-sw-accent, 30, 144, 255), 0.12) !important;
+}
+
+.isa-sw-params-wrap {
+  border: 1px solid rgba(30, 144, 255, 0.2);
+  border-radius: var(--isa-sw-radius);
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+html.dark-mode .isa-sw-params-wrap,
+html[data-mui-color-scheme="dark"] .isa-sw-params-wrap {
+  border-color: rgba(30, 144, 255, 0.22);
+  background: rgba(11, 18, 32, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-params-wrap {
+  border-color: rgba(30, 144, 255, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: none;
+}
+
+.isa-sw-params-table .MuiTableHead-root .MuiTableCell-root {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.92);
+  background: linear-gradient(180deg, rgba(15, 34, 54, 0.95), rgba(11, 18, 32, 0.88));
+  border-bottom: 1px solid rgba(30, 144, 255, 0.2);
+  padding: 6px 10px;
+  box-shadow: 0 1px 0 rgba(30, 144, 255, 0.1);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-params-table .MuiTableHead-root .MuiTableCell-root {
+  color: rgba(15, 23, 42, 0.82);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 247, 255, 0.92));
+  border-bottom-color: rgba(30, 144, 255, 0.16);
+  box-shadow: none;
+}
+
+.isa-sw-params-table .MuiTableCell-root {
+  padding: 4px 10px;
+  font-size: 0.8125rem;
+  vertical-align: middle;
+}
+
+.isa-sw-params-table--compact .MuiTableCell-root {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.isa-sw-param-col-name {
+  width: 32%;
+  white-space: nowrap;
+}
+
+.isa-sw-param-col-type {
+  width: 14%;
+  white-space: nowrap;
+}
+
+.isa-sw-param-col-value {
+  width: 54%;
+}
+
+.isa-sw-param-row:not(:last-child) .MuiTableCell-root {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+html.dark-mode .isa-sw-param-row:not(:last-child) .MuiTableCell-root,
+html[data-mui-color-scheme="dark"] .isa-sw-param-row:not(:last-child) .MuiTableCell-root {
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+.isa-sw-param-name__code {
+  font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  letter-spacing: -0.01em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(25, 118, 210, 0.08);
+  color: var(--mui-palette-primary-main, #1976d2);
+}
+
+.isa-sw-param-type {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba(71, 85, 105, 0.88);
+}
+
+html.dark-mode .isa-sw-param-type,
+html[data-mui-color-scheme="dark"] .isa-sw-param-type {
+  color: rgba(203, 213, 225, 0.78);
+}
+
+.isa-sw-param-value .MuiTextField-root,
+.isa-sw-param-value .MuiAutocomplete-root {
+  margin: 0;
+}
+
+.isa-sw-param-value .MuiInputBase-root {
+  font-size: 0.8125rem;
+}
+
+.isa-sw-param-value .MuiInputBase-input {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.isa-sw-path-var {
+  font-weight: 700;
+}
+
+.isa-sw-resp-card .MuiAccordionSummary-root {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-resp-card .MuiAccordionSummary-root,
+html.dark-mode .isa-sw-resp-card .MuiAccordionSummary-root {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-resp-card .MuiAccordionSummary-root {
+  background: rgba(248, 250, 252, 0.85);
+}
+
+.isa-sw-resp-head.isa-sw-resp--ok {
+  border-left: 3px solid #22c55e;
+}
+.isa-sw-resp-head.isa-sw-resp--auth {
+  border-left: 3px solid #a78bfa;
+}
+.isa-sw-resp-head.isa-sw-resp--warn {
+  border-left: 3px solid #f59e0b;
+}
+.isa-sw-resp-head.isa-sw-resp--err {
+  border-left: 3px solid #ef4444;
+}
+
+.isa-sw-doc-panel h1,
+.isa-sw-doc-panel h2,
+.isa-sw-doc-panel h3 {
+  margin: 0.75em 0 0.35em;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.isa-sw-doc-panel p {
+  margin: 0 0 0.5em;
+}
+
+.isa-sw-doc-fallback {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--isa-sw-radius, 0.5rem);
+  background: rgba(148, 163, 184, 0.12);
+  font-size: 12px;
+  overflow: auto;
+}
+
+.isa-sw-json-block .CodeMirror {
+  font-size: 12px;
+  min-height: 4rem;
+}
+
+.isa-sw-toolbar a.MuiButton-root,
+.isa-sw-toolbar .MuiButton-root {
+  text-decoration: none;
+  text-transform: none;
+}
+
+/* Sub-barra export — pegada bajo AppShell, ancho completo */
+.isa-sw-shell {
+  width: 100%;
+}
+
+.isa-layout-body:has(> .isa-sw-shell) {
+  padding-top: 0 !important;
+}
+
+.isa-sw-toolbar--docked {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  flex-shrink: 0;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-toolbar--docked,
+html.dark-mode .isa-sw-toolbar--docked {
+  border-bottom: 1px solid rgba(30, 144, 255, 0.22) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.22);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-toolbar--docked {
+  border-bottom: 1px solid rgba(30, 144, 255, 0.14) !important;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
