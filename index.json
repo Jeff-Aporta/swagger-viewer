@@ -1,0 +1,41 @@
+{
+  "slug": "swagger-viewer",
+  "meta": {
+    "title": "Swagger Viewer — Jeff-Aporta",
+    "applicationName": "Swagger Viewer",
+    "description": "Visor OpenAPI reutilizable — React, MUI, CodeMirror, export Postman/OpenAPI.",
+    "keywords": "openapi, swagger, api, documentación, MUI, jeff-aporta, CDN",
+    "themeColor": "#1e90ff",
+    "themeLsKey": "jeffaporta:swagger-ui-theme",
+    "icon": "mdi:api",
+    "canonical": "https://jeff-aporta.github.io/swagger-viewer/",
+    "ogSiteName": "Jeff-Aporta",
+    "ogTitle": "Swagger Viewer — Jeff-Aporta",
+    "imageAlt": "Demo swagger-viewer con tabs, ejemplos y Try it out"
+  },
+  "frontSharedPin": "a5a6597",
+  "useDist": true,
+  "importMap": true,
+  "fonts": false,
+  "loader": "mjs-module",
+  "themeInit": true,
+  "appMeta": false,
+  "headIndent": "  ",
+  "viewport": "width=device-width, initial-scale=1",
+  "styles": [
+    "shared-base",
+    "local:css/theme.css",
+    "local:css/demo.css"
+  ],
+  "componentStyles": [
+    "cdn/swagger-viewer.min.css"
+  ],
+  "preconnect": [
+    "https://cdn.jsdelivr.net",
+    "https://code.iconify.design"
+  ],
+  "libs": [
+    "iconify",
+    "loader-mjs"
+  ]
+}
