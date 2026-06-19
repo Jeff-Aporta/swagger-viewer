@@ -3,7 +3,7 @@
   "slug": "swagger-viewer",
   "repo": "Jeff-Aporta/swagger-viewer",
   "cdnPath": "cdn",
-  "componentRef": "main",
+  "componentRef": "a0f3a1b",
   "refExport": "SWAGGER_VIEWER_REF",
   "note": "Pin jsDelivr swagger-viewer@componentRef. Actualizar con sync-component-refs.mjs --from-git --component swagger"
 }

@@ -19,12 +19,12 @@ export const bootHelperUrl = isDevHost
 
 /* @isa-swagger-boot:start */
 /** @jeff-aporta/swagger-viewer — pin: sync-component-refs.mjs */
-export const SWAGGER_VIEWER_REF = "main";
+export const SWAGGER_VIEWER_REF = "a0f3a1b";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;
   if (isDevHost) {
-    return new URL("cdn/", base).href.replace(/\/?$/, "/");
+    return new URL("../../../components/swagger/cdn/", base).href.replace(/\/?$/, "/");
   }
   return `https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@${SWAGGER_VIEWER_REF}/cdn/`;
 }
@@ -42,11 +42,21 @@ function ensureSwaggerStylesheet(href) {
   });
 }
 
-/** Carga CSS del visor. El JS se importa como ESM desde la app o bootSwaggerApp. */
 export async function ensureSwaggerViewerCss(base = swaggerViewerBase()) {
   const b = base.endsWith("/") ? base : base + "/";
   await ensureSwaggerStylesheet(b + "swagger-viewer.min.css");
   return b;
+}
+
+export async function ensureSwaggerViewer(base = swaggerViewerBase()) {
+  const b = await ensureSwaggerViewerCss(base);
+  if (!globalThis.ISAComponents?.Swagger?.bootSwaggerApp) {
+    await import(b + "swagger-viewer.min.js");
+  }
+  if (!globalThis.ISAComponents?.Swagger?.bootSwaggerApp) {
+    throw new Error("Swagger no registró ISAComponents.Swagger");
+  }
+  return globalThis.ISAComponents.Swagger;
 }
 /* @isa-swagger-boot:end */
 
