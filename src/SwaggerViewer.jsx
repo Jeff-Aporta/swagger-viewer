@@ -78,7 +78,11 @@ export function SwaggerViewer({ config, spec: specProp }) {
   }, [authEnabled]);
 
   const Shell = globalThis.ISAFront?.Layout?.AppShell;
-  const useShell = config?.shell !== false && Shell;
+  const embed = config?.embed === true;
+  const useShell = config?.shell !== false && Shell && !embed;
+  const externalAuth = config?.authUi === "external";
+  const dockedToolbar = useShell || embed;
+  const shellLayout = useShell || embed;
   const brandTitle = config?.brand?.title;
   const brandIcon = config?.brand?.icon;
   const ns = config?.ns || "ISA";
@@ -102,13 +106,13 @@ export function SwaggerViewer({ config, spec: specProp }) {
   const body = (
     <ExpandStackProvider>
       <Box
-        className={useShell ? "isa-sw-shell" : undefined}
-        sx={useShell ? { width: "100%" } : undefined}
+        className={shellLayout ? "isa-sw-shell" : undefined}
+        sx={shellLayout ? { width: "100%" } : undefined}
       >
         <Box
           className="isa-sw-viewer"
           sx={{
-            p: useShell ? { xs: 1.5, sm: 2 } : 2,
+            p: shellLayout ? { xs: 1.5, sm: 2 } : 2,
             maxWidth: 1160,
             mx: "auto",
             width: "100%",
@@ -122,7 +126,7 @@ export function SwaggerViewer({ config, spec: specProp }) {
           ) : null}
           {spec ? (
             <>
-              {useShell ? (
+              {dockedToolbar ? (
                 <Box
                   className="isa-sw-toolbar-bleed"
                   sx={{
@@ -154,7 +158,7 @@ export function SwaggerViewer({ config, spec: specProp }) {
                   docked={false}
                 />
               )}
-              <InfoHeader spec={spec} showTitle={!useShell} ns={ns} />
+              <InfoHeader spec={spec} showTitle={!shellLayout} ns={ns} />
               {groups.map((group, tagIndex) => (
                 <OperationTagGroup
                   key={group.name}
@@ -172,14 +176,16 @@ export function SwaggerViewer({ config, spec: specProp }) {
           ) : !err ? (
             <Typography color="text.secondary">Cargando especificación OpenAPI…</Typography>
           ) : null}
-          <AuthDialogs
-            enabled={authEnabled}
-            authBase={config?.auth?.loginUrl}
-            authKind={config?.auth?.loginKind}
-            loginPath={config?.auth?.loginPath}
-            onSessionChange={onSessionChange}
-            ns={ns}
-          />
+          {!externalAuth ? (
+            <AuthDialogs
+              enabled={authEnabled}
+              authBase={config?.auth?.loginUrl}
+              authKind={config?.auth?.loginKind}
+              loginPath={config?.auth?.loginPath}
+              onSessionChange={onSessionChange}
+              ns={ns}
+            />
+          ) : null}
         </Box>
       </Box>
     </ExpandStackProvider>

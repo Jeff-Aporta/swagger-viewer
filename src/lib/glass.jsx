@@ -8,6 +8,7 @@ import {
   useGlassColors,
   glassCardSx,
   glassSurfaceSx,
+  glassHeaderSx,
   NEON_COLORS,
 } from "../../../neon-glass/src/index.js";
 
@@ -20,6 +21,7 @@ export {
   useGlassColors,
   glassCardSx,
   glassSurfaceSx,
+  glassHeaderSx,
   NEON_COLORS,
 };
 

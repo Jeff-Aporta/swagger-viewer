@@ -1,21 +1,21 @@
 import { SwaggerViewer } from "../../../src/SwaggerViewer.jsx";
 import { parseIsDocument, isDocumentText } from "../../../src/lib/is-document.js";
-import { IsJsonEditor } from "./IsJsonEditor.jsx";
+import { IsEditorDrawer } from "./IsEditorDrawer.jsx";
+import { buildDemoExportUrls, revokeDemoExportUrls } from "./demo-exports.js";
 import { SwIcon } from "../../../src/lib/sw-icon.jsx";
+import sampleIsDoc from "../../openapi/sample.is.json";
 
-const { useState, useEffect, useCallback } = React;
-const { Box, Button, Alert, Typography, IconButton, Tooltip } = MaterialUI;
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+const { Fab, Tooltip } = MaterialUI;
 
-const DEMO_EXPORTS = {
+const DEMO_EXPORT_NAMES = {
   openApiDownloadName: "openapi.json",
-  postmanDownloadName: "collection.postman.json",
-  isDownloadName: "api.is.json",
+  postmanDownloadName: "iss-ayudascpia.postman_collection.json",
+  isDownloadName: "iss-ayudascpia.is.json",
 };
 
 function enrichViewerConfig(viewer = {}) {
-  const config = { shell: true, ns: "ISA", ...viewer };
-  if (!config.exports) config.exports = { ...DEMO_EXPORTS };
-  return config;
+  return { shell: true, ns: "ISA", ...viewer };
 }
 
 function applyIsDocument(doc) {
@@ -24,26 +24,44 @@ function applyIsDocument(doc) {
     throw new Error("Se espera kind «insoft.swagger-viewer» con objetos viewer y spec.");
   }
   const { spec: _omit, ...viewer } = parsed.config || {};
-  const config = enrichViewerConfig(viewer);
-  return { config, spec: parsed.spec };
+  return { config: enrichViewerConfig(viewer), spec: parsed.spec };
 }
 
 export function App() {
   const params = new URLSearchParams(location.search);
   const specUrl = params.get("spec");
+  const [drawerOpen, setDrawerOpen] = useState(() => params.has("editor"));
   const [sourceText, setSourceText] = useState("");
   const [parseErr, setParseErr] = useState("");
   const [applied, setApplied] = useState(null);
-  const [editorOpen, setEditorOpen] = useState(() => !params.has("solo"));
-  const [loading, setLoading] = useState(!specUrl);
+  const getEditorTextRef = useRef(() => "");
+  const exportRevokeRef = useRef([]);
   const ns = "ISA";
 
-  const handleApply = useCallback((text = sourceText) => {
+  const handleApply = useCallback(
+    (forcedText) => {
+      const raw = String(forcedText ?? getEditorTextRef.current?.() ?? sourceText ?? "").trim();
+      if (!raw) {
+        setParseErr("El editor está vacío.");
+        return;
+      }
+      try {
+        const doc = JSON.parse(raw);
+        setApplied(applyIsDocument(doc));
+        setParseErr("");
+        setSourceText(isDocumentText(doc));
+        setDrawerOpen(false);
+      } catch (e) {
+        setParseErr(e?.message || String(e));
+      }
+    },
+    [sourceText],
+  );
+
+  const handleFormat = useCallback(() => {
     try {
-      const doc = JSON.parse(text);
-      setApplied(applyIsDocument(doc));
+      setSourceText(isDocumentText(JSON.parse(sourceText)));
       setParseErr("");
-      setSourceText(isDocumentText(doc));
     } catch (e) {
       setParseErr(e?.message || String(e));
     }
@@ -51,94 +69,73 @@ export function App() {
 
   useEffect(() => {
     if (specUrl) return;
-    const url = new URL("../../openapi/sample.is.json", import.meta.url).href;
-    fetch(url)
-      .then((r) => {
-        if (!r.ok) throw new Error(`No se pudo cargar sample.is.json (${r.status})`);
-        return r.json();
-      })
-      .then((doc) => {
-        setSourceText(isDocumentText(doc));
-        setApplied(applyIsDocument(doc));
-      })
-      .catch((e) => setParseErr(e.message || String(e)))
-      .finally(() => setLoading(false));
+    try {
+      setSourceText(isDocumentText(sampleIsDoc));
+      setApplied(applyIsDocument(sampleIsDoc));
+    } catch (e) {
+      setParseErr(e?.message || String(e));
+    }
   }, [specUrl]);
 
-  if (specUrl) {
-    const config = {
-      ns: "ISA",
+  useEffect(() => () => revokeDemoExportUrls(exportRevokeRef.current), []);
+
+  const viewerConfig = useMemo(() => {
+    if (!applied?.spec) return null;
+    revokeDemoExportUrls(exportRevokeRef.current);
+    const names = { ...DEMO_EXPORT_NAMES, ...(applied.config.exports || {}) };
+    const runtime = buildDemoExportUrls(applied.spec, names);
+    exportRevokeRef.current = runtime.revoke;
+    return {
+      ...applied.config,
       shell: true,
-      brand: { title: "Swagger Viewer", icon: "mdi:api" },
-      auth: { enabled: false },
-      exports: { openApiUrl: specUrl, openApiDownloadName: "openapi.json" },
-      specUrl,
+      exports: {
+        openApiUrl: runtime.openApiUrl,
+        openApiDownloadName: runtime.openApiDownloadName,
+        postmanUrl: runtime.postmanUrl,
+        postmanDownloadName: runtime.postmanDownloadName,
+        isDownloadName: runtime.isDownloadName,
+      },
     };
-    return React.createElement(SwaggerViewer, { config });
+  }, [applied]);
+
+  if (specUrl) {
+    return React.createElement(SwaggerViewer, {
+      config: {
+        ns: "ISA",
+        shell: true,
+        brand: { title: "Swagger Viewer", icon: "mdi:api" },
+        auth: { enabled: false },
+        exports: { openApiUrl: specUrl, openApiDownloadName: "openapi.json" },
+        specUrl,
+      },
+    });
   }
 
-  if (loading) {
+  if (!viewerConfig || !applied?.spec) {
     return React.createElement("div", { className: "isa-app-boot" }, "Cargando documento IS…");
   }
 
   return (
-    <Box className="isa-sw-demo">
-      {editorOpen ? (
-        <Box className="isa-sw-demo__editor" component="section" aria-label="Editor JSON IS">
-          <Box className="isa-sw-demo__editor-bar">
-            <Typography variant="subtitle2" className="isa-sw-demo__editor-title" component="h2">
-              <SwIcon icon="mdi:file-code-outline" size={18} ns={ns} aria-hidden />
-              Constructor IS-Swagger
-            </Typography>
-            <Box className="isa-sw-demo__editor-actions">
-              <Button size="small" variant="contained" onClick={() => handleApply()} startIcon={<SwIcon icon="mdi:play-circle-outline" size={18} ns={ns} />}>
-                Aplicar vista
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => {
-                  try {
-                    setSourceText(isDocumentText(JSON.parse(sourceText)));
-                    setParseErr("");
-                  } catch (e) {
-                    setParseErr(e?.message || String(e));
-                  }
-                }}
-              >
-                Formatear
-              </Button>
-              <Tooltip title="Ocultar editor" arrow>
-                <IconButton size="small" onClick={() => setEditorOpen(false)} aria-label="Ocultar editor">
-                  <SwIcon icon="mdi:chevron-up" size={20} ns={ns} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-          <IsJsonEditor value={sourceText} onChange={setSourceText} onApply={handleApply} ns={ns} />
-          {parseErr ? (
-            <Alert severity="error" sx={{ mx: 1.5, mb: 1, py: 0 }} className="isa-sw-demo__parse-err">
-              {parseErr}
-            </Alert>
-          ) : null}
-        </Box>
-      ) : (
-        <Box className="isa-sw-demo__editor-collapsed">
-          <Button size="small" variant="outlined" onClick={() => setEditorOpen(true)} startIcon={<SwIcon icon="mdi:file-code-outline" size={18} ns={ns} />}>
-            Mostrar editor IS
-          </Button>
-        </Box>
-      )}
+    <>
+      <SwaggerViewer config={viewerConfig} spec={applied.spec} />
 
-      <Box className="isa-sw-demo__preview" component="section" aria-label="Vista previa Swagger">
-        {applied ? (
-          <SwaggerViewer config={applied.config} spec={applied.spec} />
-        ) : (
-          <Box className="isa-sw-demo__preview-empty">
-            <Typography color="text.secondary">Pega un JSON IS válido y pulsa Aplicar vista.</Typography>
-          </Box>
-        )}
-      </Box>
-    </Box>
+      <Tooltip title="Editor JSON IS" placement="left" arrow>
+        <Fab className="isa-sw-demo__fab" color="primary" aria-label="Abrir editor JSON IS" onClick={() => setDrawerOpen(true)}>
+          <SwIcon icon="mdi:code-json" size={24} ns={ns} />
+        </Fab>
+      </Tooltip>
+
+      <IsEditorDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        sourceText={sourceText}
+        onChange={setSourceText}
+        onApply={() => handleApply()}
+        onFormat={handleFormat}
+        getTextRef={getEditorTextRef}
+        parseErr={parseErr}
+        ns={ns}
+      />
+    </>
   );
 }
