@@ -1,5 +1,7 @@
 import { OperationCard } from "./OperationCard.jsx";
+import { OperationSubGroup } from "./OperationSubGroup.jsx";
 import { SwIcon } from "../lib/sw-icon.jsx";
+import { resolveTagTheme } from "../lib/tag-theme.js";
 
 const { Box, Typography, Chip } = MaterialUI;
 
@@ -16,16 +18,41 @@ export function OperationTagGroup({
   const ops = group?.operations || [];
   if (!ops.length) return null;
 
+  const tagTheme = resolveTagTheme(group.name, group.meta);
+  const subgroups = group.subgroups || [];
+  const useSubgroups = subgroups.length > 0;
+
+  let opCounter = 0;
+
+  const renderOp = (op) => {
+    const opIndex = opCounter++;
+    return (
+      <OperationCard
+        key={`${group.name}-${op.operationId}-${op.method}-${op.path}`}
+        tagIndex={tagIndex}
+        opIndex={opIndex}
+        op={op}
+        spec={spec}
+        docMd={docIndex[op.operationId]}
+        lookupIndex={lookupIndex}
+        authEnabled={authEnabled}
+        onNeedLogin={onNeedLogin}
+        ns={ns}
+      />
+    );
+  };
+
   return (
-    <Box component="section" className="isa-sw-tag-group" sx={{ mb: 3 }}>
+    <Box
+      component="section"
+      className="isa-sw-tag-group"
+      sx={{ mb: 3, "--isa-sw-tag-accent": tagTheme.accent }}
+    >
       <Box className="isa-sw-tag-head">
         <Box className="isa-sw-tag-head__icon" aria-hidden>
-          <SwIcon icon="mdi:tag-outline" size={22} ns={ns} />
+          <SwIcon icon={tagTheme.icon} size={22} ns={ns} />
         </Box>
         <Box className="isa-sw-tag-head__text">
-          <Typography component="span" className="isa-sw-tag-head__eyebrow" variant="overline">
-            Categoría
-          </Typography>
           <Typography component="h2" className="isa-sw-tag-head__title" variant="h6">
             {group.name}
           </Typography>
@@ -43,20 +70,13 @@ export function OperationTagGroup({
         />
       </Box>
       <Box className="isa-sw-tag-group__ops">
-        {ops.map((op, opIndex) => (
-          <OperationCard
-            key={`${group.name}-${op.operationId}`}
-            tagIndex={tagIndex}
-            opIndex={opIndex}
-            op={op}
-            spec={spec}
-            docMd={docIndex[op.operationId]}
-            lookupIndex={lookupIndex}
-            authEnabled={authEnabled}
-            onNeedLogin={onNeedLogin}
-            ns={ns}
-          />
-        ))}
+        {useSubgroups
+          ? subgroups.map((sub) => (
+              <OperationSubGroup key={sub.id} subgroup={sub} tagAccent={tagTheme.accent} ns={ns}>
+                {sub.operations.map((op) => renderOp(op))}
+              </OperationSubGroup>
+            ))
+          : ops.map((op) => renderOp(op))}
       </Box>
     </Box>
   );

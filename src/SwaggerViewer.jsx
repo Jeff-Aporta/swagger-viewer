@@ -17,7 +17,11 @@ const { Box, Typography, Alert } = MaterialUI;
 const API_TAB = { id: "api", label: "API", icon: "mdi:api" };
 
 export function SwaggerViewer({ config, spec: specProp }) {
-  const authEnabled = config?.auth?.enabled !== false && !!config?.auth?.loginUrl;
+  const authEnabled =
+    config?.auth?.enabled !== false &&
+    (!!config?.auth?.loginUrl ||
+      config?.auth?.loginKind === "portal" ||
+      String(config?.auth?.loginPath || "").includes("portal-login"));
   const [spec, setSpec] = useState(specProp || null);
   const [err, setErr] = useState("");
   const [status, setStatus] = useState({ message: "", tone: "" });
@@ -99,21 +103,8 @@ export function SwaggerViewer({ config, spec: specProp }) {
     <ExpandStackProvider>
       <Box
         className={useShell ? "isa-sw-shell" : undefined}
-        sx={
-          useShell
-            ? { width: "100%", minHeight: "100%", display: "flex", flexDirection: "column" }
-            : undefined
-        }
+        sx={useShell ? { width: "100%" } : undefined}
       >
-        {spec ? (
-          <ExportToolbar
-            exports={config?.exports}
-            frontLinks={config?.frontLinks || []}
-            status={status}
-            ns={ns}
-            docked={useShell}
-          />
-        ) : null}
         <Box
           className="isa-sw-viewer"
           sx={{
@@ -122,40 +113,73 @@ export function SwaggerViewer({ config, spec: specProp }) {
             mx: "auto",
             width: "100%",
             boxSizing: "border-box",
-            flex: useShell ? 1 : undefined,
           }}
         >
-      {err ? (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {err}
-        </Alert>
-      ) : null}
-      {spec ? (
-        <>
-          <InfoHeader spec={spec} showTitle={!useShell} ns={ns} />
-          {groups.map((group, tagIndex) => (
-            <OperationTagGroup
-              key={group.name}
-              tagIndex={tagIndex}
-              group={group}
-              spec={spec}
-              docIndex={docIndex}
-              lookupIndex={lookupIndex}
-              authEnabled={authEnabled}
-              onNeedLogin={onNeedLogin}
-              ns={ns}
-            />
-          ))}
-        </>
-      ) : !err ? (
-        <Typography color="text.secondary">Cargando especificación OpenAPI…</Typography>
-      ) : null}
-      <AuthDialogs
-        enabled={authEnabled}
-        authBase={config?.auth?.loginUrl}
-        onSessionChange={onSessionChange}
-        ns={ns}
-      />
+          {err ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {err}
+            </Alert>
+          ) : null}
+          {spec ? (
+            <>
+              {useShell ? (
+                <Box
+                  className="isa-sw-toolbar-bleed"
+                  sx={{
+                    mx: { xs: -1.5, sm: -2 },
+                    width: { xs: "calc(100% + 24px)", sm: "calc(100% + 32px)" },
+                    mb: 0,
+                  }}
+                >
+                  <ExportToolbar
+                    exports={config?.exports}
+                    frontLinks={config?.frontLinks || []}
+                    status={status}
+                    ns={ns}
+                    brandIcon={brandIcon}
+                    viewerConfig={config}
+                    spec={spec}
+                    docked
+                  />
+                </Box>
+              ) : (
+                <ExportToolbar
+                  exports={config?.exports}
+                  frontLinks={config?.frontLinks || []}
+                  status={status}
+                  ns={ns}
+                  brandIcon={brandIcon}
+                  viewerConfig={config}
+                  spec={spec}
+                  docked={false}
+                />
+              )}
+              <InfoHeader spec={spec} showTitle={!useShell} ns={ns} />
+              {groups.map((group, tagIndex) => (
+                <OperationTagGroup
+                  key={group.name}
+                  tagIndex={tagIndex}
+                  group={group}
+                  spec={spec}
+                  docIndex={docIndex}
+                  lookupIndex={lookupIndex}
+                  authEnabled={authEnabled}
+                  onNeedLogin={onNeedLogin}
+                  ns={ns}
+                />
+              ))}
+            </>
+          ) : !err ? (
+            <Typography color="text.secondary">Cargando especificación OpenAPI…</Typography>
+          ) : null}
+          <AuthDialogs
+            enabled={authEnabled}
+            authBase={config?.auth?.loginUrl}
+            authKind={config?.auth?.loginKind}
+            loginPath={config?.auth?.loginPath}
+            onSessionChange={onSessionChange}
+            ns={ns}
+          />
         </Box>
       </Box>
     </ExpandStackProvider>

@@ -43,27 +43,22 @@ html[data-mui-color-scheme="light"] .isa-sw-viewer .isa-sw-glass {
   margin-bottom: 0;
 }
 
+.isa-sw-tag-group {
+  border-left: 3px solid rgb(var(--isa-sw-tag-accent, 30, 144, 255));
+  padding-left: 12px;
+}
+
 .isa-sw-tag-head {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 0 0 0 12px;
+  padding: 0;
   margin-bottom: 14px;
   border: none;
-  border-left: 3px solid var(--isa-sw-tag-accent, var(--isa-sw-neon-blue));
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-}
-
-html.dark-mode .isa-sw-tag-head,
-html[data-mui-color-scheme="dark"] .isa-sw-tag-head {
-  border-left-color: rgba(30, 144, 255, 0.55);
-}
-
-html[data-mui-color-scheme="light"] .isa-sw-tag-head {
-  border-left-color: rgba(30, 144, 255, 0.45);
 }
 
 .isa-sw-tag-head__icon {
@@ -74,13 +69,13 @@ html[data-mui-color-scheme="light"] .isa-sw-tag-head {
   width: 32px;
   height: 32px;
   border-radius: 0.5rem;
-  background: rgba(59, 130, 246, 0.12);
-  color: var(--isa-sw-tag-accent, var(--isa-sw-neon-blue));
+  background: rgba(var(--isa-sw-tag-accent, 30, 144, 255), 0.12);
+  color: rgb(var(--isa-sw-tag-accent, 30, 144, 255));
 }
 
 html[data-mui-color-scheme="dark"] .isa-sw-tag-head__icon,
 html.dark-mode .isa-sw-tag-head__icon {
-  background: rgba(30, 144, 255, 0.14);
+  background: rgba(var(--isa-sw-tag-accent, 30, 144, 255), 0.16);
 }
 
 .isa-sw-tag-head__text {
@@ -88,17 +83,9 @@ html.dark-mode .isa-sw-tag-head__icon {
   min-width: 0;
 }
 
-.isa-sw-tag-head__eyebrow {
-  display: block;
-  line-height: 1.2;
-  letter-spacing: 0.12em;
-  font-weight: 700;
-  opacity: 0.72;
-}
-
 .isa-sw-tag-head__title {
   display: block;
-  margin: 2px 0 0;
+  margin: 0;
   font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.25;
@@ -122,6 +109,73 @@ html.dark-mode .isa-sw-tag-head__icon {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+
+/* Subcategorías — borde izquierdo en todo el bloque; acento con matiz rotado */
+.isa-sw-subgroup {
+  margin-bottom: 1.35rem;
+  margin-left: 4px;
+  padding-left: 14px;
+  border-left: 2px dashed rgba(var(--isa-sw-subgroup-accent, var(--isa-sw-tag-accent, 30, 144, 255)), 0.5);
+}
+
+.isa-sw-subgroup:last-child {
+  margin-bottom: 0;
+}
+
+.isa-sw-subgroup-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 4px 0;
+}
+
+.isa-sw-subgroup-head__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 0.35rem;
+  background: rgba(var(--isa-sw-subgroup-accent, var(--isa-sw-tag-accent, 30, 144, 255)), 0.1);
+  color: rgb(var(--isa-sw-subgroup-accent, var(--isa-sw-tag-accent, 30, 144, 255)));
+  opacity: 0.92;
+}
+
+.isa-sw-subgroup-head__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.isa-sw-subgroup-head__title {
+  display: block;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.isa-sw-subgroup-head__desc {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  opacity: 0.78;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+.isa-sw-subgroup__ops {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-left: 8px;
 }
 
 .isa-sw-operation--get { --isa-sw-accent: 30, 144, 255; }
@@ -299,6 +353,7 @@ html[data-mui-color-scheme="dark"] .isa-sw-param-type {
 
 .isa-sw-path-var {
   font-weight: 700;
+  color: rgb(var(--isa-sw-accent, 30, 144, 255));
 }
 
 .isa-sw-resp-card .MuiAccordionSummary-root {
@@ -360,6 +415,45 @@ html[data-mui-color-scheme="light"] .isa-sw-resp-card .MuiAccordionSummary-root 
   text-transform: none;
 }
 
+.isa-sw-front-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--mui-palette-primary-main, #1e90ff);
+  text-decoration: none;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.isa-sw-front-link:hover {
+  opacity: 0.88;
+}
+
+.isa-sw-front-link iconify-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.isa-sw-export-group + .isa-sw-export-group {
+  padding-left: 0.75rem;
+  margin-left: 0.25rem;
+  border-left: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-export-group + .isa-sw-export-group {
+  border-left-color: rgba(100, 116, 139, 0.22);
+}
+
+.isa-sw-export-label {
+  opacity: 0.88;
+}
+
+.isa-sw-export-btn.MuiIconButton-root {
+  padding: 5px;
+}
+
 /* Sub-barra export — pegada bajo AppShell, ancho completo */
 .isa-sw-shell {
   width: 100%;
@@ -370,15 +464,19 @@ html[data-mui-color-scheme="light"] .isa-sw-resp-card .MuiAccordionSummary-root 
 }
 
 .isa-sw-toolbar--docked {
-  position: sticky;
-  top: 0;
-  z-index: 9;
+  position: static;
+  top: auto;
+  z-index: auto;
   flex-shrink: 0;
   border-radius: 0 !important;
   margin: 0 !important;
   border-left: none !important;
   border-right: none !important;
   border-top: none !important;
+}
+
+.isa-sw-shell > .isa-sw-toolbar--docked {
+  position: static;
 }
 
 html[data-mui-color-scheme="dark"] .isa-sw-toolbar--docked,

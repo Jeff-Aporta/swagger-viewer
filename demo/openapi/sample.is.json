@@ -1,0 +1,107 @@
+{
+  "kind": "insoft.swagger-viewer",
+  "version": 1,
+  "viewer": {
+    "ns": "ISA",
+    "app": "swagger-viewer",
+    "shell": true,
+    "brand": {
+      "title": "ISA PatyIA",
+      "icon": "mdi:robot-happy-outline"
+    },
+    "auth": {
+      "enabled": true,
+      "loginKind": "portal",
+      "loginPath": "/api/auth/portal-login"
+    },
+    "frontLinks": [
+      {
+        "label": "QA Testing tool (jeff-aporta.github.io/isa-patyia/)",
+        "url": "https://jeff-aporta.github.io/isa-patyia/",
+        "icon": "mdi:test-tube"
+      }
+    ]
+  },
+  "spec": {
+    "openapi": "3.0.3",
+    "info": {
+      "title": "iss-ayudascpia API",
+      "version": "1.0.0",
+      "description": "Sistema Salud del servicio y tareas de mantenimiento (sin lógica de chat ni conversaciones)."
+    },
+    "servers": [{ "url": "https://ayudascp-ia-staging.azurewebsites.net/api", "description": "Staging" }],
+    "tags": [
+      {
+        "name": "Sistema",
+        "description": "Salud del servicio y tareas de mantenimiento (sin lógica de chat ni conversaciones).",
+        "x-isa-icon": "mdi:heart-pulse",
+        "x-isa-accent": "#22c55e"
+      }
+    ],
+    "components": {
+      "securitySchemes": {
+        "Bearer": {
+          "type": "http",
+          "scheme": "bearer",
+          "bearerFormat": "JWT",
+          "description": "Token de acceso. Use Iniciar sesión o Pegar JWT en la barra superior."
+        }
+      }
+    },
+    "paths": {
+      "/health": {
+        "get": {
+          "tags": ["Sistema"],
+          "summary": "Health + ping MSSQL",
+          "description": "Comprueba que el servicio responde y que la base de datos es alcanzable.",
+          "responses": {
+            "200": {
+              "description": "OK",
+              "content": {
+                "application/json": {
+                  "example": {
+                    "encabezado": { "resultado": true, "imensaje": 0, "mensaje": "GET /api/health — OK" },
+                    "respuesta": { "ok": true, "db": "up", "ts": "2026-06-20T12:00:00.000Z" }
+                  }
+                }
+              }
+            },
+            "503": {
+              "description": "Servicio o base de datos no disponible",
+              "content": {
+                "application/json": {
+                  "example": {
+                    "encabezado": { "resultado": false, "imensaje": 1, "mensaje": "Base de datos no disponible" },
+                    "respuesta": null
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/run-unit-test": {
+        "get": {
+          "tags": ["Sistema"],
+          "summary": "Ejecutar protocolo de pruebas",
+          "description": "Dispara el test unitario automatizado documentado en OpenAPI.",
+          "security": [{ "Bearer": [] }],
+          "responses": {
+            "200": {
+              "description": "Resumen del protocolo",
+              "content": {
+                "application/json": {
+                  "example": {
+                    "encabezado": { "resultado": true, "imensaje": 0, "mensaje": "Protocolo ejecutado" },
+                    "respuesta": { "total": 12, "ok": 12, "fail": 0 }
+                  }
+                }
+              }
+            },
+            "401": { "description": "Sin JWT" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@
   "meta": {
     "title": "Swagger Viewer — Jeff-Aporta",
     "applicationName": "Swagger Viewer",
-    "description": "Visor OpenAPI reutilizable — React, MUI, CodeMirror, export Postman/OpenAPI.",
+    "description": "Visor OpenAPI reutilizable — React, MUI, editor JSON IS, export Postman/OpenAPI/IS.",
     "keywords": "openapi, swagger, api, documentación, MUI, jeff-aporta, CDN",
     "themeColor": "#1e90ff",
     "themeLsKey": "jeffaporta:swagger-ui-theme",

@@ -1,5 +1,5 @@
 /** Puente swagger → @isa-components/neon-glass (bundle esbuild). */
-export {
+import {
   GlassToolbar,
   GlassTableWrap,
   GlassPageSurface,
@@ -10,6 +10,18 @@ export {
   glassSurfaceSx,
   NEON_COLORS,
 } from "../../../neon-glass/src/index.js";
+
+export {
+  GlassToolbar,
+  GlassTableWrap,
+  GlassPageSurface,
+  GlassCard,
+  GlassSurface,
+  useGlassColors,
+  glassCardSx,
+  glassSurfaceSx,
+  NEON_COLORS,
+};
 
 export const METHOD_ACCENT = {
   get: "#1e90ff",

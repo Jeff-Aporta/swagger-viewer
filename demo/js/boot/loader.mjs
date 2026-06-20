@@ -29,6 +29,10 @@ async function boot() {
     window.ISAFront.registerCodeMirror(window.React, window.MaterialUI);
   }
 
+  if (typeof window.ISAFront?.ensureCodeMirrorLoaded === "function") {
+    await window.ISAFront.ensureCodeMirrorLoaded({ sql: false });
+  }
+
   await ensureSwaggerViewerCss();
 
   if (!document.querySelector('script[src*="marked"]')) {

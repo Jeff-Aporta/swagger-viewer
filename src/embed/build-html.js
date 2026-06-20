@@ -26,6 +26,12 @@ export function buildSwaggerViewerHtml(opts) {
     auth: {
       enabled: true,
       loginUrl: opts.authLoginUrl || "https://system-login.jeffaporta.workers.dev",
+      loginKind: opts.authKind || (opts.authLoginUrl ? "system-login" : "portal"),
+      loginPath:
+        opts.authLoginPath ||
+        (opts.authKind === "portal" || !opts.authLoginUrl
+          ? "/api/auth/portal-login"
+          : "/api/auth/test-token"),
     },
     brand: opts.brand || { title: opts.brandTitle || title, icon: opts.brandIcon || "mdi:api" },
     exports: opts.exports || {
@@ -33,6 +39,8 @@ export function buildSwaggerViewerHtml(opts) {
       openApiDownloadName: "openapi.json",
       postmanUrl: opts.postmanUrl || specUrl.replace(/\.json$/i, "/postman.json"),
       postmanDownloadName: opts.postmanDownloadName || "collection.postman.json",
+      isUrl: opts.isUrl || specUrl.replace(/\/swagger\.json$/i, "/swagger/is.json").replace(/\.json$/i, "/is.json"),
+      isDownloadName: opts.isDownloadName || "api.is.json",
     },
     frontLinks: opts.frontLinks || [],
     ...(opts.config || {}),

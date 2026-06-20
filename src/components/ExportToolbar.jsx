@@ -1,12 +1,145 @@
 import { SwIcon } from "../lib/sw-icon.jsx";
 import { GlassToolbar } from "../lib/glass.jsx";
+import { buildIsDocument, isDocumentText } from "../lib/is-document.js";
 
-const { Button, Typography, Link, Box } = MaterialUI;
+const { useState } = React;
+const { Typography, Link, Box, IconButton, Tooltip } = MaterialUI;
 
-/** Fila superior: paneles QA (izq, solid) · export OpenAPI/Postman (der). */
-export function ExportToolbar({ exports: exp, frontLinks = [], status, ns = "ISA", docked = false }) {
+/** Grupo export: etiqueta + descargar + copiar portapapeles (URL remota). */
+function ExportActionGroup({ label, url, downloadName, ns }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyToClipboard() {
+    if (!url) return;
+    try {
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) throw new Error(String(res.status));
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <Box className="isa-sw-export-group" sx={{ display: "inline-flex", alignItems: "center", gap: 0.25 }}>
+      <Typography
+        component="span"
+        variant="caption"
+        className="isa-sw-export-label"
+        sx={{ fontWeight: 600, letterSpacing: "0.02em", mr: 0.25, whiteSpace: "nowrap" }}
+      >
+        {label}
+      </Typography>
+      <Tooltip title={`Descargar ${downloadName}`} arrow>
+        <IconButton
+          component={Link}
+          href={url}
+          download={downloadName}
+          size="small"
+          aria-label={`Descargar ${label}`}
+          className="isa-sw-export-btn isa-sw-export-btn--download"
+        >
+          <SwIcon icon="mdi:tray-arrow-down" size={18} ns={ns} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title={copied ? "Copiado" : "Copiar al portapapeles"} arrow>
+        <IconButton
+          size="small"
+          onClick={copyToClipboard}
+          aria-label={`Copiar ${label} al portapapeles`}
+          className="isa-sw-export-btn isa-sw-export-btn--copy"
+          color={copied ? "success" : "default"}
+        >
+          <SwIcon icon={copied ? "mdi:check" : "mdi:content-copy"} size={18} ns={ns} />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+}
+
+/** Grupo export IS — documento inyectable generado en cliente o vía URL. */
+function ExportIsGroup({ label, downloadName, ns, url, getDocument }) {
+  const [copied, setCopied] = useState(false);
+
+  async function resolveText() {
+    if (getDocument) return isDocumentText(getDocument());
+    if (!url) return "";
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error(String(res.status));
+    return res.text();
+  }
+
+  async function copyToClipboard() {
+    try {
+      const text = await resolveText();
+      if (!text) return;
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  async function download() {
+    try {
+      const text = await resolveText();
+      if (!text) return;
+      const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = downloadName;
+      a.click();
+      URL.revokeObjectURL(href);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <Box className="isa-sw-export-group" sx={{ display: "inline-flex", alignItems: "center", gap: 0.25 }}>
+      <Typography
+        component="span"
+        variant="caption"
+        className="isa-sw-export-label"
+        sx={{ fontWeight: 600, letterSpacing: "0.02em", mr: 0.25, whiteSpace: "nowrap" }}
+      >
+        {label}
+      </Typography>
+      <Tooltip title={`Descargar ${downloadName}`} arrow>
+        <IconButton
+          size="small"
+          onClick={download}
+          aria-label={`Descargar ${label}`}
+          className="isa-sw-export-btn isa-sw-export-btn--download"
+        >
+          <SwIcon icon="mdi:tray-arrow-down" size={18} ns={ns} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title={copied ? "Copiado" : "Copiar al portapapeles"} arrow>
+        <IconButton
+          size="small"
+          onClick={copyToClipboard}
+          aria-label={`Copiar ${label} al portapapeles`}
+          className="isa-sw-export-btn isa-sw-export-btn--copy"
+          color={copied ? "success" : "default"}
+        >
+          <SwIcon icon={copied ? "mdi:check" : "mdi:content-copy"} size={18} ns={ns} />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+}
+
+/** Fila superior: paneles QA (izq) · export OpenAPI/Postman/IS (der: label + descargar + copiar). */
+export function ExportToolbar({ exports: exp, frontLinks = [], status, ns = "ISA", docked = false, brandIcon, viewerConfig, spec }) {
   const links = Array.isArray(frontLinks) ? frontLinks.filter((l) => l?.url) : [];
-  const hasExports = !!(exp?.openApiUrl || exp?.postmanUrl);
+  const hasIs = !!(spec && viewerConfig) || !!exp?.isUrl;
+  const hasExports = !!(exp?.openApiUrl || exp?.postmanUrl || hasIs);
 
   if (!links.length && !hasExports && !status?.message) return null;
 
@@ -14,54 +147,55 @@ export function ExportToolbar({ exports: exp, frontLinks = [], status, ns = "ISA
     <>
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center", minWidth: 0 }}>
         {links.map((l) => (
-          <Button
+          <Link
             key={l.url}
-            component={Link}
             href={l.url}
             target="_blank"
             rel="noopener noreferrer"
-            size="small"
-            variant="contained"
-            startIcon={<SwIcon icon="mdi:flask-outline" size={18} ns={ns} />}
+            className="isa-sw-front-link"
+            underline="hover"
           >
-            {l.label}
-          </Button>
+            <SwIcon icon={l.icon || brandIcon || "mdi:link-variant"} size={16} ns={ns} aria-hidden />
+            <span>{l.label}</span>
+          </Link>
         ))}
       </Box>
 
       <Box
+        className="isa-sw-toolbar__exports"
         sx={{
           display: "flex",
           flexWrap: "wrap",
-          gap: 1,
+          gap: 1.25,
           alignItems: "center",
           ml: "auto",
           minWidth: 0,
         }}
       >
         {exp?.openApiUrl ? (
-          <Button
-            component={Link}
-            href={exp.openApiUrl}
-            download={exp.openApiDownloadName || "openapi.json"}
-            size="small"
-            variant="outlined"
-            startIcon={<SwIcon icon="mdi:tray-arrow-down" size={18} ns={ns} />}
-          >
-            OpenAPI
-          </Button>
+          <ExportActionGroup
+            label="OpenAPI"
+            url={exp.openApiUrl}
+            downloadName={exp.openApiDownloadName || "openapi.json"}
+            ns={ns}
+          />
         ) : null}
         {exp?.postmanUrl ? (
-          <Button
-            component={Link}
-            href={exp.postmanUrl}
-            download={exp.postmanDownloadName || "collection.postman.json"}
-            size="small"
-            variant="outlined"
-            startIcon={<SwIcon icon="mdi:tray-arrow-down" size={18} ns={ns} />}
-          >
-            Postman
-          </Button>
+          <ExportActionGroup
+            label="Postman"
+            url={exp.postmanUrl}
+            downloadName={exp.postmanDownloadName || "collection.postman.json"}
+            ns={ns}
+          />
+        ) : null}
+        {hasIs ? (
+          <ExportIsGroup
+            label="IS"
+            downloadName={exp?.isDownloadName || "api.is.json"}
+            ns={ns}
+            url={exp?.isUrl}
+            getDocument={spec && viewerConfig ? () => buildIsDocument(viewerConfig, spec) : undefined}
+          />
         ) : null}
         {status?.message ? (
           <Typography

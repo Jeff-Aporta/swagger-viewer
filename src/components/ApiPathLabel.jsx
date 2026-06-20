@@ -18,7 +18,10 @@ export function ApiPathLabel({ path }) {
             component="span"
             key={`${part}-${i}`}
             className="isa-sw-path-var"
-            sx={{ color: "primary.main", fontWeight: 700 }}
+            sx={{
+              color: "rgb(var(--isa-sw-accent, 30, 144, 255))",
+              fontWeight: 700,
+            }}
           >
             {part}
           </Box>

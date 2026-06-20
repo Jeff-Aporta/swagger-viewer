@@ -120,17 +120,43 @@ export function normalizeJwt(raw) {
   return t;
 }
 
-export async function fetchTestJwt(authBase, username, password) {
+function isPortalLogin(opts = {}) {
+  const path = String(opts.loginPath || "");
+  return opts.loginKind === "portal" || path.includes("portal-login");
+}
+
+/** Portal InSoft (soporte-staging): mismo origen que el visor. system-login: authBase explícito. */
+function resolveLoginEndpoint(authBase, loginPath, loginKind) {
+  const portal = isPortalLogin({ loginKind, loginPath });
+  const path =
+    loginPath || (portal ? "/api/auth/portal-login" : "/api/auth/test-token");
+  if (portal) {
+    return new URL(path, location.origin).href;
+  }
   const base = (authBase || location.origin).replace(/\/$/, "");
+  return `${base}${path}`;
+}
+
+export async function fetchTestJwt(authBase, username, password, opts = {}) {
+  const portal = isPortalLogin(opts);
+  const loginPath = opts.loginPath || (portal ? "/api/auth/portal-login" : "/api/auth/test-token");
+  const endpoint = resolveLoginEndpoint(authBase, loginPath, portal ? "portal" : opts.loginKind || "system-login");
+  const body = portal
+    ? { semail: String(username || "").trim(), password }
+    : { username, password: wrapPassword(password) };
   let res;
   try {
-    res = await fetch(`${base}/api/auth/test-token`, {
+    res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ username, password: wrapPassword(password) }),
+      body: JSON.stringify(body),
     });
   } catch {
-    throw new Error("No se pudo conectar con el servicio de autenticación.");
+    throw new Error(
+      portal
+        ? `No se pudo conectar con ${endpoint}. Comprueba que la API esté en ejecución y recarga con Ctrl+F5.`
+        : `No se pudo conectar con el servicio de autenticación (${endpoint}).`,
+    );
   }
   let data = {};
   try {

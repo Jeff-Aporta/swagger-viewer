@@ -21,14 +21,19 @@ const {
   Checkbox,
   Alert,
   Stack,
+  IconButton,
+  InputAdornment,
+  Tooltip,
 } = MaterialUI;
 
-export function AuthDialogs({ authBase, enabled, onSessionChange, ns = "ISA" }) {
+export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionChange, ns = "ISA" }) {
+  const isPortal = authKind === "portal" || String(loginPath || "").includes("portal-login");
   const [loginOpen, setLoginOpen] = useState(false);
   const [jwtOpen, setJwtOpen] = useState(false);
   const [loginHint, setLoginHint] = useState("");
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
+  const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(true);
   const [jwt, setJwt] = useState("");
   const [loginErr, setLoginErr] = useState("");
@@ -45,6 +50,7 @@ export function AuthDialogs({ authBase, enabled, onSessionChange, ns = "ISA" }) 
   const openLogin = useCallback((hint) => {
     loadForm();
     setLoginErr("");
+    setShowPass(false);
     setLoginHint(hint || "");
     setLoginOpen(true);
   }, [loadForm]);
@@ -88,23 +94,27 @@ export function AuthDialogs({ authBase, enabled, onSessionChange, ns = "ISA" }) 
 
   async function submitLogin() {
     if (!user.trim() || !pass) {
-      setLoginErr("Usuario y contraseña requeridos.");
+      setLoginErr(isPortal ? "Correo y contraseña requeridos." : "Usuario y contraseña requeridos.");
       return;
     }
     setBusy(true);
     setLoginErr("");
     try {
       saveCredentials(user.trim(), pass, remember);
-      const data = await fetchTestJwt(authBase, user.trim(), pass);
-      storeJwt(data.token, { expiresAt: data.expiresAt, username: data.username });
+      const data = await fetchTestJwt(authBase, user.trim(), pass, {
+        loginKind: isPortal ? "portal" : authKind || "system-login",
+        loginPath,
+      });
+      storeJwt(data.token, { expiresAt: data.expiresAt, username: data.username || data.displayName });
       setPass("");
       setLoginOpen(false);
       setLoginHint("");
+      const who = data.displayName || data.username || user.trim();
       onSessionChange?.({
         token: data.token,
-        username: data.username,
+        username: data.username || user.trim(),
         expiresAt: data.expiresAt,
-        message: `Autorizado como ${data.username} · expira ${formatLocalDateTime(data.expiresAt)}`,
+        message: `Autorizado como ${who}${data.expiresAt ? ` · expira ${formatLocalDateTime(data.expiresAt)}` : ""}`,
       });
     } catch (e) {
       setLoginErr(e.message || String(e));
@@ -136,27 +146,47 @@ export function AuthDialogs({ authBase, enabled, onSessionChange, ns = "ISA" }) 
             {loginHint ? <Alert severity="warning">{loginHint}</Alert> : null}
             {loginErr ? <Alert severity="error">{loginErr}</Alert> : null}
             <TextField
-              label="Usuario"
+              label={isPortal ? "Correo electrónico" : "Usuario"}
               value={user}
               onChange={(e) => setUser(e.target.value)}
               fullWidth
               autoFocus
               size="small"
               autoComplete="username"
+              type={isPortal ? "email" : "text"}
             />
             <TextField
               label="Contraseña"
-              type="password"
+              type={showPass ? "text" : "password"}
               value={pass}
               onChange={(e) => setPass(e.target.value)}
               fullWidth
               size="small"
               autoComplete="current-password"
               onKeyDown={(e) => e.key === "Enter" && !busy && submitLogin()}
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title={showPass ? "Ocultar contraseña" : "Mostrar contraseña"} arrow>
+                        <IconButton
+                          size="small"
+                          edge="end"
+                          aria-label={showPass ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          onClick={() => setShowPass((v) => !v)}
+                          tabIndex={-1}
+                        >
+                          <SwIcon icon={showPass ? "mdi:eye-off-outline" : "mdi:eye-outline"} size={20} ns={ns} />
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
             <FormControlLabel
               control={<Checkbox checked={remember} onChange={(e) => setRemember(!!e.target.checked)} />}
-              label="Recordar usuario y contraseña"
+              label={isPortal ? "Recordar correo y contraseña" : "Recordar usuario y contraseña"}
             />
           </Stack>
         </DialogContent>
@@ -170,7 +200,7 @@ export function AuthDialogs({ authBase, enabled, onSessionChange, ns = "ISA" }) 
             onClick={submitLogin}
             startIcon={<SwIcon icon="mdi:key-variant" size={18} ns={ns} />}
           >
-            {busy ? "Solicitando JWT…" : "Obtener JWT"}
+            {busy ? "Solicitando JWT…" : isPortal ? "Iniciar sesión" : "Obtener JWT"}
           </Button>
         </DialogActions>
       </Dialog>

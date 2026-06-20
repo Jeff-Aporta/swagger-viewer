@@ -3,6 +3,7 @@ import { RequestBodySection } from "./RequestBodySection.jsx";
 import { ResponsesSection } from "./ResponsesSection.jsx";
 import { DocPanel } from "./DocPanel.jsx";
 import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
+import { QueryFiltersPanel } from "./QueryFiltersPanel.jsx";
 import {
   extractJsonExample,
   jsonPretty,
@@ -51,9 +52,13 @@ export function TryItOutPanel({
 }) {
   const params = op.parameters || [];
   const queryParams = params.filter((p) => p.in === "query");
+  const queryQExt = op["x-iss-query-q"];
+  const packQueryQ = !!queryQExt;
   const pathParams = pathParamsOnly(params);
   const headerParams = params.filter((p) => p.in === "header");
-  const extraParams = [...queryParams, ...headerParams];
+  const extraParams = packQueryQ
+    ? headerParams
+    : [...queryParams, ...headerParams];
 
   const [values, setValues] = useState({});
   const [body, setBody] = useState("");
@@ -80,9 +85,14 @@ export function TryItOutPanel({
       const server = resolveServerUrl(spec) || location.origin;
       let url = buildUrl(server, op.path, values);
       const qs = new URLSearchParams();
-      for (const p of queryParams) {
-        const v = values[p.name];
-        if (v != null && String(v).length) qs.set(p.name, v);
+      if (packQueryQ) {
+        const qVal = values.q;
+        if (qVal != null && String(qVal).length) qs.set("q", String(qVal));
+      } else {
+        for (const p of queryParams) {
+          const v = values[p.name];
+          if (v != null && String(v).length) qs.set(p.name, v);
+        }
       }
       const q = qs.toString();
       if (q) url += (url.includes("?") ? "&" : "?") + q;
@@ -127,6 +137,13 @@ export function TryItOutPanel({
         lookupIndex={lookupIndex}
         disabled={busy}
       />
+      {packQueryQ ? (
+        <QueryFiltersPanel
+          ext={queryQExt}
+          disabled={busy}
+          onChange={(encoded) => onParamChange("q", encoded)}
+        />
+      ) : null}
       {extraParams.length ? (
         <Box className="isa-sw-extra-params" sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
           {extraParams.map((p) => {

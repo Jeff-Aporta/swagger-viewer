@@ -1,6 +1,40 @@
 /** Utilidades OpenAPI 3.x para el visor ISA. */
 
+import { parseIsDocument } from "./is-document.js";
+
 const HTTP_METHODS = ["get", "post", "put", "patch", "delete", "options", "head"];
+const ISS_SUBGROUP_EXTENSION = "x-isa-subgroup";
+const ISS_SUBGROUPS_EXTENSION = "x-isa-subgroups";
+
+function subgroupDefs(tagMeta) {
+  const raw = tagMeta?.[ISS_SUBGROUPS_EXTENSION];
+  return Array.isArray(raw) ? raw : [];
+}
+
+function resolveSubgroupDef(tagMeta, subgroupId) {
+  const defs = subgroupDefs(tagMeta);
+  const hit = defs.find((d) => d?.id === subgroupId);
+  if (hit) return { ...hit };
+  if (subgroupId) {
+    return { id: subgroupId, name: subgroupId, icon: "mdi:folder-outline" };
+  }
+  return { id: "general", name: "General", icon: "mdi:folder-outline" };
+}
+
+function orderSubgroups(subgroupMap, tagMeta) {
+  const ordered = [];
+  const seen = new Set();
+  for (const def of subgroupDefs(tagMeta)) {
+    const id = def?.id;
+    if (!id || !subgroupMap.has(id)) continue;
+    ordered.push(subgroupMap.get(id));
+    seen.add(id);
+  }
+  for (const [id, sub] of subgroupMap) {
+    if (!seen.has(id)) ordered.push(sub);
+  }
+  return ordered.filter((s) => s.operations?.length);
+}
 
 export function opIdFromOperation(op, method, path) {
   if (op?.operationId) return op.operationId;
@@ -58,16 +92,40 @@ export function groupOperationsByTag(spec) {
     const tags = op.tags?.length ? op.tags : ["General"];
     for (const name of tags) {
       if (!groups.has(name)) {
+        const meta = tagMeta.get(name) || {};
         groups.set(name, {
           name,
-          description: tagMeta.get(name)?.description || "",
+          description: meta.description || "",
+          meta,
+          operations: [],
+          subgroupMap: new Map(),
+        });
+      }
+      const g = groups.get(name);
+      g.operations.push(op);
+
+      const subgroupId = String(op[ISS_SUBGROUP_EXTENSION] ?? "").trim();
+      const subKey = subgroupId || "__default__";
+      if (!g.subgroupMap.has(subKey)) {
+        g.subgroupMap.set(subKey, {
+          ...resolveSubgroupDef(g.meta, subgroupId),
           operations: [],
         });
       }
-      groups.get(name).operations.push(op);
+      g.subgroupMap.get(subKey).operations.push(op);
     }
   }
-  return [...groups.values()];
+  return [...groups.values()].map((g) => {
+    const subgroups = orderSubgroups(g.subgroupMap, g.meta);
+    const hasNamedSubgroups = subgroups.some((s) => s.id && s.id !== "general" && s.id !== "__default__");
+    return {
+      name: g.name,
+      description: g.description,
+      meta: g.meta,
+      operations: g.operations,
+      subgroups: hasNamedSubgroups ? subgroups : [],
+    };
+  });
 }
 
 export function buildDocIndex(spec) {
@@ -143,6 +201,8 @@ export function responseTone(code) {
 }
 
 export async function loadSpec(config) {
+  const parsed = parseIsDocument(config);
+  if (parsed) return parsed.spec;
   if (config.spec && typeof config.spec === "object") return config.spec;
   const url = config.specUrl || config.url;
   if (!url) throw new Error("SwaggerViewer: spec o specUrl requerido");

@@ -1,5 +1,121 @@
-.isa-sw-demo__main {
-  max-width: 1160px;
-  margin: 0 auto;
-  padding: 0 16px 32px;
+.isa-sw-demo {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.isa-sw-demo__editor {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  max-height: min(42vh, 420px);
+  min-height: 200px;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.18);
+  background: rgba(11, 18, 32, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-demo__editor {
+  border-bottom-color: rgba(30, 144, 255, 0.16);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.isa-sw-demo__editor-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.isa-sw-demo__editor-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.isa-sw-demo__editor-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.isa-sw-demo__cm-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.isa-sw-demo__cm-host {
+  flex: 1 1 auto;
+  min-height: 140px;
+  font-size: 13px;
+}
+
+.isa-sw-demo__cm-host .CodeMirror {
+  height: 100% !important;
+  min-height: 140px;
+  font-family: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+}
+
+.isa-sw-demo__cm-hint {
+  margin: 0;
+  padding: 0.2rem 0.75rem 0.35rem;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-demo__cm-hint {
+  color: #64748b;
+}
+
+.isa-sw-demo__editor-collapsed {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.75rem;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.12);
+}
+
+.isa-sw-demo__preview {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.isa-sw-demo__preview .isa-layout-root {
+  min-height: 0 !important;
+  height: 100% !important;
+  flex: 1 1 auto;
+}
+
+.isa-sw-demo__preview .isa-layout-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.isa-sw-demo__preview-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.isa-sw-demo__parse-err {
+  flex-shrink: 0;
 }
