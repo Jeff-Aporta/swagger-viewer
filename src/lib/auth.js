@@ -1,5 +1,7 @@
 /** Sesión JWT para Try it out (system-login). */
 
+import { formatLoginError } from "./http-error.js";
+
 const STORAGE_KEY = "jeffaporta:swagger-test-jwt";
 const CREDENTIALS_KEY = "jeffaporta:swagger-login-creds";
 const PREFIX = "abc123";
@@ -125,16 +127,12 @@ function isPortalLogin(opts = {}) {
   return opts.loginKind === "portal" || path.includes("portal-login");
 }
 
-/** Portal InSoft (soporte-staging): mismo origen que el visor. system-login: authBase explícito. */
+/** Portal: mismo origen por defecto; authBase (loginUrl) si el visor está en otro host. */
 function resolveLoginEndpoint(authBase, loginPath, loginKind) {
   const portal = isPortalLogin({ loginKind, loginPath });
-  const path =
-    loginPath || (portal ? "/api/auth/portal-login" : "/api/auth/test-token");
-  if (portal) {
-    return new URL(path, location.origin).href;
-  }
+  const path = loginPath || (portal ? "/api/auth/portal-login" : "/api/auth/test-token");
   const base = (authBase || location.origin).replace(/\/$/, "");
-  return `${base}${path}`;
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 export async function fetchTestJwt(authBase, username, password, opts = {}) {
@@ -165,9 +163,7 @@ export async function fetchTestJwt(authBase, username, password, opts = {}) {
     /* ignore */
   }
   if (!res.ok || !data.ok || !data.token) {
-    let err = data.error || `HTTP ${res.status}`;
-    if (data.retryAfterSeconds) err += ` (reintenta en ${data.retryAfterSeconds} s)`;
-    throw new Error(err);
+    throw new Error(formatLoginError(res, data, endpoint));
   }
   return data;
 }

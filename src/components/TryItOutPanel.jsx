@@ -4,26 +4,32 @@ import { ResponsesSection } from "./ResponsesSection.jsx";
 import { DocPanel } from "./DocPanel.jsx";
 import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
 import { QueryFiltersPanel } from "./QueryFiltersPanel.jsx";
+import { IssListFilterField, isIssListFilterParam } from "./IssListFilterField.jsx";
 import {
-  extractJsonExample,
   jsonPretty,
   operationRequiresBearer,
   resolveServerUrl,
 } from "../lib/openapi.js";
+import { defaultTryItBodyText, opUsesRequestBody, resolveTryItBodyExample, shouldShowTryItBody } from "../lib/tryit-body.js";
 import { getStoredJwt } from "../lib/auth.js";
+import { joinApiUrl } from "../lib/server-base.js";
+import { fetchApiRaw, extractEnvelopeError } from "../lib/api-fetch.js";
+import { formatHttpError, extractApiError } from "../lib/http-error.js";
+import { useServerBase } from "../context/ServerBaseContext.jsx";
 import { SwIcon } from "../lib/sw-icon.jsx";
+import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
 
-const { useState } = React;
+const { useState, useMemo, useEffect } = React;
 const {
   Box,
   Button,
   Tabs,
   Tab,
   Typography,
-  Alert,
   CircularProgress,
   Chip,
   TextField,
+  Tooltip,
 } = MaterialUI;
 
 const METHOD_COLORS = {
@@ -34,12 +40,30 @@ const METHOD_COLORS = {
   delete: "error",
 };
 
-function buildUrl(server, path, paramValues) {
+function applyPathParams(path, paramValues) {
   let url = path;
   for (const [k, v] of Object.entries(paramValues)) {
     url = url.replace(`{${k}}`, encodeURIComponent(v || ""));
   }
-  return `${server.replace(/\/$/, "")}${url.startsWith("/") ? url : `/${url}`}`;
+  return url;
+}
+
+function buildTryItOutUrl({ op, values, serverBase, spec, packQueryQ, queryParams }) {
+  const server = serverBase || resolveServerUrl(spec) || (typeof location !== "undefined" ? location.origin : "");
+  let url = joinApiUrl(server, applyPathParams(op.path, values));
+  const qs = new URLSearchParams();
+  if (packQueryQ) {
+    const qVal = values.q;
+    if (qVal != null && String(qVal).length) qs.set("q", String(qVal));
+  } else {
+    for (const p of queryParams) {
+      const v = values[p.name];
+      if (v != null && String(v).length) qs.set(p.name, v);
+    }
+  }
+  const q = qs.toString();
+  if (q) url += (url.includes("?") ? "&" : "?") + q;
+  return url;
 }
 
 export function TryItOutPanel({
@@ -60,14 +84,29 @@ export function TryItOutPanel({
     ? headerParams
     : [...queryParams, ...headerParams];
 
+  const needsBearer = authEnabled && operationRequiresBearer(op, spec);
+  const specExample = resolveTryItBodyExample(op);
+  const defaultBody = useMemo(() => defaultTryItBodyText(op), [op.path, op.method, op.requestBody]);
+  const { serverBase } = useServerBase();
   const [values, setValues] = useState({});
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(defaultBody);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [err, setErr] = useState("");
+  const [apiErr, setApiErr] = useState("");
 
-  const needsBearer = authEnabled && operationRequiresBearer(op, spec);
-  const specExample = extractJsonExample(op.requestBody?.content?.["application/json"]);
+  useEffect(() => {
+    setBody(defaultBody);
+    setValues({});
+    setResult(null);
+    setErr("");
+    setApiErr("");
+  }, [op.path, op.method, defaultBody]);
+  const previewUrl = useMemo(
+    () => buildTryItOutUrl({ op, values, serverBase, spec, packQueryQ, queryParams }),
+    [op, values, serverBase, spec, packQueryQ, queryParams],
+  );
+  const previewLabel = `${op.method.toUpperCase()} ${previewUrl}`;
 
   function onParamChange(name, v) {
     setValues((prev) => ({ ...prev, [name]: v }));
@@ -80,47 +119,50 @@ export function TryItOutPanel({
     }
     setBusy(true);
     setErr("");
+    setApiErr("");
     setResult(null);
     try {
-      const server = resolveServerUrl(spec) || location.origin;
-      let url = buildUrl(server, op.path, values);
-      const qs = new URLSearchParams();
-      if (packQueryQ) {
-        const qVal = values.q;
-        if (qVal != null && String(qVal).length) qs.set("q", String(qVal));
-      } else {
-        for (const p of queryParams) {
-          const v = values[p.name];
-          if (v != null && String(v).length) qs.set(p.name, v);
-        }
-      }
-      const q = qs.toString();
-      if (q) url += (url.includes("?") ? "&" : "?") + q;
+      const url = buildTryItOutUrl({ op, values, serverBase, spec, packQueryQ, queryParams });
 
-      const headers = { Accept: "application/json" };
+      const headers = {};
       for (const p of headerParams) {
         const v = values[p.name];
         if (v) headers[p.name] = v;
       }
-      const jwt = getStoredJwt()?.token;
-      if (jwt) headers.Authorization = `Bearer ${jwt}`;
 
       const init = { method: op.method.toUpperCase(), headers };
-      if (op.requestBody && ["post", "put", "patch"].includes(op.method)) {
+      if (opUsesRequestBody(op.method)) {
         headers["Content-Type"] = "application/json";
-        init.body = body || (specExample !== undefined ? JSON.stringify(specExample) : "{}");
+        const payload = String(body ?? "").trim() || defaultBody;
+        init.body = payload;
       }
 
       const started = performance.now();
-      const res = await fetch(url, init);
+      const { data, res, text, ok } = await fetchApiRaw(url, init);
       const elapsed = Math.round(performance.now() - started);
-      let text = await res.text();
+      let pretty = text;
       try {
-        text = jsonPretty(JSON.parse(text));
+        pretty = jsonPretty(typeof data === "object" ? data : JSON.parse(text));
       } catch {
         /* plain text */
       }
-      setResult({ status: res.status, statusText: res.statusText, elapsed, body: text });
+      if (!ok) {
+        const detail = extractApiError(data) || (typeof data === "string" ? data : "");
+        setApiErr(
+          formatHttpError(res.status, {
+            statusText: res.statusText,
+            data: typeof data === "object" ? data : undefined,
+            detail,
+            hint: detail.includes("GetConnection")
+              ? "La base de datos no está accesible. Revisa GET /health → database.bconnected."
+              : undefined,
+          }),
+        );
+      } else {
+        const envelopeErr = extractEnvelopeError(data);
+        if (envelopeErr) setApiErr(envelopeErr);
+      }
+      setResult({ status: res.status, statusText: res.statusText, elapsed, body: pretty });
     } catch (e) {
       setErr(e.message || String(e));
     } finally {
@@ -136,6 +178,8 @@ export function TryItOutPanel({
         onChange={onParamChange}
         lookupIndex={lookupIndex}
         disabled={busy}
+        authEnabled={authEnabled}
+        onNeedLogin={onNeedLogin}
       />
       {packQueryQ ? (
         <QueryFiltersPanel
@@ -148,6 +192,18 @@ export function TryItOutPanel({
         <Box className="isa-sw-extra-params" sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
           {extraParams.map((p) => {
             const name = p.name || "";
+            if (isIssListFilterParam(p)) {
+              return (
+                <IssListFilterField
+                  key={`${p.in}-${name}`}
+                  param={p}
+                  value={values[name] || ""}
+                  onChange={(v) => onParamChange(name, v)}
+                  disabled={busy}
+                  ns={ns}
+                />
+              );
+            }
             const ph = p.description || (p.example != null ? String(p.example) : name);
             return (
               <TextField
@@ -164,42 +220,37 @@ export function TryItOutPanel({
           })}
         </Box>
       ) : null}
-      <RequestBodySection
-        requestBody={op.requestBody}
-        example={specExample}
-        bodyText={body}
-        onBodyChange={setBody}
-        disabled={busy}
-        ns={ns}
-      />
-      <Box sx={{ mt: 2, display: "flex", gap: 1, alignItems: "center" }}>
+      {shouldShowTryItBody(op) ? (
+        <RequestBodySection op={op} example={specExample} bodyText={body} onBodyChange={setBody} disabled={busy} ns={ns} />
+      ) : op.method === "delete" ? (
+        <Typography variant="caption" color="text.secondary" className="isa-sw-tryit-no-body" sx={{ display: "block", mt: 1.5 }}>
+          DELETE — no requiere body; use el parámetro de ruta arriba.
+        </Typography>
+      ) : null}
+      <Box className="isa-sw-tryit-actions" sx={{ mt: 2, display: "flex", gap: 1.5, alignItems: "center", pl: 0.5, minWidth: 0 }}>
         <Button
           variant="contained"
           onClick={execute}
           disabled={busy}
+          sx={{ flexShrink: 0 }}
           startIcon={
             busy ? null : <SwIcon icon="mdi:play-circle-outline" size={18} ns={ns} style={{ color: "inherit" }} />
           }
         >
           {busy ? <CircularProgress size={18} sx={{ color: "inherit" }} /> : "Ejecutar"}
         </Button>
-        {needsBearer ? (
-          <Chip
-            size="small"
-            icon={<SwIcon icon="mdi:lock-outline" size={14} ns={ns} />}
-            label="Bearer JWT"
-            color="warning"
-            variant="outlined"
-          />
-        ) : null}
+        <Tooltip title={previewLabel} enterDelay={400} placement="top-start">
+          <Typography component="code" variant="body2" className="isa-sw-tryit-url">
+            {previewLabel}
+          </Typography>
+        </Tooltip>
       </Box>
       {err ? (
-        <Alert severity="error" sx={{ mt: 1.5 }}>
-          {err}
-        </Alert>
+        <HttpErrorAlert severity="error" message={err} sx={{ mt: 1.5 }} />
       ) : null}
       {result ? (
         <Box sx={{ mt: 1.5 }}>
+          {apiErr ? <HttpErrorAlert severity="warning" message={apiErr} sx={{ mb: 1 }} /> : null}
           <Typography variant="caption" color="text.secondary">
             {result.status} {result.statusText} · {result.elapsed} ms
           </Typography>
@@ -213,6 +264,7 @@ export function TryItOutPanel({
 export function MethodChip({ method }) {
   return (
     <Chip
+      className="isa-sw-chip isa-sw-method-chip"
       label={method.toUpperCase()}
       size="small"
       color={METHOD_COLORS[method] || "default"}

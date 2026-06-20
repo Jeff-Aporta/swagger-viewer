@@ -1,6 +1,7 @@
 import { SwIcon } from "../lib/sw-icon.jsx";
 import { GlassToolbar } from "../lib/glass.jsx";
 import { buildIsDocument, isDocumentText } from "../lib/is-document.js";
+import { ServerUrlField } from "./ServerUrlField.jsx";
 
 const { useState } = React;
 const { Typography, Link, Box, IconButton, Tooltip } = MaterialUI;
@@ -135,17 +136,17 @@ function ExportIsGroup({ label, downloadName, ns, url, getDocument }) {
   );
 }
 
-/** Fila superior: paneles QA (izq) · export OpenAPI/Postman/IS (der: label + descargar + copiar). */
-export function ExportToolbar({ exports: exp, frontLinks = [], status, ns = "ISA", docked = false, brandIcon, viewerConfig, spec }) {
+/** Fila superior: paneles QA (izq) · export + servidor API (der). */
+export function ExportToolbar({ exports: exp, frontLinks = [], ns = "ISA", docked = false, brandIcon, viewerConfig, spec, showServer = false }) {
   const links = Array.isArray(frontLinks) ? frontLinks.filter((l) => l?.url) : [];
   const hasIs = !!(spec && viewerConfig) || !!exp?.isUrl;
   const hasExports = !!(exp?.openApiUrl || exp?.postmanUrl || hasIs);
 
-  if (!links.length && !hasExports && !status?.message) return null;
+  if (!links.length && !hasExports && !showServer) return null;
 
   const inner = (
     <>
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center", minWidth: 0 }}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center", minWidth: 0, flex: "1 1 auto" }}>
         {links.map((l) => (
           <Link
             key={l.url}
@@ -165,11 +166,12 @@ export function ExportToolbar({ exports: exp, frontLinks = [], status, ns = "ISA
         className="isa-sw-toolbar__exports"
         sx={{
           display: "flex",
-          flexWrap: "wrap",
-          gap: 1.25,
+          flexWrap: "nowrap",
+          gap: 1,
           alignItems: "center",
           ml: "auto",
           minWidth: 0,
+          flexShrink: 0,
         }}
       >
         {exp?.openApiUrl ? (
@@ -197,26 +199,7 @@ export function ExportToolbar({ exports: exp, frontLinks = [], status, ns = "ISA
             getDocument={spec && viewerConfig ? () => buildIsDocument(viewerConfig, spec) : undefined}
           />
         ) : null}
-        {status?.message ? (
-          <Typography
-            variant="caption"
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 0.5,
-              color: status.tone === "err" ? "error.main" : status.tone === "ok" ? "success.main" : "text.secondary",
-            }}
-          >
-            {status.tone === "ok" ? (
-              <SwIcon icon="mdi:check-circle-outline" size={14} ns={ns} />
-            ) : status.tone === "err" ? (
-              <SwIcon icon="mdi:alert-circle-outline" size={14} ns={ns} />
-            ) : (
-              <SwIcon icon="mdi:information-outline" size={14} ns={ns} />
-            )}
-            {status.message}
-          </Typography>
-        ) : null}
+        {showServer ? <ServerUrlField ns={ns} compact /> : null}
       </Box>
     </>
   );

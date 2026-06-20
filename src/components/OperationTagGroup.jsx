@@ -63,7 +63,7 @@ export function OperationTagGroup({
           ) : null}
         </Box>
         <Chip
-          className="isa-sw-tag-head__count"
+          className="isa-sw-chip isa-sw-tag-head__count"
           size="small"
           label={`${ops.length} endpoint${ops.length === 1 ? "" : "s"}`}
           variant="outlined"

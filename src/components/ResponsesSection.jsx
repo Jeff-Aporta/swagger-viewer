@@ -65,7 +65,7 @@ export function ResponsesSection({ responses = {}, tagIndex, opIndex, ns = "ISA"
               className={`isa-sw-resp-head isa-sw-resp--${tone}`}
               expandIcon={<SwIcon icon="mdi:chevron-down" size={20} ns={ns} />}
             >
-              <Chip label={code} size="small" color={toneColor(tone)} sx={{ mr: 1, fontWeight: 700 }} />
+              <Chip className="isa-sw-chip" label={code} size="small" color={toneColor(tone)} sx={{ mr: 1, fontWeight: 700 }} />
               <Typography variant="body2" color="text.secondary">
                 {resp?.description || ""}
               </Typography>

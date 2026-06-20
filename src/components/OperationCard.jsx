@@ -3,7 +3,8 @@ import { RequestBodySection } from "./RequestBodySection.jsx";
 import { ResponsesSection } from "./ResponsesSection.jsx";
 import { DocPanel } from "./DocPanel.jsx";
 import { ApiPathLabel } from "./ApiPathLabel.jsx";
-import { extractJsonExample, operationRequiresBearer } from "../lib/openapi.js";
+import { resolveTryItBodyExample } from "../lib/tryit-body.js";
+import { operationRequiresBearer } from "../lib/openapi.js";
 import { SwIcon, tabLabel } from "../lib/sw-icon.jsx";
 import { opExpandIndex } from "../lib/expand-stack.js";
 import { useExpandStack } from "../context/ExpandStackContext.jsx";
@@ -18,6 +19,7 @@ const {
   Tabs,
   Tab,
   Box,
+  Chip,
 } = MaterialUI;
 
 export function OperationCard({
@@ -37,12 +39,12 @@ export function OperationCard({
   const expanded = isOpen(expandId);
   const glassC = useGlassColors();
   const accent = methodAccent(op.method);
-  const specExample = extractJsonExample(op.requestBody?.content?.["application/json"]);
+  const specExample = resolveTryItBodyExample(op);
   const needsAuth = authEnabled && operationRequiresBearer(op, spec);
 
   const tabs = [
     { id: "try", label: "Try it out", icon: "mdi:play-circle-outline" },
-    { id: "overview", label: "Resumen", icon: "mdi:file-document-outline" },
+    { id: "overview", label: "Ejemplos", icon: "mdi:file-document-outline" },
     { id: "doc", label: "Doc", icon: "mdi:book-open-page-variant" },
   ];
 
@@ -94,6 +96,17 @@ export function OperationCard({
             {op.description}
           </Typography>
         ) : null}
+        {needsAuth ? (
+          <Chip
+            className="isa-sw-chip isa-sw-auth-chip"
+            size="small"
+            icon={<SwIcon icon="mdi:lock-outline" size={14} ns={ns} />}
+            label="Bearer JWT"
+            color="warning"
+            variant="outlined"
+            sx={{ mb: 1, alignSelf: "flex-start" }}
+          />
+        ) : null}
         <Tabs
           value={tab}
           onChange={(_e, v) => setTab(v)}
@@ -119,7 +132,7 @@ export function OperationCard({
 
         {tab === "overview" ? (
           <Box>
-            <RequestBodySection requestBody={op.requestBody} example={specExample} disabled ns={ns} />
+            <RequestBodySection op={op} example={specExample} disabled ns={ns} />
             <Typography
               variant="overline"
               color="text.secondary"

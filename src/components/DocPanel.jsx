@@ -17,6 +17,8 @@ export function DocPanel({ markdown }) {
     <Box
       className="isa-sw-doc-panel"
       sx={{
+        maxHeight: "80vh",
+        overflow: "auto",
         typography: "body2",
         lineHeight: 1.55,
         "& pre": { overflow: "auto", p: 1, borderRadius: "0.5rem", bgcolor: "action.hover" },

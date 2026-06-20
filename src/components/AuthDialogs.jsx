@@ -7,7 +7,9 @@ import {
   normalizeJwt,
   formatLocalDateTime,
 } from "../lib/auth.js";
+import { parseJwtClaims } from "../lib/lookup-label.js";
 import { SwIcon } from "../lib/sw-icon.jsx";
+import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
 
 const { useState, useEffect, useCallback } = React;
 const {
@@ -105,7 +107,12 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
         loginKind: isPortal ? "portal" : authKind || "system-login",
         loginPath,
       });
-      storeJwt(data.token, { expiresAt: data.expiresAt, username: data.username || data.displayName });
+      storeJwt(data.token, {
+        expiresAt: data.expiresAt,
+        username: data.username || user.trim(),
+        displayName: data.displayName || data.username || user.trim(),
+        claims: data.claims || null,
+      });
       setPass("");
       setLoginOpen(false);
       setLoginHint("");
@@ -129,7 +136,7 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
       setJwtErr("Pega un JWT válido.");
       return;
     }
-    storeJwt(token);
+    storeJwt(token, { claims: parseJwtClaims(token) });
     setJwtOpen(false);
     onSessionChange?.({ token, message: "JWT aplicado manualmente." });
   }
@@ -144,7 +151,7 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 0.5 }}>
             {loginHint ? <Alert severity="warning">{loginHint}</Alert> : null}
-            {loginErr ? <Alert severity="error">{loginErr}</Alert> : null}
+            {loginErr ? <HttpErrorAlert message={loginErr} /> : null}
             <TextField
               label={isPortal ? "Correo electrónico" : "Usuario"}
               value={user}
@@ -212,7 +219,7 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 0.5 }}>
-            {jwtErr ? <Alert severity="error">{jwtErr}</Alert> : null}
+            {jwtErr ? <HttpErrorAlert message={jwtErr} /> : null}
             <TextField
               label="Token"
               value={jwt}

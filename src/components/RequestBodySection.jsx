@@ -1,53 +1,95 @@
-import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
-import { extractJsonExample, jsonPretty } from "../lib/openapi.js";
-import { SwIcon } from "../lib/sw-icon.jsx";
-
-const { useState, useEffect } = React;
-const { Box, Typography, TextField } = MaterialUI;
-
-export function RequestBodySection({ requestBody, example: specExample, bodyText, onBodyChange, disabled, ns = "ISA" }) {
-  const media = requestBody?.content?.["application/json"];
-  const example = specExample ?? extractJsonExample(media);
-  const [raw, setRaw] = useState(bodyText ?? (example !== undefined ? jsonPretty(example) : ""));
-
-  useEffect(() => {
-    if (bodyText !== undefined) setRaw(bodyText);
-  }, [bodyText]);
-
-  if (!requestBody) return null;
-
-  return (
-    <Box className="isa-sw-request-body" sx={{ mt: 1.5 }}>
-      <Typography
-        variant="overline"
-        color="text.secondary"
-        sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.5 }}
-      >
-        <SwIcon icon="mdi:code-json" size={14} ns={ns} />
-        Body (application/json)
-      </Typography>
-      {example !== undefined ? (
-        <Box sx={{ mb: 1 }}>
-          <Typography variant="caption" color="text.secondary">
-            Ejemplo del spec
-          </Typography>
-          <JsonCodeBlock value={jsonPretty(example)} minHeight="6rem" />
-        </Box>
-      ) : null}
-      <TextField
-        label="Body raw"
-        multiline
-        minRows={4}
-        fullWidth
-        size="small"
-        disabled={disabled}
-        value={raw}
-        onChange={(e) => {
-          setRaw(e.target.value);
-          onBodyChange?.(e.target.value);
-        }}
-        inputProps={{ style: { fontFamily: "ui-monospace, monospace", fontSize: 12 } }}
-      />
-    </Box>
-  );
-}
+import { defaultTryItBodyText, formatBodyExample, resolveTryItBodyExample, resolveTryItBodyExamples, shouldShowTryItBody } from "../lib/tryit-body.js";
+import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
+import { SwIcon } from "../lib/sw-icon.jsx";
+
+const { useState, useEffect, useRef } = React;
+const { Box, Typography, Chip } = MaterialUI;
+
+const BODY_EDITOR_MIN = "11rem";
+const BODY_EDITOR_MAX = "40vh";
+
+export function RequestBodySection({
+  op,
+  requestBody,
+  method,
+  path,
+  example: specExample,
+  bodyText,
+  onBodyChange,
+  disabled,
+  ns = "ISA",
+}) {
+  const bodyOp = op || { requestBody, method, path };
+  if (!shouldShowTryItBody(bodyOp)) return null;
+
+  const example = specExample ?? resolveTryItBodyExample(bodyOp);
+  const examplePretty = example !== undefined ? defaultTryItBodyText(bodyOp) : "{\n  \n}";
+  const presets = resolveTryItBodyExamples(bodyOp);
+  const [raw, setRaw] = useState(bodyText ?? examplePretty);
+  const seededRef = useRef(false);
+
+  useEffect(() => {
+    seededRef.current = false;
+  }, [bodyOp.method, bodyOp.path, bodyOp.requestBody]);
+
+  useEffect(() => {
+    if (bodyText !== undefined && String(bodyText).length) {
+      setRaw(bodyText);
+      return;
+    }
+    if (!examplePretty || seededRef.current) return;
+    seededRef.current = true;
+    setRaw(examplePretty);
+    onBodyChange?.(examplePretty);
+  }, [bodyText, examplePretty, onBodyChange]);
+
+  function handleChange(text) {
+    setRaw(text);
+    onBodyChange?.(text);
+  }
+
+  function applyPreset(preset) {
+    const text = formatBodyExample(preset?.example);
+    setRaw(text);
+    onBodyChange?.(text);
+  }
+
+  return (
+    <Box className="isa-sw-request-body" sx={{ mt: 1.5 }}>
+      <Box className="isa-sw-request-body__head" sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0.75, mb: 0.5 }}>
+        <Typography variant="overline" color="text.secondary" sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, mr: presets.length ? 0.5 : 0 }}>
+          <SwIcon icon="mdi:code-json" size={14} ns={ns} />
+          Body raw · JSON
+        </Typography>
+        {presets.length > 0 && (
+          <Box className="isa-sw-request-body__examples" sx={{ display: "inline-flex", flexWrap: "wrap", gap: 0.5, alignItems: "center" }}>
+            {presets.map((preset) => (
+              <Chip
+                key={preset.id || preset.label}
+                className="isa-sw-request-body__example-chip"
+                size="small"
+                variant="outlined"
+                disabled={disabled}
+                clickable={!disabled}
+                onClick={() => applyPreset(preset)}
+                icon={preset.icon ? <SwIcon icon={preset.icon} size={14} ns={ns} /> : undefined}
+                label={preset.label}
+              />
+            ))}
+          </Box>
+        )}
+      </Box>
+      <JsonCodeBlock
+        className="isa-sw-request-body__editor"
+        value={raw}
+        onChange={handleChange}
+        readOnly={false}
+        disabled={disabled}
+        minHeight={BODY_EDITOR_MIN}
+        maxHeight={BODY_EDITOR_MAX}
+        placeholder='{ "campo": "valor" }'
+      />
+    </Box>
+  );
+}
+

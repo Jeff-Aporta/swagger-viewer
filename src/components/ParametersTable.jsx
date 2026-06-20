@@ -1,5 +1,6 @@
 import { ParamLookupField } from "./ParamLookupField.jsx";
 import { GlassTableWrap } from "../lib/glass.jsx";
+import { paramInputMode, paramSchemaType, sanitizeParamInputValue } from "../lib/param-schema.js";
 
 const {
   Table,
@@ -25,7 +26,7 @@ function paramTypeLabel(p) {
   return p.schema?.type || p.schema?.format || "—";
 }
 
-export function ParametersTable({ parameters = [], values, onChange, lookupIndex = {}, disabled }) {
+export function ParametersTable({ parameters = [], values, onChange, lookupIndex = {}, disabled, authEnabled, onNeedLogin }) {
   const pathParams = pathParamsOnly(parameters);
   if (!pathParams.length) return null;
 
@@ -44,6 +45,7 @@ export function ParametersTable({ parameters = [], values, onChange, lookupIndex
             const name = p.name || "";
             const lookup = lookupIndex[name] || p["x-iss-lookup"];
             const typeLabel = paramTypeLabel(p);
+            const schemaType = paramSchemaType(p.schema);
             return (
               <TableRow key={name} className="isa-sw-param-row">
                 <TableCell className="isa-sw-param-name">
@@ -57,11 +59,14 @@ export function ParametersTable({ parameters = [], values, onChange, lookupIndex
                     <ParamLookupField
                       lookup={lookup}
                       paramName={name}
+                      schema={p.schema}
                       value={values[name] || ""}
                       onChange={(v) => onChange(name, v)}
                       disabled={disabled}
                       hideLabel
                       placeholder={paramPlaceholder(p)}
+                      authEnabled={authEnabled}
+                      onNeedLogin={onNeedLogin}
                     />
                   ) : (
                     <TextField
@@ -69,9 +74,13 @@ export function ParametersTable({ parameters = [], values, onChange, lookupIndex
                       fullWidth
                       disabled={disabled}
                       value={values[name] || ""}
-                      onChange={(e) => onChange(name, e.target.value)}
+                      onChange={(e) => onChange(name, sanitizeParamInputValue(p.schema, e.target.value))}
                       placeholder={paramPlaceholder(p)}
-                      inputProps={{ "aria-label": name }}
+                      inputProps={{
+                        "aria-label": name,
+                        inputMode: paramInputMode(p.schema),
+                        pattern: schemaType === "integer" ? "[0-9]*" : undefined,
+                      }}
                     />
                   )}
                 </TableCell>

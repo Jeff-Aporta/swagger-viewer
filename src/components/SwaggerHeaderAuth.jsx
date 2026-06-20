@@ -24,7 +24,7 @@ export function SwaggerHeaderAuth({ enabled, session, onLogin, onJwt, onLogout, 
           <Chip
             size="small"
             variant="filled"
-            className="header-session-chip"
+            className="isa-sw-chip header-session-chip"
             clickable
             icon={<SwIcon icon="mdi:account-circle-outline" size={18} ns={ns} />}
             label={label}
