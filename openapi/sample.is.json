@@ -14,6 +14,11 @@
       "loginKind": "portal",
       "loginPath": "/api/auth/portal-login"
     },
+    "exports": {
+      "openApiDownloadName": "openapi.json",
+      "postmanDownloadName": "iss-ayudascpia.postman_collection.json",
+      "isDownloadName": "iss-ayudascpia.is.json"
+    },
     "frontLinks": [
       {
         "label": "QA Testing tool (jeff-aporta.github.io/isa-patyia/)",
