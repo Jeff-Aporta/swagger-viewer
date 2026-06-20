@@ -14,8 +14,15 @@ const DEMO_EXPORT_NAMES = {
   isDownloadName: "iss-ayudascpia.is.json",
 };
 
+const DEMO_BRAND_ICON = "mdi:file-code-outline";
+
 function enrichViewerConfig(viewer = {}) {
-  return { shell: true, ns: "ISA", ...viewer };
+  return {
+    shell: true,
+    ns: "ISA",
+    ...viewer,
+    brand: { ...viewer.brand, icon: DEMO_BRAND_ICON, title: "IS-Swagger" },
+  };
 }
 
 function applyIsDocument(doc) {
@@ -103,7 +110,7 @@ export function App() {
       config: {
         ns: "ISA",
         shell: true,
-        brand: { title: "Swagger Viewer", icon: "mdi:api" },
+        brand: { title: "IS-Swagger", icon: DEMO_BRAND_ICON },
         auth: { enabled: false },
         exports: { openApiUrl: specUrl, openApiDownloadName: "openapi.json" },
         specUrl,
@@ -112,7 +119,7 @@ export function App() {
   }
 
   if (!viewerConfig || !applied?.spec) {
-    return React.createElement("div", { className: "isa-app-boot" }, "Cargando documento IS…");
+    return React.createElement("div", { className: "isa-app-boot" }, "Cargando IS-Swagger…");
   }
 
   return (

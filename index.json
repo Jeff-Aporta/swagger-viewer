@@ -1,17 +1,17 @@
 {
   "slug": "swagger-viewer",
   "meta": {
-    "title": "Swagger Viewer — Jeff-Aporta",
-    "applicationName": "Swagger Viewer",
+    "title": "IS-Swagger",
+    "applicationName": "IS-Swagger",
     "description": "Visor OpenAPI reutilizable — React, MUI, editor JSON IS, export Postman/OpenAPI/IS.",
-    "keywords": "openapi, swagger, api, documentación, MUI, jeff-aporta, CDN",
+    "keywords": "openapi, swagger, api, documentación, MUI, IS-Swagger, ISA",
     "themeColor": "#1e90ff",
     "themeLsKey": "jeffaporta:swagger-ui-theme",
-    "icon": "mdi:api",
+    "icon": "mdi:file-code-outline",
     "canonical": "https://jeff-aporta.github.io/swagger-viewer/",
-    "ogSiteName": "Jeff-Aporta",
-    "ogTitle": "Swagger Viewer — Jeff-Aporta",
-    "imageAlt": "Demo swagger-viewer con tabs, ejemplos y Try it out"
+    "ogSiteName": "IS-Swagger",
+    "ogTitle": "IS-Swagger",
+    "imageAlt": "Visor OpenAPI IS-Swagger con tabs, ejemplos y Try it out"
   },
   "frontSharedPin": "a5a6597",
   "useDist": true,
