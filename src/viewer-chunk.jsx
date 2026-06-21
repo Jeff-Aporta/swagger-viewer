@@ -25,4 +25,5 @@ export async function mountSwaggerViewer(config, target = "#root") {
   return { unmount: () => _reactRoot?.unmount?.() };
 }
 
-export { SwaggerViewer };
+export { SwaggerViewer } from "./SwaggerViewer.jsx";
+export { resolveViewerBrand, readBrandFromMeta, applyBrandToDocument } from "./lib/viewer-brand.js";

@@ -46,7 +46,7 @@ export function OperationTagGroup({
     <Box
       component="section"
       className="isa-sw-tag-group"
-      sx={{ mb: 3, "--isa-sw-tag-accent": tagTheme.accent }}
+      sx={{ mb: 3, mt: tagIndex === 0 ? 3 : 0, "--isa-sw-tag-accent": tagTheme.accent }}
     >
       <Box className="isa-sw-tag-head">
         <Box className="isa-sw-tag-head__icon" aria-hidden>

@@ -6,6 +6,7 @@ import {
   clearJwt,
   normalizeJwt,
   formatLocalDateTime,
+  stripContapymeEmail,
 } from "../lib/auth.js";
 import { parseJwtClaims } from "../lib/lookup-label.js";
 import { SwIcon } from "../lib/sw-icon.jsx";
@@ -116,7 +117,7 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
       setPass("");
       setLoginOpen(false);
       setLoginHint("");
-      const who = data.displayName || data.username || user.trim();
+      const who = data.displayName || stripContapymeEmail(data.username || user.trim()) || user.trim();
       onSessionChange?.({
         token: data.token,
         username: data.username || user.trim(),

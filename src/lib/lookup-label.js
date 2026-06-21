@@ -1,5 +1,7 @@
 /** Etiqueta de fila para x-iss-lookup — p. ej. `1859 | Solicitar videos | JUAN GARCIA`. */
 
+import { stripContapymeEmail } from "./auth.js";
+
 export function parseJwtClaims(token) {
   try {
     const part = String(token || "").split(".")[1];
@@ -32,7 +34,7 @@ export function resolveRowOwnerNick(row, lookup, session) {
     const full =
       session?.displayName ||
       [claims?.nombres, claims?.apellidos].filter(Boolean).join(" ").trim() ||
-      session?.username ||
+      stripContapymeEmail(session?.username || "") ||
       "";
     const nick = shortOwnerNick(full);
     if (nick) return nick;

@@ -2,6 +2,19 @@
 
 import { formatLoginError } from "./http-error.js";
 
+const CONTAPYME_EMAIL_SUFFIX = /@contapyme\.com$/i;
+
+/** Quita el dominio corporativo (jagudeloe@contapyme.com → jagudeloe). */
+export function stripContapymeEmail(value) {
+  return String(value ?? "").trim().replace(CONTAPYME_EMAIL_SUFFIX, "");
+}
+
+/** Etiqueta visible del chip de sesión — sin @contapyme.com, mayúsculas. */
+export function formatSessionUsername(value) {
+  const cleaned = stripContapymeEmail(value);
+  return (cleaned || String(value ?? "").trim() || "JWT").toUpperCase();
+}
+
 const STORAGE_KEY = "jeffaporta:swagger-test-jwt";
 const CREDENTIALS_KEY = "jeffaporta:swagger-login-creds";
 const PREFIX = "abc123";

@@ -1,5 +1,6 @@
 import { SwaggerViewer } from "../../../src/SwaggerViewer.jsx";
 import { parseIsDocument, isDocumentText } from "../../../src/lib/is-document.js";
+import { readBrandFromMeta } from "../../../src/lib/viewer-brand.js";
 import { IsEditorDrawer } from "./IsEditorDrawer.jsx";
 import { buildDemoExportUrls, revokeDemoExportUrls } from "./demo-exports.js";
 import { SwIcon } from "../../../src/lib/sw-icon.jsx";
@@ -14,14 +15,25 @@ const DEMO_EXPORT_NAMES = {
   isDownloadName: "iss-ayudascpia.is.json",
 };
 
-const DEMO_BRAND_ICON = "mdi:file-code-outline";
+function demoBrandDefaults() {
+  const meta = readBrandFromMeta();
+  return {
+    title: meta.title || "IS-Swagger",
+    icon: meta.icon || "mdi:file-code-outline",
+  };
+}
 
+/** Demo: respeta viewer.brand del IS; si falta, usa meta del index.html. */
 function enrichViewerConfig(viewer = {}) {
+  const defaults = demoBrandDefaults();
   return {
     shell: true,
     ns: "ISA",
     ...viewer,
-    brand: { ...viewer.brand, icon: DEMO_BRAND_ICON, title: "IS-Swagger" },
+    brand: {
+      title: viewer.brand?.title || defaults.title,
+      icon: viewer.brand?.icon || defaults.icon,
+    },
   };
 }
 
@@ -106,11 +118,12 @@ export function App() {
   }, [applied]);
 
   if (specUrl) {
+    const demoBrand = demoBrandDefaults();
     return React.createElement(SwaggerViewer, {
       config: {
         ns: "ISA",
         shell: true,
-        brand: { title: "IS-Swagger", icon: DEMO_BRAND_ICON },
+        brand: demoBrand,
         auth: { enabled: false },
         exports: { openApiUrl: specUrl, openApiDownloadName: "openapi.json" },
         specUrl,

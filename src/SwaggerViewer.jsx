@@ -12,6 +12,7 @@ import {
   buildLookupIndex,
 } from "./lib/openapi.js";
 import { getStoredJwt, clearJwt } from "./lib/auth.js";
+import { applyBrandToDocument, resolveViewerBrand } from "./lib/viewer-brand.js";
 
 const { useState, useEffect, useMemo } = React;
 const { Box, Typography, Alert } = MaterialUI;
@@ -63,18 +64,14 @@ export function SwaggerViewer({ config, spec: specProp }) {
   }, [spec]);
   const docIndex = useMemo(() => (spec ? buildDocIndex(spec) : {}), [spec]);
   const lookupIndex = useMemo(() => (spec ? buildLookupIndex(spec) : {}), [spec]);
-  const brandTitle = config?.brand?.title;
-  const brandIcon = config?.brand?.icon;
+  const brand = useMemo(() => resolveViewerBrand(config, spec), [config, spec]);
+  const brandTitle = brand.title;
+  const brandIcon = brand.icon;
   const ns = config?.ns || "ISA";
 
   useEffect(() => {
-    if (!brandTitle) return;
-    document.title = brandTitle;
-    const appName = document.querySelector('meta[name="application-name"]');
-    if (appName) appName.setAttribute("content", brandTitle);
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) ogTitle.setAttribute("content", brandTitle);
-  }, [brandTitle]);
+    applyBrandToDocument(brand);
+  }, [brandTitle, brandIcon]);
 
   useEffect(() => {
     if (!authEnabled) return;

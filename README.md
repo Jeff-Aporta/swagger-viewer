@@ -1,8 +1,28 @@
-# Swagger Viewer (`@isa-components/swagger`)
+# Swagger Viewer (`@jeff-aporta/is-swagger`)
 
 Visor **OpenAPI 3** como app React + MUI + Iconify + CodeMirror, alineado con el stack de las apps front (`ISAFront`, `AppShell`, tema, toasts).
 
+Publicado como **CDN** (`Jeff-Aporta/swagger-viewer`) y **npm** `@jeff-aporta/is-swagger` (visor + utilidades server: spec, Postman, embed HTML).
+
 Solo necesitas pasar la especificación OpenAPI (objeto o URL) y opciones de marca/auth/export; el componente construye tabs por tag, ejemplos JSON, panel Doc (`x-iss-doc-md`), Try it out con JWT y exportaciones.
+
+## Uso npm (Azure Functions / workers)
+
+```bash
+npm install @jeff-aporta/is-swagger
+```
+
+```ts
+import { issRspAuth, jsonRequestBody, bearerComponents } from "@jeff-aporta/is-swagger/server/spec";
+import { exampleOk } from "@jeff-aporta/is-swagger/server/envelope";
+import { openApiToPostmanCollection } from "@jeff-aporta/is-swagger/server/postman";
+import { createRequire } from "node:module";
+
+const requireIsSwagger = createRequire(__filename);
+const { buildSwaggerUiHtml } = requireIsSwagger("@jeff-aporta/is-swagger/embed/build-html");
+```
+
+Exports principales: `./server/spec`, `./server/envelope`, `./server/docs`, `./server/postman`, `./server/viewer-pins`, `./embed/build-html`, `./lib/is-document`.
 
 ## Uso CDN (mínimo)
 

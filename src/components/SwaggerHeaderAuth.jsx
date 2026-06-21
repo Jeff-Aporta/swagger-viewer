@@ -1,3 +1,4 @@
+import { formatSessionUsername, stripContapymeEmail } from "../lib/auth.js";
 import { SwIcon } from "../lib/sw-icon.jsx";
 
 const { Box, Stack, Button, Chip, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText } = MaterialUI;
@@ -17,10 +18,12 @@ export function SwaggerHeaderAuth({ enabled, session, onLogin, onJwt, onLogout, 
   if (!enabled) return null;
 
   if (session?.token) {
-    const label = String(session.username || "JWT").trim().toUpperCase();
+    const who = session.displayName || session.username || "";
+    const label = formatSessionUsername(who || "JWT");
+    const tooltipWho = stripContapymeEmail(who);
     return (
       <Box component="span" className="header-session-wrap" sx={{ display: "inline-flex", alignItems: "center" }}>
-        <Tooltip title={session.username ? `Sesión: ${session.username}` : "JWT activo"} arrow>
+        <Tooltip title={tooltipWho ? `Sesión: ${tooltipWho}` : "JWT activo"} arrow>
           <Chip
             size="small"
             variant="filled"

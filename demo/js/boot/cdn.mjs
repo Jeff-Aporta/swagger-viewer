@@ -19,7 +19,7 @@ export const bootHelperUrl = isDevHost
 
 /* @isa-swagger-boot:start */
 /** @jeff-aporta/swagger-viewer — pin: sync-component-refs.mjs */
-export const SWAGGER_VIEWER_REF = "a0f3a1b";
+export const SWAGGER_VIEWER_REF = "fefe32c";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;

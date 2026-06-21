@@ -1,6 +1,6 @@
 /**
- * HTML mínimo para hosts (Azure Functions, workers) — boot @isa-components/swagger por CDN.
- * Mantener alineado con ISS-AyudasCPIA src/lib/openapi/openapi-boot-html.ts
+ * HTML mínimo para hosts (Azure Functions, workers) — boot @jeff-aporta/is-swagger por CDN.
+ * Publicado en npm como @jeff-aporta/is-swagger/embed/build-html.
  *
  * @param {object} opts
  * @param {string} opts.specUrl
