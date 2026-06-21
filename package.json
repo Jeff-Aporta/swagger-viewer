@@ -11,15 +11,33 @@
   ],
   "typesVersions": {
     "*": {
-      "server/build-spec": ["dist/server/build-spec.d.ts"],
-      "server/envelope": ["dist/server/envelope.d.ts"],
-      "server/spec": ["dist/server/spec.d.ts"],
-      "server/docs": ["dist/server/docs.d.ts"],
-      "server/postman": ["dist/server/postman.d.ts"],
-      "server/viewer-pins": ["dist/server/viewer-pins.d.ts"],
-      "server": ["dist/server/index.d.ts"],
-      "embed/build-html": ["dist/embed/build-html.d.ts"],
-      "lib/is-document": ["dist/lib/is-document.d.ts"]
+      "server/build-spec": [
+        "dist/server/build-spec.d.ts"
+      ],
+      "server/envelope": [
+        "dist/server/envelope.d.ts"
+      ],
+      "server/spec": [
+        "dist/server/spec.d.ts"
+      ],
+      "server/docs": [
+        "dist/server/docs.d.ts"
+      ],
+      "server/postman": [
+        "dist/server/postman.d.ts"
+      ],
+      "server/viewer-pins": [
+        "dist/server/viewer-pins.d.ts"
+      ],
+      "server": [
+        "dist/server/index.d.ts"
+      ],
+      "embed/build-html": [
+        "dist/embed/build-html.d.ts"
+      ],
+      "lib/is-document": [
+        "dist/lib/is-document.d.ts"
+      ]
     }
   },
   "exports": {
@@ -77,6 +95,7 @@
     "publish:restricted": "npm publish --access restricted"
   },
   "devDependencies": {
+    "esbuild": "^0.25.12",
     "typescript": "^5.8.2"
   },
   "publishConfig": {

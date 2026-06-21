@@ -136,13 +136,27 @@ export function buildSwaggerUiHtml(openApiJsonUrl, opts = {}) {
   });
 }
 
+function swaggerCdnPathFromSpecUrl(specUrl) {
+  try {
+    const path = new URL(specUrl).pathname.replace(/\/swagger\.json\/?$/i, "/swagger/cdn");
+    return path.endsWith("/swagger/cdn") ? path : "/api/swagger/cdn";
+  } catch {
+    return "/api/swagger/cdn";
+  }
+}
+
 function resolveViewerBase(specUrl, localCdnBase) {
-  if (localCdnBase) return localCdnBase.replace(/\/$/, "");
-  return `${apiBaseFromSpecUrl(specUrl)}/swagger/cdn`;
+  if (localCdnBase) return String(localCdnBase).replace(/\/$/, "");
+  return swaggerCdnPathFromSpecUrl(specUrl);
 }
 
 function apiBaseFromSpecUrl(specUrl) {
-  return specUrl.replace(/\/swagger\.json\/?$/i, "");
+  try {
+    const u = new URL(specUrl);
+    return `${u.origin}${u.pathname.replace(/\/swagger\.json\/?$/i, "")}`;
+  } catch {
+    return specUrl.replace(/\/swagger\.json\/?$/i, "");
+  }
 }
 
 function apiOriginFromSpecUrl(specUrl) {

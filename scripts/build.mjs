@@ -10,7 +10,7 @@ import { execSync } from "node:child_process";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const require = createRequire(import.meta.url);
-const esbuild = require("../../../apps/src/scripts/node_modules/esbuild");
+const esbuild = require("esbuild");
 
 const CDN_DIR = join(root, "cdn");
 const BOOT_JS = join(CDN_DIR, "swagger-viewer.min.js");
