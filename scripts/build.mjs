@@ -18,6 +18,7 @@ const APP_JS = join(CDN_DIR, "swagger-viewer-app.min.js");
 const CDN_CSS = join(CDN_DIR, "swagger-viewer.min.css");
 const CSS_PAGE = join(root, "..", "neon-glass", "css", "neon-glass-page.css");
 const CSS_IN = join(root, "css", "swagger-viewer.css");
+const CSS_DEMO = join(root, "demo", "css", "demo.css");
 
 const SERVER_ENTRIES = [
     "server/envelope.ts",
@@ -25,6 +26,7 @@ const SERVER_ENTRIES = [
     "server/docs.ts",
     "server/postman.ts",
     "server/viewer-pins.ts",
+    "server/build-spec.ts",
     "server/index.ts",
 ];
 
@@ -68,7 +70,11 @@ function buildCdn() {
         format: "esm",
     });
 
-    writeFileSync(CDN_CSS, minifyCss(readFileSync(CSS_PAGE, "utf8") + readFileSync(CSS_IN, "utf8")), "utf8");
+    writeFileSync(
+        CDN_CSS,
+        minifyCss(readFileSync(CSS_PAGE, "utf8") + readFileSync(CSS_IN, "utf8") + readFileSync(CSS_DEMO, "utf8")),
+        "utf8",
+    );
 
     for (const name of readdirSync(CDN_DIR)) {
         if (/^swagger-viewer-[A-Z0-9]+\.js$/i.test(name)) {

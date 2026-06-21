@@ -1,18 +1,17 @@
 /** Sesión JWT para Try it out (system-login). */
 
 import { formatLoginError } from "./http-error.js";
+import {
+  stripContapymeEmail,
+  formatSessionDisplayName,
+  formatSessionChipLabel,
+} from "../../../front-shared/cdn/isa/js/core/format.js";
 
-const CONTAPYME_EMAIL_SUFFIX = /@contapyme\.com$/i;
+export { stripContapymeEmail, formatSessionDisplayName, formatSessionChipLabel };
 
-/** Quita el dominio corporativo (jagudeloe@contapyme.com → jagudeloe). */
-export function stripContapymeEmail(value) {
-  return String(value ?? "").trim().replace(CONTAPYME_EMAIL_SUFFIX, "");
-}
-
-/** Etiqueta visible del chip de sesión — sin @contapyme.com, mayúsculas. */
+/** Etiqueta visible del chip de sesión — primer nombre, sin mayúsculas sostenidas. */
 export function formatSessionUsername(value) {
-  const cleaned = stripContapymeEmail(value);
-  return (cleaned || String(value ?? "").trim() || "JWT").toUpperCase();
+  return formatSessionChipLabel(value, "JWT");
 }
 
 const STORAGE_KEY = "jeffaporta:swagger-test-jwt";

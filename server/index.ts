@@ -1,3 +1,4 @@
+export * from "./build-spec.js";
 export * from "./envelope.js";
 export * from "./spec.js";
 export * from "./docs.js";

@@ -1,5 +1,4 @@
 import { SwIcon } from "../../../src/lib/sw-icon.jsx";
-import { useGlassColors } from "../../../src/lib/glass.jsx";
 
 const { useEffect, useRef, useState } = React;
 const { Box, Typography } = MaterialUI;
@@ -9,9 +8,26 @@ function resolveCmTheme() {
   return scheme === "light" ? "default" : "dracula";
 }
 
+function isEventInCodeMirror(cm, target) {
+  const root = cm?.getWrapperElement?.();
+  if (!root) return false;
+  const el = target ?? document.activeElement;
+  return !!(el && root.contains(el));
+}
+
+/** addKeyMap: el pin front-shared@a5a6597 no fusiona extraKeys ni define Ctrl-A. */
+function attachEditorKeyMaps(cm, onApplyRef) {
+  if (!cm?.addKeyMap) return;
+  cm.addKeyMap({
+    "Ctrl-A": () => cm.execCommand("selectAll"),
+    "Cmd-A": () => cm.execCommand("selectAll"),
+    "Ctrl-Enter": () => onApplyRef.current?.(cm.getValue?.() ?? ""),
+    "Cmd-Enter": () => onApplyRef.current?.(cm.getValue?.() ?? ""),
+  });
+}
+
 /** Editor JSON (CodeMirror) para documentos insoft.swagger-viewer. */
 export function IsJsonEditor({ value, onChange, onApply, getTextRef, active, ns = "ISA" }) {
-  const c = useGlassColors();
   const hostRef = useRef(null);
   const cmRef = useRef(null);
   const onApplyRef = useRef(onApply);
@@ -42,15 +58,8 @@ export function IsJsonEditor({ value, onChange, onApply, getTextRef, active, ns 
         lineWrapping: false,
         theme: resolveCmTheme(),
         onChange: (text) => onChange?.(text),
-        extraKeys: {
-          "Ctrl-Enter"() {
-            onApplyRef.current?.(cmRef.current?.getValue?.() ?? "");
-          },
-          "Cmd-Enter"() {
-            onApplyRef.current?.(cmRef.current?.getValue?.() ?? "");
-          },
-        },
       });
+      attachEditorKeyMaps(cmRef.current, onApplyRef);
       if (getTextRef) {
         getTextRef.current = () => cmRef.current?.getValue?.() ?? value ?? "";
       }
@@ -79,6 +88,23 @@ export function IsJsonEditor({ value, onChange, onApply, getTextRef, active, ns 
   }, [value]);
 
   useEffect(() => {
+    if (!active || !cmReady) return undefined;
+    const cm = cmRef.current;
+    if (!cm) return undefined;
+
+    function onKeyDown(e) {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "a") return;
+      if (!isEventInCodeMirror(cm, e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      cm.execCommand("selectAll");
+    }
+
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [active, cmReady]);
+
+  useEffect(() => {
     if (!cmReady) return undefined;
     function applyTheme() {
       const cm = cmRef.current;
@@ -96,16 +122,9 @@ export function IsJsonEditor({ value, onChange, onApply, getTextRef, active, ns 
   }, [cmReady]);
 
   return (
-    <Box
-      className="isa-sw-demo__cm-wrap"
-      sx={{
-        bgcolor: c.preBg,
-        borderTop: 1,
-        borderColor: c.border,
-      }}
-    >
+    <Box className="isa-sw-demo__cm-wrap" sx={{ borderTop: 1, borderColor: "divider" }}>
       <Box ref={hostRef} className="isa-sw-demo__cm-host isa-cm-host" aria-label="Editor JSON IS" />
-      <Typography component="p" variant="caption" className="isa-sw-demo__cm-hint" sx={{ color: c.muted, borderColor: c.border }}>
+      <Typography component="p" variant="caption" color="text.secondary" className="isa-sw-demo__cm-hint">
         <SwIcon icon="mdi:keyboard" size={14} ns={ns} aria-hidden />
         Ctrl+Enter aplica · Ctrl+A selecciona todo
       </Typography>

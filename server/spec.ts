@@ -18,6 +18,7 @@ export const ISS_LIST_FILTER_EXTENSION = "x-iss-list-filter";
 export const ISS_SUBGROUP_EXTENSION = "x-isa-subgroup";
 export const ISS_SUBGROUPS_EXTENSION = "x-isa-subgroups";
 export const ISS_REQUEST_BODY_EXAMPLES_EXTENSION = "x-iss-request-body-examples";
+export const ISS_INPUT_RECOMMENDATION_EXTENSION = "x-iss-input-recommendation";
 
 export const jsonResponse = (
     description: string,

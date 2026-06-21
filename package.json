@@ -1,6 +1,6 @@
 {
   "name": "@jeff-aporta/is-swagger",
-  "version": "0.1.1",
+  "version": "0.1.4",
   "description": "Visor OpenAPI @isa-components/swagger — CDN + utilidades server (spec, Postman, embed HTML).",
   "type": "module",
   "sideEffects": false,
@@ -11,6 +11,7 @@
   ],
   "typesVersions": {
     "*": {
+      "server/build-spec": ["dist/server/build-spec.d.ts"],
       "server/envelope": ["dist/server/envelope.d.ts"],
       "server/spec": ["dist/server/spec.d.ts"],
       "server/docs": ["dist/server/docs.d.ts"],
@@ -32,6 +33,11 @@
       "types": "./dist/lib/is-document.d.ts",
       "import": "./dist/lib/is-document.js",
       "require": "./dist/lib/is-document.cjs"
+    },
+    "./server/build-spec": {
+      "types": "./dist/server/build-spec.d.ts",
+      "import": "./dist/server/build-spec.js",
+      "require": "./dist/server/build-spec.cjs"
     },
     "./server/envelope": {
       "types": "./dist/server/envelope.d.ts",

@@ -15,10 +15,10 @@ export function ServerUrlField({ ns = "ISA", compact = false }) {
       onChange={(e) => setServerBase(e.target.value)}
       placeholder={defaultBase || "http://localhost:5502/api"}
       sx={{
-        minWidth: compact ? 0 : { xs: 180, sm: 240 },
-        maxWidth: compact ? 280 : 360,
-        width: compact ? { xs: 140, sm: 200, md: 240 } : undefined,
-        flex: compact ? "1 1 8rem" : "1 1 200px",
+        minWidth: compact ? 0 : { xs: 180, sm: 300 },
+        maxWidth: compact ? 340 : 420,
+        width: compact ? { xs: 140, sm: 260, md: 300 } : undefined,
+        flex: compact ? "1 1 8rem" : "1 1 260px",
         "& .MuiInputBase-root": { height: 36 },
         "& .MuiInputBase-input": { fontFamily: "ui-monospace, monospace", fontSize: "0.8125rem", py: 0.75 },
       }}

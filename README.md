@@ -79,6 +79,7 @@ globalThis.ISAComponents.Swagger.bootSwaggerApp(config);
 
 - `x-iss-doc-md` en operación → pestaña **Doc** (Markdown vía `marked`)
 - `x-iss-lookup` en parámetro → autocomplete contra API
+- `x-iss-input-recommendation` en parámetro o propiedad de body → endpoint + filtro `f` recomendado (declarativo en JSON: `inputRecommendations`, `fPresets`)
 
 ## Build
 

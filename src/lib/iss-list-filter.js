@@ -1,4 +1,4 @@
-/** Filtro ISS (query `f` = JSON en Base64) — validación alineada con IssListFilter.ts */
+/** Filtro ISS (query `f` = JSON en Base64) — validación alineada con @jeff-aporta/apiservers/filter/iss-list-filter */
 
 export const ISS_LIST_FILTER_QUERY_PARAM = "f";
 export const ISS_LIST_FILTER_EXT = "x-iss-list-filter";

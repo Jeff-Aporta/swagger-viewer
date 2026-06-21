@@ -10,6 +10,7 @@ import { useServerBase } from "../context/ServerBaseContext.jsx";
 import { sanitizeParamInputValue, paramInputMode, paramSchemaType } from "../lib/param-schema.js";
 import { createDelayer, LOOKUP_SEARCH_DELAY_MS } from "../lib/delayer.js";
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
+import { recommendationSampleRequest } from "../lib/input-recommendation.js";
 
 function mapLookupRows(rows, lookup, session) {
   return rows.map((row) => ({
@@ -149,6 +150,8 @@ export function ParamLookupField({
 
   if (!lookup) return null;
 
+  const sample = recommendationSampleRequest(lookup, serverBase);
+
   function onFocusField() {
     setTouched(true);
     if (requiresAuth && !getStoredJwt()?.token) {
@@ -269,6 +272,11 @@ export function ParamLookupField({
       {lookup.hint ? (
         <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
           {lookup.hint}
+        </Typography>
+      ) : null}
+      {sample ? (
+        <Typography variant="caption" color="text.secondary" component="div" sx={{ display: "block", mt: 0.25, fontFamily: "ui-monospace, monospace", fontSize: "0.72rem", wordBreak: "break-all" }}>
+          {sample.method} {sample.url.replace(/^https?:\/\/[^/]+/i, "")}
         </Typography>
       ) : null}
       {error ? (
