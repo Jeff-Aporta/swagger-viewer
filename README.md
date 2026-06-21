@@ -2,15 +2,22 @@
 
 Visor **OpenAPI 3** como app React + MUI + Iconify + CodeMirror, alineado con el stack de las apps front (`ISAFront`, `AppShell`, tema, toasts).
 
-Publicado como **CDN** (`Jeff-Aporta/swagger-viewer`) y **npm** `@jeff-aporta/is-swagger` (visor + utilidades server: spec, Postman, embed HTML).
+**Repositorio privado** — distribución **solo por npm**. Los bundles del visor (`cdn/`) se sirven desde el host que instala el paquete (`GET /api/swagger/cdn/*` leyendo `node_modules`), no desde GitHub Pages ni jsDelivr del repo.
 
-Solo necesitas pasar la especificación OpenAPI (objeto o URL) y opciones de marca/auth/export; el componente construye tabs por tag, ejemplos JSON, panel Doc (`x-iss-doc-md`), Try it out con JWT y exportaciones.
-
-## Uso npm (Azure Functions / workers)
+## Instalación
 
 ```bash
 npm install @jeff-aporta/is-swagger
 ```
+
+Requiere token npm con acceso al scope `@jeff-aporta` (paquete **restricted**). Ejemplo `.npmrc` local (no versionar):
+
+```ini
+@jeff-aporta:registry=https://registry.npmjs.org/
+//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+```
+
+## Uso server (Azure Functions / workers)
 
 ```ts
 import { issRspAuth, jsonRequestBody, bearerComponents } from "@jeff-aporta/is-swagger/server/spec";
@@ -22,76 +29,47 @@ const requireIsSwagger = createRequire(__filename);
 const { buildSwaggerUiHtml } = requireIsSwagger("@jeff-aporta/is-swagger/embed/build-html");
 ```
 
-Exports principales: `./server/spec`, `./server/envelope`, `./server/docs`, `./server/postman`, `./server/viewer-pins`, `./embed/build-html`, `./lib/is-document`.
+Exports: `./server/spec`, `./server/envelope`, `./server/docs`, `./server/postman`, `./server/viewer-pins`, `./embed/build-html`, `./lib/is-document`, `./cdn/*`.
 
-## Uso CDN (mínimo)
+## HTML embebido (producción)
 
-```html
-<div id="root"></div>
-<script type="importmap">{ /* react + mui — ver demo/index.html */ }</script>
-<script>
-  window.__SWAGGER_CONFIG__ = {
-    specUrl: "/api/swagger.json",
-    brand: { title: "Mi API", icon: "mdi:api" },
-    auth: { enabled: true, loginUrl: "https://system-login.jeffaporta.workers.dev" },
-    exports: {
-      openApiUrl: "/api/swagger.json",
-      postmanUrl: "/api/swagger/postman.json",
-    },
-  };
-</script>
-<script type="module">
-  import { bootSwaggerApp } from "https://cdn.jsdelivr.net/gh/Jeff-Aporta/Personal@main/components/swagger/cdn/swagger-viewer.min.js";
-  await bootSwaggerApp();
-</script>
-```
+`buildSwaggerUiHtml` genera una página que carga los assets desde **`{origin}/api/swagger/cdn/`** (mismo host que `swagger.json`). El backend debe exponer esos estáticos desde `node_modules/@jeff-aporta/is-swagger/cdn/` (ver `GET-SwaggerCdn` en ISS-AyudasCPIA).
 
-## API programática
-
-```js
-import { mountSwaggerViewer, bootSwaggerApp } from ".../swagger-viewer.min.js";
-
-// Arranque completo (stack + ISAFront + CodeMirror)
-await bootSwaggerApp({ specUrl: "/api/swagger.json", brand: { title: "API", icon: "mdi:api" } });
-
-// Solo montar (stack ya cargado)
-await mountSwaggerViewer({ spec: openApiObject, shell: true }, "#root");
-
-// Global IIFE tras cargar el bundle
-globalThis.ISAComponents.Swagger.bootSwaggerApp(config);
-```
-
-## Config (`__SWAGGER_CONFIG__` / primer argumento)
+## Config del visor (`__SWAGGER_CONFIG__`)
 
 | Campo | Descripción |
 |-------|-------------|
 | `spec` | Objeto OpenAPI 3 |
-| `specUrl` | URL del JSON (alternativa a `spec`) |
-| `brand.title`, `brand.icon` | Marca en `AppShell` (meta `application-name` / `app-icon`) |
-| `auth.loginUrl` | Base system-login para JWT de prueba |
-| `auth.enabled` | `false` desactiva login |
+| `specUrl` | URL del JSON |
+| `brand.title`, `brand.icon` | Marca en `AppShell` |
+| `auth.loginUrl` | Base system-login / portal para JWT de prueba |
 | `exports.openApiUrl`, `exports.postmanUrl` | Enlaces de descarga |
-| `frontLinks` | `[{ label, url }]` paneles GH Pages |
-| `shell` | `false` omite `AppShell` (solo cuerpo) |
-| `ns` | Namespace ISAFront (default `ISA`) |
+| `shell` | `false` omite `AppShell` |
 
 ## Extensiones ISS
 
-- `x-iss-doc-md` en operación → pestaña **Doc** (Markdown vía `marked`)
-- `x-iss-lookup` en parámetro → autocomplete contra API
-- `x-iss-input-recommendation` en parámetro o propiedad de body → endpoint + filtro `f` recomendado (declarativo en JSON: `inputRecommendations`, `fPresets`)
+- `x-iss-doc-md` → pestaña **Doc** (Markdown)
+- `x-iss-lookup` → autocomplete contra API
+- `x-iss-input-recommendation` → endpoint + filtro recomendado
 
-## Build
+## Build y publicación
 
 ```bash
 cd components/swagger
 npm run build
-cd ../../apps/src/scripts
-node front/gen-component-demo.mjs --component swagger
+npm run publish:restricted
 ```
+
+El build sincroniza la versión en `server/viewer-pins.ts` y `cdn/versions.json`.
 
 ## Demo local
 
-Servir `components/swagger/demo/` (p. ej. Live Server puerto 5500) o abrir tras `gen-component-demo`.
+Servir `demo/` con Live Server (puerto 5500). Usa bundles en `demo/cdn/` (copia local del build). No hay demo pública en GitHub Pages.
+
+```bash
+npm run build
+cd ../../apps/src/scripts
+node front/gen-component-demo.mjs --component swagger
+```
 
 Parámetro `?spec=https://…/openapi.json` carga otra especificación.

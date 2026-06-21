@@ -1,13 +1,13 @@
 /**
- * HTML mínimo para hosts (Azure Functions, workers) — boot @jeff-aporta/is-swagger por CDN.
+ * HTML mínimo para hosts (Azure Functions, workers) — assets del visor vía npm.
  * Publicado en npm como @jeff-aporta/is-swagger/embed/build-html.
  *
  * @param {object} opts
  * @param {string} opts.specUrl
  * @param {string} [opts.title]
- * @param {string} [opts.viewerRef] — pin jsDelivr swagger-viewer@ref
+ * @param {string} [opts.viewerRef] — versión npm (legacy; default: misma origin /swagger/cdn)
  * @param {string} [opts.frontSharedRef]
- * @param {string} [opts.viewerRepo] — default Jeff-Aporta/swagger-viewer
+ * @param {string} [opts.viewerRepo] — legacy (nombre paquete npm)
  * @param {string} [opts.localCdnBase] — ej. http://localhost:5502/api/swagger/cdn
  * @param {object} [opts.config] — resto de __SWAGGER_CONFIG__
  */
@@ -16,8 +16,7 @@ export function buildSwaggerViewerHtml(opts) {
   const title = opts.title || "API";
   const viewerRef = opts.viewerRef || "main";
   const fsRef = opts.frontSharedRef || "a5a6597";
-  const viewerRepo = opts.viewerRepo || "Jeff-Aporta/swagger-viewer";
-  const viewerBase = resolveViewerBase(specUrl, viewerRepo, viewerRef, opts.localCdnBase);
+  const viewerBase = resolveViewerBase(specUrl, opts.localCdnBase);
   const fsBase = `https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@${fsRef}/cdn`;
 
   const authKind = opts.authKind || (opts.authLoginUrl ? "system-login" : "portal");
@@ -137,12 +136,9 @@ export function buildSwaggerUiHtml(openApiJsonUrl, opts = {}) {
   });
 }
 
-function resolveViewerBase(specUrl, viewerRepo, viewerRef, localCdnBase) {
+function resolveViewerBase(specUrl, localCdnBase) {
   if (localCdnBase) return localCdnBase.replace(/\/$/, "");
-  if (isLocalHostUrl(specUrl)) {
-    return `${apiBaseFromSpecUrl(specUrl)}/swagger/cdn`;
-  }
-  return `https://cdn.jsdelivr.net/gh/${viewerRepo}@${viewerRef}/cdn`;
+  return `${apiBaseFromSpecUrl(specUrl)}/swagger/cdn`;
 }
 
 function apiBaseFromSpecUrl(specUrl) {
@@ -154,14 +150,6 @@ function apiOriginFromSpecUrl(specUrl) {
     return new URL(specUrl).origin;
   } catch {
     return "";
-  }
-}
-
-function isLocalHostUrl(url) {
-  try {
-    return /localhost|127\.0\.0\.1|\[::1\]/i.test(new URL(url).hostname);
-  } catch {
-    return false;
   }
 }
 

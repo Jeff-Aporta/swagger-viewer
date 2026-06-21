@@ -1,9 +1,10 @@
 {
   "componentId": "swagger",
   "slug": "swagger-viewer",
-  "repo": "Jeff-Aporta/swagger-viewer",
+  "pkg": "@jeff-aporta/is-swagger",
   "cdnPath": "cdn",
-  "componentRef": "fefe32c",
+  "componentRef": "0.1.5",
   "refExport": "SWAGGER_VIEWER_REF",
-  "note": "Pin jsDelivr swagger-viewer@componentRef. Actualizar con sync-component-refs.mjs --from-git --component swagger"
+  "distribution": "npm",
+  "note": "Paquete npm privado. Runtime: /api/swagger/cdn del host (node_modules) o ruta local en demo."
 }

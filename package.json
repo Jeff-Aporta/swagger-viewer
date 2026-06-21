@@ -1,7 +1,7 @@
 {
   "name": "@jeff-aporta/is-swagger",
-  "version": "0.1.4",
-  "description": "Visor OpenAPI @isa-components/swagger — CDN + utilidades server (spec, Postman, embed HTML).",
+  "version": "0.1.5",
+  "description": "Visor OpenAPI React/MUI — paquete npm (@jeff-aporta/is-swagger): viewer CDN bundles + utilidades server (spec, Postman, embed HTML).",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -24,6 +24,7 @@
   },
   "exports": {
     "./package.json": "./package.json",
+    "./cdn/*": "./cdn/*",
     "./embed/build-html": {
       "types": "./dist/embed/build-html.d.ts",
       "import": "./dist/embed/build-html.js",
@@ -72,13 +73,15 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "publish:restricted": "npm publish --access restricted"
   },
   "devDependencies": {
     "typescript": "^5.8.2"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "restricted",
+    "registry": "https://registry.npmjs.org/"
   },
   "repository": {
     "type": "git",

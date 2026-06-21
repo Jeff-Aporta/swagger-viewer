@@ -35,6 +35,25 @@ const EMBED_JS = [
     { from: "src/lib/is-document.js", outDir: "lib", name: "is-document" },
 ];
 
+function syncPinsFromPackage() {
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    const version = String(pkg.version || "").trim();
+    if (!version) return;
+
+    const pinsPath = join(root, "server", "viewer-pins.ts");
+    let pins = readFileSync(pinsPath, "utf8");
+    pins = pins.replace(/SWAGGER_VIEWER_VERSION = "[^"]+"/, `SWAGGER_VIEWER_VERSION = "${version}"`);
+    writeFileSync(pinsPath, pins, "utf8");
+
+    const versionsPath = join(CDN_DIR, "versions.json");
+    const versions = JSON.parse(readFileSync(versionsPath, "utf8"));
+    writeFileSync(
+        versionsPath,
+        `${JSON.stringify({ ...versions, componentRef: version, pkg: pkg.name }, null, 2)}\n`,
+        "utf8",
+    );
+}
+
 function minifyCss(css) {
     return css
         .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -140,6 +159,7 @@ export function isDocumentText(doc: Record<string, unknown>): string;
 }
 
 function build() {
+    syncPinsFromPackage();
     buildCdn();
     buildEmbedJs();
     writeEmbedTypes();
