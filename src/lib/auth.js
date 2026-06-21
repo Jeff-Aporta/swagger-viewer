@@ -5,6 +5,7 @@ import {
   stripContapymeEmail,
   formatSessionDisplayName,
   formatSessionChipLabel,
+  normalizeContapymeLoginId,
 } from "../../../front-shared/cdn/isa/js/core/format.js";
 
 export { stripContapymeEmail, formatSessionDisplayName, formatSessionChipLabel };
@@ -152,7 +153,7 @@ export async function fetchTestJwt(authBase, username, password, opts = {}) {
   const loginPath = opts.loginPath || (portal ? "/api/auth/portal-login" : "/api/auth/test-token");
   const endpoint = resolveLoginEndpoint(authBase, loginPath, portal ? "portal" : opts.loginKind || "system-login");
   const body = portal
-    ? { semail: String(username || "").trim(), password }
+    ? { semail: normalizeContapymeLoginId(username), password }
     : { username, password: wrapPassword(password) };
   let res;
   try {
