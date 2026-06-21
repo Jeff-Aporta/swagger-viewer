@@ -77,3 +77,103 @@
 .isa-sw-demo__parse-err {
   flex-shrink: 0;
 }
+
+/* Drawer editor IS — portal MUI (fuera de .isa-sw-viewer); sigue data-mui-color-scheme */
+html[data-mui-color-scheme="dark"] .isa-sw-demo__drawer-paper.MuiPaper-root,
+html.dark-mode .isa-sw-demo__drawer-paper.MuiPaper-root {
+  color: #e8f4ff !important;
+  background: linear-gradient(
+    165deg,
+    rgba(30, 144, 255, 0.12) 0%,
+    rgba(99, 102, 241, 0.07) 38%,
+    rgba(15, 34, 54, 0.94) 100%
+  ) !important;
+  background-color: transparent !important;
+  border-top: 1px solid rgba(30, 144, 255, 0.28) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow:
+    0 -8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-demo__drawer-paper.MuiPaper-root {
+  color: #0a2540 !important;
+  background: linear-gradient(
+    165deg,
+    rgba(30, 144, 255, 0.04) 0%,
+    rgba(99, 102, 241, 0.025) 38%,
+    rgba(255, 255, 255, 0.96) 100%
+  ) !important;
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-top: 1px solid rgba(30, 144, 255, 0.18) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 -6px 28px rgba(15, 23, 42, 0.08);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-demo__drawer-bar,
+html.dark-mode .isa-sw-demo__drawer-bar {
+  color: #e8f4ff;
+  border-bottom: 1px solid rgba(30, 144, 255, 0.28);
+  border-left: 4px solid #1e90ff;
+  background: linear-gradient(90deg, rgba(30, 144, 255, 0.16), transparent 72%);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-demo__drawer-bar {
+  color: #0a2540;
+  border-bottom: 1px solid rgba(30, 144, 255, 0.14);
+  border-left: 4px solid #1e90ff;
+  background: rgba(30, 144, 255, 0.07);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-demo__drawer-title,
+html.dark-mode .isa-sw-demo__drawer-title {
+  color: #e8f4ff;
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-demo__drawer-title {
+  color: #0a2540;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-demo__cm-wrap,
+html.dark-mode .isa-sw-demo__cm-wrap {
+  background: rgba(13, 33, 55, 0.45);
+  border-top-color: rgba(30, 144, 255, 0.22);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-demo__cm-wrap {
+  background: rgba(232, 238, 245, 0.55);
+  border-top-color: rgba(30, 144, 255, 0.14);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-demo__cm-hint,
+html.dark-mode .isa-sw-demo__cm-hint {
+  color: #9ec5eb;
+  border-top-color: rgba(30, 144, 255, 0.22);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-demo__cm-hint {
+  color: #4a6278;
+  border-top-color: rgba(30, 144, 255, 0.14);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-demo__drawer-actions .MuiButton-outlined,
+html.dark-mode .isa-sw-demo__drawer-actions .MuiButton-outlined {
+  border-color: rgba(30, 144, 255, 0.35);
+  color: #e8f4ff;
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-demo__drawer-actions .MuiButton-outlined {
+  border-color: rgba(30, 144, 255, 0.28);
+  color: #0a2540;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-demo__drawer-actions .MuiIconButton-root,
+html.dark-mode .isa-sw-demo__drawer-actions .MuiIconButton-root {
+  color: #9ec5eb;
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-demo__drawer-actions .MuiIconButton-root {
+  color: #4a6278;
+}
