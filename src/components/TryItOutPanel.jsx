@@ -15,6 +15,8 @@ import { getStoredJwt } from "../lib/auth.js";
 import { joinApiUrl } from "../lib/server-base.js";
 import { fetchApiRaw, extractEnvelopeError } from "../lib/api-fetch.js";
 import { formatHttpError, extractApiError } from "../lib/http-error.js";
+import { formatUnitTestSse, isEventStreamResponse, parseSseDataLines } from "../lib/sse-parse.js";
+import { renderMarkdown } from "../lib/markdown.js";
 import { useServerBase } from "../context/ServerBaseContext.jsx";
 import { SwIcon } from "../lib/sw-icon.jsx";
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
@@ -140,6 +142,24 @@ export function TryItOutPanel({
       const started = performance.now();
       const { data, res, text, ok } = await fetchApiRaw(url, init);
       const elapsed = Math.round(performance.now() - started);
+      if (isEventStreamResponse(res, text)) {
+        const events = parseSseDataLines(text);
+        const sse = formatUnitTestSse(events);
+        if (!ok) {
+          setApiErr(formatHttpError(res.status, { statusText: res.statusText, endpoint: url }));
+        } else if (sse.ok === false) {
+          setApiErr("El test unitario reportó fallos. Revise los pasos marcados con ❌.");
+        }
+        setResult({
+          status: res.status,
+          statusText: res.statusText,
+          elapsed,
+          body: sse.raw || text,
+          sseMarkdown: sse.markdown,
+          sseOk: sse.ok,
+        });
+        return;
+      }
       let pretty = text;
       try {
         pretty = jsonPretty(typeof data === "object" ? data : JSON.parse(text));
@@ -253,8 +273,17 @@ export function TryItOutPanel({
           {apiErr ? <HttpErrorAlert severity="warning" message={apiErr} sx={{ mb: 1 }} /> : null}
           <Typography variant="caption" color="text.secondary">
             {result.status} {result.statusText} · {result.elapsed} ms
+            {result.sseOk === true ? " · test OK" : result.sseOk === false ? " · test con fallos" : ""}
           </Typography>
-          <JsonCodeBlock value={result.body} minHeight="10rem" />
+          {result.sseMarkdown ? (
+            <Box
+              className="isa-sw-doc isa-sw-tryit-sse"
+              sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: "action.hover", overflow: "auto", maxHeight: "28rem" }}
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(result.sseMarkdown) }}
+            />
+          ) : (
+            <JsonCodeBlock value={result.body} minHeight="10rem" />
+          )}
         </Box>
       ) : null}
     </Box>

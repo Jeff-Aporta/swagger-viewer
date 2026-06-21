@@ -8,7 +8,7 @@ import {
   normalizeContapymeLoginId,
 } from "../../../front-shared/cdn/isa/js/core/format.js";
 
-export { stripContapymeEmail, formatSessionDisplayName, formatSessionChipLabel };
+export { stripContapymeEmail, formatSessionDisplayName, formatSessionChipLabel, normalizeContapymeLoginId };
 
 /** Etiqueta visible del chip de sesión — primer nombre, sin mayúsculas sostenidas. */
 export function formatSessionUsername(value) {

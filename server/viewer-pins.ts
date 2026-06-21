@@ -6,4 +6,4 @@ export const SWAGGER_VIEWER_VERSION = "0.1.5";
 export const SWAGGER_VIEWER_REF = SWAGGER_VIEWER_VERSION;
 /** Alias histórico (nombre del paquete npm). */
 export const SWAGGER_VIEWER_REPO = SWAGGER_VIEWER_PKG;
-export const SWAGGER_FRONT_SHARED_REF = "a5a6597";
+export const SWAGGER_FRONT_SHARED_REF = "846b658";

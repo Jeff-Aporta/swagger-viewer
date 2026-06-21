@@ -214,7 +214,6 @@ export function SwaggerViewer({ config, spec: specProp }) {
             session={session}
             ns={ns}
             onLogin={() => globalThis.__isaSwaggerAuth?.openLogin?.()}
-            onJwt={() => globalThis.__isaSwaggerAuth?.openJwt?.()}
             onLogout={() => {
               clearJwt();
               globalThis.__isaSwaggerAuth?.clear?.();

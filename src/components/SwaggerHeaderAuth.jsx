@@ -12,7 +12,7 @@ const HEADER_CHIP_SX = {
 };
 
 /** Botón de sesión en AppBar — mismo estilo que isa-patyia LoginButton. */
-export function SwaggerHeaderAuth({ enabled, session, onLogin, onJwt, onLogout, ns = "ISA" }) {
+export function SwaggerHeaderAuth({ enabled, session, onLogin, onLogout, ns = "ISA" }) {
   const [menuEl, setMenuEl] = React.useState(null);
 
   if (!enabled) return null;
@@ -36,17 +36,6 @@ export function SwaggerHeaderAuth({ enabled, session, onLogin, onJwt, onLogout, 
           />
         </Tooltip>
         <Menu anchorEl={menuEl} open={Boolean(menuEl)} onClose={() => setMenuEl(null)}>
-          <MenuItem
-            onClick={() => {
-              setMenuEl(null);
-              onJwt?.();
-            }}
-          >
-            <ListItemIcon>
-              <SwIcon icon="mdi:key-outline" size={18} ns={ns} />
-            </ListItemIcon>
-            <ListItemText>Pegar JWT</ListItemText>
-          </MenuItem>
           <MenuItem
             onClick={() => {
               setMenuEl(null);

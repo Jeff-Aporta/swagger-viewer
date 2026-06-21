@@ -547,6 +547,22 @@ html[data-mui-color-scheme="light"] .isa-sw-resp-card .MuiAccordionSummary-root 
   opacity: 0.9;
 }
 
+html[data-mui-color-scheme="dark"] .isa-sw-toolbar .isa-sw-front-link,
+html.dark-mode .isa-sw-toolbar .isa-sw-front-link {
+  color: #c8e4ff;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-toolbar .isa-sw-front-link:hover,
+html.dark-mode .isa-sw-toolbar .isa-sw-front-link:hover {
+  color: #ecf6ff;
+  opacity: 1;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-toolbar .isa-sw-front-link iconify-icon,
+html.dark-mode .isa-sw-toolbar .isa-sw-front-link iconify-icon {
+  opacity: 1;
+}
+
 .isa-sw-export-group + .isa-sw-export-group {
   padding-left: 0.75rem;
   margin-left: 0.25rem;

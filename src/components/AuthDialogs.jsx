@@ -4,13 +4,18 @@ import {
   fetchTestJwt,
   storeJwt,
   clearJwt,
-  normalizeJwt,
   formatLocalDateTime,
   stripContapymeEmail,
+  normalizeContapymeLoginId,
 } from "../lib/auth.js";
-import { parseJwtClaims } from "../lib/lookup-label.js";
 import { SwIcon } from "../lib/sw-icon.jsx";
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
+import {
+  LoginHeaderBand,
+  loginDialogProps,
+  contapymeLoginTextFieldProps,
+  LOGIN_REMEMBER_LABEL,
+} from "../../../front-shared/cdn/isa/js/ui/login-surface.js";
 
 const { useState, useEffect, useCallback } = React;
 const {
@@ -29,18 +34,21 @@ const {
   Tooltip,
 } = MaterialUI;
 
+function swaggerUiIcon(ns) {
+  return function SwaggerUiIcon(props) {
+    return <SwIcon {...props} ns={ns} />;
+  };
+}
+
 export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionChange, ns = "ISA" }) {
   const isPortal = authKind === "portal" || String(loginPath || "").includes("portal-login");
   const [loginOpen, setLoginOpen] = useState(false);
-  const [jwtOpen, setJwtOpen] = useState(false);
   const [loginHint, setLoginHint] = useState("");
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [jwt, setJwt] = useState("");
   const [loginErr, setLoginErr] = useState("");
-  const [jwtErr, setJwtErr] = useState("");
   const [busy, setBusy] = useState(false);
 
   const loadForm = useCallback(() => {
@@ -58,17 +66,10 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
     setLoginOpen(true);
   }, [loadForm]);
 
-  const openJwt = useCallback(() => {
-    setJwt("");
-    setJwtErr("");
-    setJwtOpen(true);
-  }, []);
-
   useEffect(() => {
     if (!enabled) return;
     globalThis.__isaSwaggerAuth = {
       openLogin,
-      openJwt,
       clear: () => {
         clearJwt();
         onSessionChange?.(null);
@@ -91,36 +92,37 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
         /* ignore */
       }
     };
-  }, [enabled, openLogin, openJwt, onSessionChange]);
+  }, [enabled, openLogin, onSessionChange]);
 
   if (!enabled) return null;
 
   async function submitLogin() {
     if (!user.trim() || !pass) {
-      setLoginErr(isPortal ? "Correo y contraseña requeridos." : "Usuario y contraseña requeridos.");
+      setLoginErr("Usuario y contraseña requeridos");
       return;
     }
+    const loginId = isPortal ? normalizeContapymeLoginId(user) : user.trim();
     setBusy(true);
     setLoginErr("");
     try {
       saveCredentials(user.trim(), pass, remember);
-      const data = await fetchTestJwt(authBase, user.trim(), pass, {
+      const data = await fetchTestJwt(authBase, loginId, pass, {
         loginKind: isPortal ? "portal" : authKind || "system-login",
         loginPath,
       });
       storeJwt(data.token, {
         expiresAt: data.expiresAt,
-        username: data.username || user.trim(),
-        displayName: data.displayName || data.username || user.trim(),
+        username: data.username || loginId,
+        displayName: data.displayName || data.username || loginId,
         claims: data.claims || null,
       });
       setPass("");
       setLoginOpen(false);
       setLoginHint("");
-      const who = data.displayName || stripContapymeEmail(data.username || user.trim()) || user.trim();
+      const who = data.displayName || stripContapymeEmail(data.username || loginId) || loginId;
       onSessionChange?.({
         token: data.token,
-        username: data.username || user.trim(),
+        username: data.username || loginId,
         expiresAt: data.expiresAt,
         message: `Autorizado como ${who}${data.expiresAt ? ` · expira ${formatLocalDateTime(data.expiresAt)}` : ""}`,
       });
@@ -131,37 +133,33 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
     }
   }
 
-  function submitJwt() {
-    const token = normalizeJwt(jwt);
-    if (!token) {
-      setJwtErr("Pega un JWT válido.");
-      return;
-    }
-    storeJwt(token, { claims: parseJwtClaims(token) });
-    setJwtOpen(false);
-    onSessionChange?.({ token, message: "JWT aplicado manualmente." });
-  }
+  const loginUi = { Icon: swaggerUiIcon(ns) };
 
   return (
-    <>
-      <Dialog open={loginOpen} onClose={busy ? undefined : () => setLoginOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <SwIcon icon="mdi:login" size={22} ns={ns} />
-          Iniciar sesión
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 0.5 }}>
-            {loginHint ? <Alert severity="warning">{loginHint}</Alert> : null}
-            {loginErr ? <HttpErrorAlert message={loginErr} /> : null}
+    <Dialog
+        {...loginDialogProps({
+          open: loginOpen,
+          onClose: busy ? undefined : () => { setLoginOpen(false); setShowPass(false); },
+        })}
+      >
+        {LoginHeaderBand(React, MaterialUI, loginUi, {
+          icon: "mdi:account-key-outline",
+          title: "Iniciar sesión",
+          accent: "#1e90ff",
+        })}
+        <DialogContent sx={{ pt: 2 }}>
+          {loginHint ? <Alert severity="warning" sx={{ mb: 2 }}>{loginHint}</Alert> : null}
+          {loginErr ? <HttpErrorAlert message={loginErr} sx={{ mb: 2 }} /> : null}
+          <Stack spacing={2}>
             <TextField
-              label={isPortal ? "Correo electrónico" : "Usuario"}
-              value={user}
-              onChange={(e) => setUser(e.target.value)}
-              fullWidth
-              autoFocus
-              size="small"
-              autoComplete="username"
-              type={isPortal ? "email" : "text"}
+              {...contapymeLoginTextFieldProps({
+                value: user,
+                onChange: (e) => setUser(e.target.value),
+                fullWidth: true,
+                autoFocus: true,
+                size: "small",
+                onKeyDown: (e) => { if (e.key === "Enter") submitLogin(); },
+              })}
             />
             <TextField
               label="Contraseña"
@@ -193,61 +191,17 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
               }}
             />
             <FormControlLabel
-              control={<Checkbox checked={remember} onChange={(e) => setRemember(!!e.target.checked)} />}
-              label={isPortal ? "Recordar correo y contraseña" : "Recordar usuario y contraseña"}
+              control={<Checkbox checked={remember} onChange={(e) => setRemember(!!e.target.checked)} size="small" />}
+              label={LOGIN_REMEMBER_LABEL}
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setLoginOpen(false)} disabled={busy} startIcon={<SwIcon icon="mdi:close" size={18} ns={ns} />}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            disabled={busy || !user.trim() || !pass}
-            onClick={submitLogin}
-            startIcon={<SwIcon icon="mdi:key-variant" size={18} ns={ns} />}
-          >
-            {busy ? "Solicitando JWT…" : isPortal ? "Iniciar sesión" : "Obtener JWT"}
+        <DialogActions>
+          <Button onClick={() => setLoginOpen(false)} disabled={busy}>Cancelar</Button>
+          <Button variant="contained" disabled={busy || !user.trim()} onClick={submitLogin}>
+            {busy ? "Entrando…" : (isPortal ? "Entrar" : "Obtener JWT")}
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Dialog open={jwtOpen} onClose={() => setJwtOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <SwIcon icon="mdi:key-outline" size={22} ns={ns} />
-          Pegar JWT
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 0.5 }}>
-            {jwtErr ? <HttpErrorAlert message={jwtErr} /> : null}
-            <TextField
-              label="Token"
-              value={jwt}
-              onChange={(e) => setJwt(e.target.value)}
-              fullWidth
-              multiline
-              minRows={4}
-              placeholder="eyJhbG…"
-              size="small"
-              inputProps={{ style: { fontFamily: "ui-monospace, monospace", fontSize: 13 } }}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setJwtOpen(false)} startIcon={<SwIcon icon="mdi:close" size={18} ns={ns} />}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            disabled={!jwt.trim()}
-            onClick={submitJwt}
-            startIcon={<SwIcon icon="mdi:check" size={18} ns={ns} />}
-          >
-            Aplicar JWT
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
   );
 }
