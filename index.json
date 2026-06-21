@@ -8,7 +8,7 @@
     "themeColor": "#1e90ff",
     "themeLsKey": "jeffaporta:swagger-ui-theme",
     "icon": "mdi:file-code-outline",
-    "canonical": "https://jeff-aporta.github.io/swagger-viewer/",
+    "canonical": "./",
     "ogSiteName": "IS-Swagger",
     "ogTitle": "IS-Swagger",
     "imageAlt": "Visor OpenAPI IS-Swagger con tabs, ejemplos y Try it out"

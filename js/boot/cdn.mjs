@@ -18,15 +18,15 @@ export const bootHelperUrl = isDevHost
   : `${CDN}/boot-helper.mjs?v=${PIN}`;
 
 /* @isa-swagger-boot:start */
-/** @jeff-aporta/swagger-viewer — pin: sync-component-refs.mjs */
-export const SWAGGER_VIEWER_REF = "fefe32c";
+/** @jeff-aporta/is-swagger — versión npm (sync build → cdn/versions.json) */
+export const SWAGGER_VIEWER_REF = "0.1.5";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;
   if (isDevHost) {
     return new URL("../../../components/swagger/cdn/", base).href.replace(/\/?$/, "/");
   }
-  return `https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@${SWAGGER_VIEWER_REF}/cdn/`;
+  return new URL("cdn/", base).href.replace(/\/?$/, "/");
 }
 
 function ensureSwaggerStylesheet(href) {
