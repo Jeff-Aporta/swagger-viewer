@@ -16,6 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: swagger-viewer
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Jeff-Aporta/neon-glass
+          path: neon-glass
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Jeff-Aporta/front-shared
+          path: front-shared
 
       - uses: actions/setup-node@v4
         with:
@@ -24,6 +36,7 @@ jobs:
           scope: "@jeff-aporta"
 
       - name: Verificar versión
+        working-directory: swagger-viewer
         run: |
           PKG=$(node -p "require('./package.json').version")
           if [ "$PKG" != "${{ github.event.inputs.tag }}" ]; then
@@ -32,7 +45,10 @@ jobs:
           fi
 
       - run: npm ci
+        working-directory: swagger-viewer
       - run: npm run build
+        working-directory: swagger-viewer
       - run: npm publish --access restricted
+        working-directory: swagger-viewer
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
