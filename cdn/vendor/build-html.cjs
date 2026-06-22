@@ -46,25 +46,21 @@ function loadHtmlTemplate() {
   }
   throw new Error("embed/index.html no encontrado (cdn/embed-index.html)");
 }
-function loadPkgVersion() {
+function loadViewerRef() {
   const here = moduleDir();
-  const tries = [
-    (0, import_node_path.join)(here, "..", "versions.json"),
-    (0, import_node_path.join)(here, "..", "..", "package.json")
-  ];
+  const tries = [(0, import_node_path.join)(here, "..", "versions.json"), (0, import_node_path.join)(here, "..", "..", "cdn", "versions.json")];
   for (const p of tries) {
     if (!(0, import_node_fs.existsSync)(p)) continue;
     const raw = JSON.parse((0, import_node_fs.readFileSync)(p, "utf8"));
     if (raw.componentRef) return String(raw.componentRef);
-    if (raw.version) return String(raw.version);
   }
-  return "0.1.18";
+  return "main";
 }
-var SWAGGER_VIEWER_VERSION = loadPkgVersion();
-var SWAGGER_FRONT_SHARED_REF = "f215e22";
+var SWAGGER_VIEWER_REF = loadViewerRef();
+var SWAGGER_FRONT_SHARED_REF = "37aa772";
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-function swaggerViewerCdnJsdelivr(ref = SWAGGER_VIEWER_VERSION) {
-  const pin = String(ref || SWAGGER_VIEWER_VERSION).replace(/^v/, "");
+function swaggerViewerCdnJsdelivr(ref = SWAGGER_VIEWER_REF) {
+  const pin = String(ref || SWAGGER_VIEWER_REF).replace(/^v/, "");
   return `https://cdn.jsdelivr.net/gh/${SWAGGER_VIEWER_GH_REPO}@${pin}/cdn`;
 }
 function buildSwaggerViewerHtml(opts) {
@@ -137,7 +133,7 @@ function resolveViewerBase(specUrl, localCdnBase, viewerRef) {
   if (viewerRef && viewerRef !== "main") {
     return swaggerViewerCdnJsdelivr(viewerRef);
   }
-  return swaggerViewerCdnJsdelivr(SWAGGER_VIEWER_VERSION);
+  return swaggerViewerCdnJsdelivr(SWAGGER_VIEWER_REF);
 }
 function apiOriginFromSpecUrl(specUrl) {
   try {

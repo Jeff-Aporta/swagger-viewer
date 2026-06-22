@@ -1,119 +1,15 @@
 {
-  "name": "@jeff-aporta/is-swagger",
-  "version": "0.1.18",
-  "description": "Visor OpenAPI React/MUI — paquete npm (@jeff-aporta/is-swagger): viewer CDN bundles + utilidades server (spec, Postman, embed HTML).",
-  "type": "module",
-  "sideEffects": false,
-  "files": [
-    "dist",
-    "cdn",
-    "README.md"
-  ],
-  "typesVersions": {
-    "*": {
-      "server/build-spec": [
-        "dist/server/build-spec.d.ts"
-      ],
-      "server/build-exports": [
-        "dist/server/build-exports.d.ts"
-      ],
-      "server/envelope": [
-        "dist/server/envelope.d.ts"
-      ],
-      "server/spec": [
-        "dist/server/spec.d.ts"
-      ],
-      "server/docs": [
-        "dist/server/docs.d.ts"
-      ],
-      "server/postman": [
-        "dist/server/postman.d.ts"
-      ],
-      "server/viewer-pins": [
-        "dist/server/viewer-pins.d.ts"
-      ],
-      "server": [
-        "dist/server/index.d.ts"
-      ],
-      "embed/build-html": [
-        "dist/embed/build-html.d.ts"
-      ],
-      "lib/openapi/is-document": [
-        "dist/lib/openapi/is-document.d.ts"
-      ]
-    }
-  },
-  "exports": {
-    "./package.json": "./package.json",
-    "./cdn/*": "./cdn/*",
-    "./embed/build-html": {
-      "types": "./dist/embed/build-html.d.ts",
-      "import": "./dist/embed/build-html.js",
-      "require": "./dist/embed/build-html.cjs"
-    },
-    "./lib/openapi/is-document": {
-      "types": "./dist/lib/openapi/is-document.d.ts",
-      "import": "./dist/lib/openapi/is-document.js",
-      "require": "./dist/lib/openapi/is-document.cjs"
-    },
-    "./server/build-spec": {
-      "types": "./dist/server/build-spec.d.ts",
-      "import": "./dist/server/build-spec.js",
-      "require": "./dist/server/build-spec.cjs"
-    },
-    "./server/build-exports": {
-      "types": "./dist/server/build-exports.d.ts",
-      "import": "./dist/server/build-exports.js",
-      "require": "./dist/server/build-exports.cjs"
-    },
-    "./server/envelope": {
-      "types": "./dist/server/envelope.d.ts",
-      "import": "./dist/server/envelope.js",
-      "require": "./dist/server/envelope.cjs"
-    },
-    "./server/spec": {
-      "types": "./dist/server/spec.d.ts",
-      "import": "./dist/server/spec.js",
-      "require": "./dist/server/spec.cjs"
-    },
-    "./server/docs": {
-      "types": "./dist/server/docs.d.ts",
-      "import": "./dist/server/docs.js",
-      "require": "./dist/server/docs.cjs"
-    },
-    "./server/postman": {
-      "types": "./dist/server/postman.d.ts",
-      "import": "./dist/server/postman.js",
-      "require": "./dist/server/postman.cjs"
-    },
-    "./server/viewer-pins": {
-      "types": "./dist/server/viewer-pins.d.ts",
-      "import": "./dist/server/viewer-pins.js",
-      "require": "./dist/server/viewer-pins.cjs"
-    },
-    "./server": {
-      "types": "./dist/server/index.d.ts",
-      "import": "./dist/server/index.js",
-      "require": "./dist/server/index.cjs"
-    }
-  },
+  "private": true,
+  "description": "IS-Swagger — visor OpenAPI React/MUI (solo CDN frontend; utilidades server en cdn/vendor para hosts).",
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "prepublishOnly": "npm run build",
-    "publish:restricted": "npm publish --access restricted"
+    "build": "node scripts/build.mjs"
   },
   "devDependencies": {
-    "esbuild": "^0.25.12",
-    "typescript": "^5.8.2"
-  },
-  "publishConfig": {
-    "access": "restricted",
-    "registry": "https://registry.npmjs.org/"
+    "esbuild": "^0.25.12"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Jeff-Aporta/swagger-viewer.git"
   },
-  "license": "UNLICENSED",
-  "private": false
+  "license": "UNLICENSED"
 }

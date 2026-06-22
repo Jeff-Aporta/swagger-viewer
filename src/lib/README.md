@@ -11,4 +11,4 @@
 | `nav/` | `expand-stack`, `swagger-url-state` |
 | `brand/` | `viewer-brand` |
 
-Export npm público: `@jeff-aporta/is-swagger/lib/openapi/is-document`.
+Código fuente del visor; el runtime se publica solo en `cdn/`.

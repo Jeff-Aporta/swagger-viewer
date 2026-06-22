@@ -5,7 +5,7 @@
 import { buildOpenApiFromConfig, type IsOpenApiConfig } from "./build-spec.js";
 import { enrichListFilterCatalog } from "./list-filter-schema.js";
 import { openApiToPostmanCollection, type PostmanExportOpts } from "./postman.js";
-import { SWAGGER_FRONT_SHARED_REF, SWAGGER_VIEWER_REF, SWAGGER_VIEWER_REPO } from "./viewer-pins.js";
+import { SWAGGER_FRONT_SHARED_REF, SWAGGER_VIEWER_GH_REPO, SWAGGER_VIEWER_REF } from "./viewer-pins.js";
 
 export type { IsOpenApiConfig } from "./build-spec.js";
 
@@ -127,7 +127,7 @@ function buildEmbedOpts(config: IsOpenApiConfig, specUrl: string, viewer: Record
         isDownloadName: exports?.isDownloadName,
         viewerRef: viewer.viewerRef,
         frontSharedRef: viewer.frontSharedRef,
-        viewerRepo: SWAGGER_VIEWER_REPO,
+        viewerRepo: SWAGGER_VIEWER_GH_REPO,
         localCdnBase: embed.localCdnBase,
     };
 }

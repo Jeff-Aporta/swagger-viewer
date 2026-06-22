@@ -920,11 +920,9 @@ function openApiToPostmanCollection(spec, opts = {}) {
 }
 
 // server/viewer-pins.ts
-var SWAGGER_VIEWER_PKG = "@jeff-aporta/is-swagger";
-var SWAGGER_VIEWER_VERSION = "0.1.18";
-var SWAGGER_VIEWER_REF = SWAGGER_VIEWER_VERSION;
-var SWAGGER_VIEWER_REPO = SWAGGER_VIEWER_PKG;
-var SWAGGER_FRONT_SHARED_REF = "f215e22";
+var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
+var SWAGGER_VIEWER_REF = "dc06816";
+var SWAGGER_FRONT_SHARED_REF = "37aa772";
 
 // server/build-exports.ts
 var OPENAPI_CONFIG_KIND = "insoft.openapi-config";
@@ -1003,7 +1001,7 @@ function buildEmbedOpts(config, specUrl, viewer) {
     isDownloadName: exports2?.isDownloadName,
     viewerRef: viewer.viewerRef,
     frontSharedRef: viewer.frontSharedRef,
-    viewerRepo: SWAGGER_VIEWER_REPO,
+    viewerRepo: SWAGGER_VIEWER_GH_REPO,
     localCdnBase: embed.localCdnBase
   };
 }

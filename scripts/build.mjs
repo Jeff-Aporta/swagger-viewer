@@ -1,11 +1,11 @@
 /**
- * Build @jeff-aporta/is-swagger — CDN viewer + npm server/embed (CJS + ESM).
+ * Build IS-Swagger — bundles CDN frontend + vendor Node (cdn/vendor) para hosts.
  */
 import { readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync, copyFileSync } from "node:fs";
-import { dirname, join, basename } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
@@ -20,31 +20,21 @@ const CSS_KIT = join(root, "..", "front-shared", "cdn", "isa", "css", "kits", "n
 const CSS_IN = join(root, "css", "swagger-viewer.css");
 const CSS_DEMO = join(root, "demo", "css", "demo.css");
 
-const SERVER_ENTRIES = [
-    "server/envelope.ts",
-    "server/spec.ts",
-    "server/docs.ts",
-    "server/postman.ts",
-    "server/viewer-pins.ts",
-    "server/build-spec.ts",
-    "server/list-filter-schema.ts",
-    "server/build-exports.ts",
-    "server/index.ts",
-];
+function gitShortRef() {
+    try {
+        return execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+    } catch {
+        const versions = JSON.parse(readFileSync(join(CDN_DIR, "versions.json"), "utf8"));
+        return String(versions.componentRef || "main");
+    }
+}
 
-const EMBED_JS = [
-    { from: "src/embed/build-html.js", outDir: "embed", name: "build-html" },
-    { from: "src/lib/openapi/is-document.js", outDir: "lib/openapi", name: "is-document" },
-];
-
-function syncPinsFromPackage() {
-    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-    const version = String(pkg.version || "").trim();
-    if (!version) return;
+function syncVersionsAndPins() {
+    const ref = gitShortRef();
 
     const pinsPath = join(root, "server", "viewer-pins.ts");
     let pins = readFileSync(pinsPath, "utf8");
-    pins = pins.replace(/SWAGGER_VIEWER_VERSION = "[^"]+"/, `SWAGGER_VIEWER_VERSION = "${version}"`);
+    pins = pins.replace(/SWAGGER_VIEWER_REF = "[^"]+"/, `SWAGGER_VIEWER_REF = "${ref}"`);
     writeFileSync(pinsPath, pins, "utf8");
 
     const versionsPath = join(CDN_DIR, "versions.json");
@@ -54,10 +44,8 @@ function syncPinsFromPackage() {
         `${JSON.stringify(
             {
                 ...versions,
-                componentRef: version,
-                pkg: pkg.name,
-                distribution: "cdn",
-                jsdelivr: `https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@${version}/cdn`,
+                componentRef: ref,
+                jsdelivr: `https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@${ref}/cdn`,
                 note: "Runtime: jsDelivr GitHub pin o /api/swagger/cdn del host (vendor, sin npm).",
             },
             null,
@@ -115,54 +103,12 @@ function buildCdn() {
     }
 }
 
-function buildServerEntry(rel) {
-    const entry = join(root, rel);
-    const name = basename(rel, ".ts");
-    const outDir = join(root, "dist", "server");
-    mkdirSync(outDir, { recursive: true });
-
-    for (const format of ["esm", "cjs"]) {
-        esbuild.buildSync({
-            entryPoints: [entry],
-            outfile: join(outDir, `${name}.${format === "esm" ? "js" : "cjs"}`),
-            bundle: true,
-            platform: "node",
-            format,
-            target: "node18",
-        });
-    }
-}
-
-function buildEmbedJs() {
-    for (const { from, outDir, name } of EMBED_JS) {
-        const entry = join(root, from);
-        const destDir = join(root, "dist", outDir);
-        mkdirSync(destDir, { recursive: true });
-        esbuild.buildSync({
-            entryPoints: [entry],
-            outfile: join(destDir, `${name}.js`),
-            bundle: true,
-            platform: "node",
-            format: "esm",
-            target: "node18",
-        });
-        esbuild.buildSync({
-            entryPoints: [entry],
-            outfile: join(destDir, `${name}.cjs`),
-            bundle: true,
-            platform: "node",
-            format: "cjs",
-            target: "node18",
-        });
-    }
-}
-
 function copyEmbedToCdn() {
     copyFileSync(join(root, "embed", "boot.mjs"), join(CDN_DIR, "embed-boot.mjs"));
     copyFileSync(join(root, "embed", "index.html"), join(CDN_DIR, "embed-index.html"));
 }
 
-function buildIssExportsBundle() {
+function buildVendorBundles() {
     const outDir = join(root, "cdn", "vendor");
     mkdirSync(outDir, { recursive: true });
     esbuild.buildSync({
@@ -183,40 +129,14 @@ function buildIssExportsBundle() {
     });
 }
 
-function writeEmbedTypes() {
-    writeFileSync(
-        join(root, "dist", "embed", "build-html.d.ts"),
-        `export function buildSwaggerViewerHtml(opts: Record<string, unknown>): string;
-export function buildSwaggerUiHtml(openApiJsonUrl: string, opts?: Record<string, unknown>): string;
-`,
-        "utf8",
-    );
-    writeFileSync(
-        join(root, "dist", "lib", "is-document.d.ts"),
-        `export const IS_DOCUMENT_KIND: string;
-export const IS_DOCUMENT_VERSION: number;
-export function viewerConfigFromBoot(config?: Record<string, unknown>): Record<string, unknown>;
-export function buildIsDocument(config: Record<string, unknown>, spec: Record<string, unknown>): Record<string, unknown>;
-export function parseIsDocument(doc: unknown): { config: Record<string, unknown>; spec: Record<string, unknown> } | null;
-export function isDocumentText(doc: Record<string, unknown>): string;
-`,
-        "utf8",
-    );
-}
-
 function build() {
-    syncPinsFromPackage();
+    syncVersionsAndPins();
     buildCdn();
     copyEmbedToCdn();
-    buildIssExportsBundle();
-    buildEmbedJs();
-    writeEmbedTypes();
-    for (const rel of SERVER_ENTRIES) buildServerEntry(rel);
-    execSync("npx tsc -p tsconfig.build.json", { cwd: root, stdio: "inherit" });
-    console.log("@jeff-aporta/is-swagger build OK");
+    buildVendorBundles();
+    console.log("IS-Swagger build OK");
     console.log("  CDN:", BOOT_JS);
     console.log("  vendor:", join(CDN_DIR, "vendor", "iss-exports.cjs"));
-    console.log("  npm (opcional): dist/server/* dist/embed/*");
 }
 
 build();
