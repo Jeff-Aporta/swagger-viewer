@@ -1,4 +1,4 @@
-import { SwIcon } from "../../../src/lib/sw-icon.jsx";
+import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
 
 const { useEffect, useRef, useState } = React;
 const { Box, Typography } = MaterialUI;

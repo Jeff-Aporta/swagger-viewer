@@ -1,5 +1,5 @@
 /** Pin jsDelivr front-shared + rutas del paquete swagger-viewer. */
-export const PIN = "846b658";
+export const PIN = "13629aa";
 
 const isDevHost =
   typeof location !== "undefined" && /localhost|127\.0\.0\.1|\[::1\]/.test(location.hostname);
@@ -19,7 +19,7 @@ export const bootHelperUrl = isDevHost
 
 /* @isa-swagger-boot:start */
 /** @jeff-aporta/is-swagger — versión npm (sync-component-refs.mjs) */
-export const SWAGGER_VIEWER_REF = "0.1.5";
+export const SWAGGER_VIEWER_REF = "0.1.18";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;
