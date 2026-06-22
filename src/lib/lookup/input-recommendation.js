@@ -1,5 +1,5 @@
 /** Recomendaciones de input (endpoint + filtro f) — extensión x-iss-input-recommendation. */
-import { encodeIssFilterB64 } from "./iss-list-filter.js";
+import { encodeIssFilterB64 } from "../filter/iss-list-filter.js";
 import { joinApiUrl } from "./server-base.js";
 
 export const ISS_INPUT_RECOMMENDATION_EXT = "x-iss-input-recommendation";

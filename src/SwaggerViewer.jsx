@@ -10,9 +10,9 @@ import {
   groupOperationsByTag,
   buildDocIndex,
   buildLookupIndex,
-} from "./lib/openapi.js";
-import { getStoredJwt, clearJwt } from "./lib/auth.js";
-import { applyBrandToDocument, resolveViewerBrand } from "./lib/viewer-brand.js";
+} from "./lib/openapi/openapi.js";
+import { getStoredJwt, clearJwt } from "./lib/auth/auth.js";
+import { applyBrandToDocument, resolveViewerBrand } from "./lib/brand/viewer-brand.js";
 
 const { useState, useEffect, useMemo } = React;
 const { Box, Typography, Alert } = MaterialUI;
@@ -37,7 +37,7 @@ export function SwaggerViewer({ config, spec: specProp }) {
     let cancelled = false;
     (async () => {
       try {
-        const { loadSpec } = await import("./lib/openapi.js");
+        const { loadSpec } = await import("./lib/openapi/openapi.js");
         const loaded = await loadSpec(config);
         if (!cancelled) setSpec(loaded);
       } catch (e) {

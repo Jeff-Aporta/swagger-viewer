@@ -1,9 +1,9 @@
 import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
-import { extractJsonExample, jsonPretty, responseTone } from "../lib/openapi.js";
-import { SwIcon } from "../lib/sw-icon.jsx";
-import { respExpandIndex } from "../lib/expand-stack.js";
+import { extractJsonExample, jsonPretty, responseTone } from "../lib/openapi/openapi.js";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { respExpandIndex } from "../lib/nav/expand-stack.js";
 import { useExpandStack } from "../context/ExpandStackContext.jsx";
-import { useGlassColors, glassSurfaceSx } from "../lib/glass.jsx";
+import { useGlassColors, glassSurfaceSx } from "../lib/ui/glass.jsx";
 
 const {
   Accordion,
@@ -72,7 +72,7 @@ export function ResponsesSection({ responses = {}, tagIndex, opIndex, ns = "ISA"
             </AccordionSummary>
             <AccordionDetails>
               {example !== undefined ? (
-                <JsonCodeBlock value={jsonPretty(example)} minHeight="8rem" />
+                <JsonCodeBlock value={jsonPretty(example)} />
               ) : (
                 <Typography variant="caption" color="text.secondary">
                   Sin ejemplo JSON.

@@ -3,12 +3,12 @@ import { RequestBodySection } from "./RequestBodySection.jsx";
 import { ResponsesSection } from "./ResponsesSection.jsx";
 import { DocPanel } from "./DocPanel.jsx";
 import { ApiPathLabel } from "./ApiPathLabel.jsx";
-import { resolveTryItBodyExample } from "../lib/tryit-body.js";
-import { operationRequiresBearer } from "../lib/openapi.js";
-import { SwIcon, tabLabel } from "../lib/sw-icon.jsx";
-import { opExpandIndex } from "../lib/expand-stack.js";
+import { resolveTryItBodyExample } from "../lib/openapi/tryit-body.js";
+import { operationRequiresBearer } from "../lib/openapi/openapi.js";
+import { SwIcon, tabLabel } from "../lib/ui/sw-icon.jsx";
+import { opExpandIndex } from "../lib/nav/expand-stack.js";
 import { useExpandStack } from "../context/ExpandStackContext.jsx";
-import { useGlassColors, glassAccordionSx, methodAccent } from "../lib/glass.jsx";
+import { useGlassColors, glassAccordionSx, methodAccent } from "../lib/ui/glass.jsx";
 
 const { useState } = React;
 const {

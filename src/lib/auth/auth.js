@@ -1,14 +1,15 @@
 /** Sesión JWT para Try it out (system-login). */
 
-import { formatLoginError } from "./http-error.js";
+import { formatLoginError } from "../http/http-error.js";
 import {
   stripContapymeEmail,
   formatSessionDisplayName,
   formatSessionChipLabel,
   normalizeContapymeLoginId,
-} from "../../../front-shared/cdn/isa/js/core/format.js";
+  resolveSessionHeaderLabel,
+} from "../../../../front-shared/cdn/isa/js/core/format.js";
 
-export { stripContapymeEmail, formatSessionDisplayName, formatSessionChipLabel, normalizeContapymeLoginId };
+export { stripContapymeEmail, formatSessionDisplayName, formatSessionChipLabel, normalizeContapymeLoginId, resolveSessionHeaderLabel };
 
 /** Etiqueta visible del chip de sesión — primer nombre, sin mayúsculas sostenidas. */
 export function formatSessionUsername(value) {

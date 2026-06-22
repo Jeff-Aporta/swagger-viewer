@@ -1,4 +1,4 @@
-import { renderMarkdown } from "../lib/markdown.js";
+import { renderMarkdown } from "../lib/ui/markdown.js";
 
 const { Box, Typography } = MaterialUI;
 

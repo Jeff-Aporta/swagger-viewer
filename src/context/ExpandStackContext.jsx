@@ -1,5 +1,5 @@
-import { initSwaggerExpandUrlState } from "../lib/swagger-url-state.js";
-import { isOpenDerived, scrollToExpandId, toggleInStack } from "../lib/expand-stack.js";
+import { initSwaggerExpandUrlState } from "../lib/nav/swagger-url-state.js";
+import { isOpenDerived, scrollToExpandId, toggleInStack } from "../lib/nav/expand-stack.js";
 
 const { createContext, useContext, useEffect, useMemo, useRef, useState } = React;
 

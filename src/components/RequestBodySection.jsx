@@ -1,7 +1,7 @@
-import { defaultTryItBodyText, formatBodyExample, resolveTryItBodyExample, resolveTryItBodyExamples, shouldShowTryItBody } from "../lib/tryit-body.js";
+import { defaultTryItBodyText, formatBodyExample, resolveTryItBodyExample, resolveTryItBodyExamples, shouldShowTryItBody } from "../lib/openapi/tryit-body.js";
 import { InputRecommendationHints } from "./InputRecommendationHints.jsx";
 import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
-import { SwIcon } from "../lib/sw-icon.jsx";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
 
 const { useState, useEffect, useRef } = React;
 const { Box, Typography, Chip } = MaterialUI;

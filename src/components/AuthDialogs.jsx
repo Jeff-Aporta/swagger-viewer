@@ -7,15 +7,15 @@ import {
   formatLocalDateTime,
   stripContapymeEmail,
   normalizeContapymeLoginId,
-} from "../lib/auth.js";
-import { SwIcon } from "../lib/sw-icon.jsx";
+} from "../lib/auth/auth.js";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
 import {
   LoginHeaderBand,
   loginDialogProps,
   contapymeLoginTextFieldProps,
   LOGIN_REMEMBER_LABEL,
-} from "../../../front-shared/cdn/isa/js/ui/login-surface.js";
+} from "../../../front-shared/cdn/isa/js/ui/kits/neon-glass/login/login-surface.js";
 
 const { useState, useEffect, useCallback } = React;
 const {

@@ -1,9 +1,13 @@
-/** Filtro ISS (query `f` = JSON en Base64) — validación alineada con @jeff-aporta/apiservers/filter/iss-list-filter */
+/** Filtro ISS (query `f` = JSON en Base64) — validación desde x-iss-list-filter (catalog.listFilters). */
+
+import { allowedFilterFieldKeys, distinctColumnsFromMeta, searchColumnOptionsFromMeta, sortKeysFromMeta } from "./list-filter-schema.js";
 
 export const ISS_LIST_FILTER_QUERY_PARAM = "f";
 export const ISS_LIST_FILTER_EXT = "x-iss-list-filter";
-export const DEFAULT_LIMIT = 25;
-export const MAX_LIMIT = 100;
+export const DEFAULT_LIMIT = 9999;
+export const MAX_LIMIT = 9999;
+/** Límite en peticiones de autocomplete / lookup (x-iss-lookup). */
+export const LOOKUP_SEARCH_LIMIT = 10;
 
 export function encodeIssFilterB64(jsonStr) {
   if (!jsonStr || !String(jsonStr).trim()) return "";
@@ -16,7 +20,8 @@ export function decodeIssFilterB64(b64) {
 }
 
 export function emptyIssFilter(defaults = {}) {
-  return { limit: defaults.limit ?? DEFAULT_LIMIT, offset: defaults.offset ?? 0, eq: {} };
+  const sort = defaults.sort != null && String(defaults.sort).trim() ? String(defaults.sort).trim() : "";
+  return { limit: defaults.limit ?? DEFAULT_LIMIT, offset: defaults.offset ?? 0, sort, eq: {} };
 }
 
 export function parseIssFilterRaw(raw) {
@@ -46,6 +51,8 @@ export function parseIssFilterQueryValue(raw) {
 export function validateIssFilter(src, ext = {}) {
   const allowedEq = new Set(Object.keys(ext.eq || {}));
   const allowedSort = sortKeys(ext);
+  const allowedDistinct = distinctColumnsFromMeta(ext);
+  const allowedSearchColumns = searchColumnOptionsFromMeta(ext);
   const out = {};
   const errors = [];
 
@@ -108,7 +115,34 @@ export function validateIssFilter(src, ext = {}) {
     }
   }
 
-  const extra = Object.keys(src).filter((k) => !["search", "limit", "offset", "eq", "sort"].includes(k));
+  if (src.distinct !== undefined) {
+    if (!Array.isArray(src.distinct) || !src.distinct.length) {
+      errors.push("distinct: debe ser un array no vacío.");
+    } else if (allowedDistinct.length) {
+      const cols = [];
+      for (const col of src.distinct) {
+        const c = String(col).trim();
+        if (!c) continue;
+        if (!allowedDistinct.includes(c)) errors.push(`distinct: columna «${c}» no permitida.`);
+        else cols.push(c);
+      }
+      if (cols.length) out.distinct = cols;
+    } else {
+      errors.push("distinct: no disponible en este endpoint.");
+    }
+  }
+
+  if (src.searchColumn !== undefined) {
+    const col = String(src.searchColumn).trim();
+    if (col) {
+      if (allowedSearchColumns.length && !allowedSearchColumns.includes(col)) {
+        errors.push(`searchColumn: use uno de ${allowedSearchColumns.join(", ")}.`);
+      } else if (col.length > 64) errors.push("searchColumn: máximo 64 caracteres.");
+      else out.searchColumn = col;
+    }
+  }
+
+  const extra = Object.keys(src).filter((k) => !allowedFilterFieldKeys(ext).includes(k));
   if (extra.length) errors.push(`Campos no permitidos: ${extra.join(", ")}.`);
 
   if (errors.length) return { ok: false, error: errors.join(" ") };
@@ -129,6 +163,8 @@ export function serializeIssFilter(bag, ext = {}) {
     if (v !== null && v !== undefined && v !== "") eqOut[k] = v;
   }
   if (Object.keys(eqOut).length) out.eq = eqOut;
+  if (Array.isArray(bag.distinct) && bag.distinct.length) out.distinct = bag.distinct;
+  if (bag.searchColumn?.trim()) out.searchColumn = bag.searchColumn.trim();
   return Object.keys(out).length ? JSON.stringify(out) : "";
 }
 
@@ -136,6 +172,28 @@ export function serializeIssFilter(bag, ext = {}) {
 export function serializeIssFilterQuery(bag, ext = {}) {
   const json = serializeIssFilter(bag, ext);
   return json ? encodeIssFilterB64(json) : "";
+}
+
+/** JSON compacto decodificado desde `f` (Base64 o JSON literal). */
+export function filterValueToJsonText(raw) {
+  if (raw == null || !String(raw).trim()) return "";
+  const parsed = parseIssFilterQueryValue(raw);
+  if (!parsed.ok || !parsed.value || !Object.keys(parsed.value).length) return "";
+  return JSON.stringify(parsed.value);
+}
+
+/** Valida JSON de filtro y devuelve el valor listo para query `f` (Base64). */
+export function jsonTextToFilterQuery(jsonText, ext = {}) {
+  if (jsonText == null || !String(jsonText).trim()) return { ok: true, value: "" };
+  const r = parseIssFilterRaw(jsonText);
+  if (!r.ok) return r;
+  const validated = validateIssFilter(r.value, ext);
+  if (!validated.ok) return validated;
+  const json =
+    validated.value && Object.keys(validated.value).length
+      ? JSON.stringify(validated.value)
+      : "";
+  return { ok: true, value: json ? encodeIssFilterB64(json) : "" };
 }
 
 export function bagFromFilterValue(raw, ext = {}) {
@@ -147,18 +205,40 @@ export function bagFromFilterValue(raw, ext = {}) {
     search: v.search || "",
     limit: v.limit ?? base.limit,
     offset: v.offset ?? base.offset,
-    sort: v.sort || "",
+    sort: v.sort != null && String(v.sort).trim() ? String(v.sort).trim() : base.sort,
     eq: { ...base.eq, ...(v.eq || {}) },
+    distinct: Array.isArray(v.distinct) ? v.distinct : [],
+    searchColumn: v.searchColumn || "",
   };
 }
 
 function sortKeys(ext) {
-  const s = ext.sort;
-  if (!s) return [];
-  if (Array.isArray(s)) return s;
-  return Object.keys(s);
+  return sortKeysFromMeta(ext);
 }
 
+export function sortColumnOptions(ext) {
+  const keys = sortKeys(ext);
+  const labels = typeof ext.sort === "object" && !Array.isArray(ext.sort) ? ext.sort : {};
+  return keys.map((key) => ({
+    value: key,
+    label: labels[key]?.label || key,
+  }));
+}
+
+export function parseSortParts(sort) {
+  const s = String(sort ?? "").trim();
+  if (!s) return { field: "", dir: "desc" };
+  const desc = s.startsWith("-");
+  return { field: desc ? s.slice(1) : s, dir: desc ? "desc" : "asc" };
+}
+
+export function formatSortValue(field, dir) {
+  const f = String(field ?? "").trim();
+  if (!f) return "";
+  return dir === "desc" ? `-${f}` : f;
+}
+
+/** @deprecated use sortColumnOptions + parseSortParts */
 export function sortOptions(ext) {
   const keys = sortKeys(ext);
   const labels = typeof ext.sort === "object" && !Array.isArray(ext.sort) ? ext.sort : {};

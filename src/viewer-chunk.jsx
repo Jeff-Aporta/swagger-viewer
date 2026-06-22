@@ -1,6 +1,6 @@
 import { SwaggerViewer } from "./SwaggerViewer.jsx";
-import { loadSpec } from "./lib/openapi.js";
-import { parseIsDocument } from "./lib/is-document.js";
+import { loadSpec } from "./lib/openapi/openapi.js";
+import { parseIsDocument } from "./lib/openapi/is-document.js";
 
 /** @type {import('react-dom/client').Root | null} */
 let _reactRoot = null;
@@ -26,4 +26,4 @@ export async function mountSwaggerViewer(config, target = "#root") {
 }
 
 export { SwaggerViewer } from "./SwaggerViewer.jsx";
-export { resolveViewerBrand, readBrandFromMeta, applyBrandToDocument } from "./lib/viewer-brand.js";
+export { resolveViewerBrand, readBrandFromMeta, applyBrandToDocument } from "./lib/brand/viewer-brand.js";

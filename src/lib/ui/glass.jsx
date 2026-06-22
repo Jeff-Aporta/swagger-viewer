@@ -1,4 +1,4 @@
-/** Puente swagger → @isa-components/neon-glass (bundle esbuild). */
+/** Puente swagger → ISAFront.Glass (front-shared neon-glass). */
 import {
   GlassToolbar,
   GlassTableWrap,
@@ -10,7 +10,7 @@ import {
   glassSurfaceSx,
   glassHeaderSx,
   NEON_COLORS,
-} from "../../../neon-glass/src/index.js";
+} from "../../../../front-shared/cdn/isa/js/ui/kits/neon-glass/index.js";
 
 export {
   GlassToolbar,

@@ -2,7 +2,7 @@ import {
   inferDefaultServerBase,
   normalizeServerBase,
   serverBaseStorageKey,
-} from "../lib/server-base.js";
+} from "../lib/lookup/server-base.js";
 
 const { createContext, useContext, useState, useEffect, useMemo } = React;
 

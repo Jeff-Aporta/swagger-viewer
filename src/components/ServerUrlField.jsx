@@ -1,4 +1,4 @@
-import { SwIcon } from "../lib/sw-icon.jsx";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
 import { useServerBase } from "../context/ServerBaseContext.jsx";
 
 const { TextField, InputAdornment, Tooltip, IconButton } = MaterialUI;
@@ -13,7 +13,7 @@ export function ServerUrlField({ ns = "ISA", compact = false }) {
       label={compact ? undefined : "Servidor API"}
       value={serverBase}
       onChange={(e) => setServerBase(e.target.value)}
-      placeholder={defaultBase || "http://localhost:5502/api"}
+      placeholder={defaultBase || "http://localhost:8802/api"}
       sx={{
         minWidth: compact ? 0 : { xs: 180, sm: 300 },
         maxWidth: compact ? 340 : 420,

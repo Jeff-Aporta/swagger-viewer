@@ -21,11 +21,6 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          repository: Jeff-Aporta/neon-glass
-          path: neon-glass
-
-      - uses: actions/checkout@v4
-        with:
           repository: Jeff-Aporta/front-shared
           path: front-shared
 

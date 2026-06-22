@@ -1,7 +1,7 @@
-import { ISS_INPUT_RECOMMENDATION_EXT, recommendationSampleRequest } from "../lib/input-recommendation.js";
-import { jsonPretty } from "../lib/openapi.js";
+import { ISS_INPUT_RECOMMENDATION_EXT, recommendationSampleRequest } from "../lib/lookup/input-recommendation.js";
+import { jsonPretty } from "../lib/openapi/openapi.js";
 import { useServerBase } from "../context/ServerBaseContext.jsx";
-import { SwIcon } from "../lib/sw-icon.jsx";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
 
 const { Box, Typography, Chip, Tooltip } = MaterialUI;
 

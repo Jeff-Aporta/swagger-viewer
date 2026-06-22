@@ -1,6 +1,6 @@
 /** fetch JSON contra la API con JWT y mensajes de error legibles. */
 
-import { getStoredJwt } from "./auth.js";
+import { getStoredJwt } from "../auth/auth.js";
 import { formatHttpError, extractApiError } from "./http-error.js";
 
 export function authHeaders(includeAuth = true) {

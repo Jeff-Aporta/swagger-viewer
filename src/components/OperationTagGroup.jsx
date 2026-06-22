@@ -1,7 +1,7 @@
 import { OperationCard } from "./OperationCard.jsx";
 import { OperationSubGroup } from "./OperationSubGroup.jsx";
-import { SwIcon } from "../lib/sw-icon.jsx";
-import { resolveTagTheme } from "../lib/tag-theme.js";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { resolveTagTheme } from "../lib/ui/tag-theme.js";
 
 const { Box, Typography, Chip } = MaterialUI;
 

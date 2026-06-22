@@ -1,22 +1,74 @@
 /**
- * HTML mínimo para hosts (Azure Functions, workers) — assets del visor vía npm.
- * Publicado en npm como @jeff-aporta/is-swagger/embed/build-html.
+ * HTML embebido para hosts (Azure Functions, workers) — visor 100 % CDN.
+ * Plantilla: embed/index.html (mismo shell que isa-patyia).
  *
  * @param {object} opts
  * @param {string} opts.specUrl
  * @param {string} [opts.title]
- * @param {string} [opts.viewerRef] — versión npm (legacy; default: misma origin /swagger/cdn)
+ * @param {string} [opts.viewerRef] — versión pin (jsDelivr / vendor)
  * @param {string} [opts.frontSharedRef]
- * @param {string} [opts.viewerRepo] — legacy (nombre paquete npm)
- * @param {string} [opts.localCdnBase] — ej. http://localhost:5502/api/swagger/cdn
+ * @param {string} [opts.localCdnBase] — ej. https://host/api/swagger/cdn
+ * @param {string} [opts.viewerCdnBase] — alias de localCdnBase
  * @param {object} [opts.config] — resto de __SWAGGER_CONFIG__
  */
+import { readFileSync, existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+function moduleDir() {
+  try {
+    // CJS bundle (cdn/vendor/build-html.cjs)
+    // eslint-disable-next-line no-undef
+    if (typeof __dirname === "string") return __dirname;
+  } catch {
+    /* ignore */
+  }
+  return dirname(fileURLToPath(import.meta.url));
+}
+
+function loadHtmlTemplate() {
+  const here = moduleDir();
+  const tries = [
+    join(here, "..", "embed-index.html"),
+    join(here, "..", "..", "embed", "embed-index.html"),
+    join(here, "..", "..", "embed", "index.html"),
+  ];
+  for (const p of tries) {
+    if (existsSync(p)) return readFileSync(p, "utf8");
+  }
+  throw new Error("embed/index.html no encontrado (cdn/embed-index.html)");
+}
+
+function loadPkgVersion() {
+  const here = moduleDir();
+  const tries = [
+    join(here, "..", "versions.json"),
+    join(here, "..", "..", "package.json"),
+  ];
+  for (const p of tries) {
+    if (!existsSync(p)) continue;
+    const raw = JSON.parse(readFileSync(p, "utf8"));
+    if (raw.componentRef) return String(raw.componentRef);
+    if (raw.version) return String(raw.version);
+  }
+  return "0.1.18";
+}
+
+const SWAGGER_VIEWER_VERSION = loadPkgVersion();
+const SWAGGER_FRONT_SHARED_REF = "13629aa";
+const SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
+
+function swaggerViewerCdnJsdelivr(ref = SWAGGER_VIEWER_VERSION) {
+  const pin = String(ref || SWAGGER_VIEWER_VERSION).replace(/^v/, "");
+  return `https://cdn.jsdelivr.net/gh/${SWAGGER_VIEWER_GH_REPO}@${pin}/cdn`;
+}
+
 export function buildSwaggerViewerHtml(opts) {
+  const HTML_TEMPLATE = loadHtmlTemplate();
   const specUrl = opts.specUrl;
   const title = opts.title || "API";
-  const viewerRef = opts.viewerRef || "main";
-  const fsRef = opts.frontSharedRef || "a5a6597";
-  const viewerBase = resolveViewerBase(specUrl, opts.localCdnBase);
+  const fsRef = opts.frontSharedRef || SWAGGER_FRONT_SHARED_REF;
+  const viewerBase = resolveViewerBase(specUrl, opts.viewerCdnBase || opts.localCdnBase, opts.viewerRef);
   const fsBase = `https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@${fsRef}/cdn`;
 
   const authKind = opts.authKind || (opts.authLoginUrl ? "system-login" : "portal");
@@ -24,11 +76,19 @@ export function buildSwaggerViewerHtml(opts) {
     opts.authLoginPath ||
     (authKind === "portal" ? "/api/auth/portal-login" : "/api/auth/test-token");
 
+  const brand = opts.brand || { title: opts.brandTitle || title, icon: opts.brandIcon || "mdi:api" };
+  const brandIcon = String(brand.icon || "mdi:api");
+  const brandTitle = String(brand.title || title);
+  const iconColor = encodeURIComponent("#1e90ff");
+  const iconify = (size) =>
+    `https://api.iconify.design/${brandIcon.replace(":", "/")}.svg?color=${iconColor}&width=${size}&height=${size}`;
+
   const config = {
     specUrl,
     ns: "ISA",
     app: "swagger-viewer",
     shell: true,
+    viewerCdnBase: viewerBase,
     cssUrl: `${viewerBase}/swagger-viewer.min.css`,
     appUrl: `${viewerBase}/swagger-viewer-app.min.js`,
     stackUrl: `${fsBase}/stack.mjs`,
@@ -39,7 +99,7 @@ export function buildSwaggerViewerHtml(opts) {
       loginKind: authKind,
       loginPath,
     },
-    brand: opts.brand || { title: opts.brandTitle || title, icon: opts.brandIcon || "mdi:api" },
+    brand,
     exports: opts.exports || {
       openApiUrl: specUrl,
       openApiDownloadName: "openapi.json",
@@ -53,62 +113,24 @@ export function buildSwaggerViewerHtml(opts) {
   };
 
   const cfgJson = JSON.stringify(config).replace(/</g, "\\u003c");
+  const themeKey = "jeffaporta:swagger-ui-theme";
+  const description =
+    opts.description ||
+    `Documentación interactiva OpenAPI — ${brandTitle}. Try it out, export Postman y JSON IS.`;
 
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>${esc(title)}</title>
-  <meta name="application-name" content="${esc(config.brand.title)}"/>
-  <meta name="app-icon" content="${esc(config.brand.icon)}"/>
-  <meta name="app-theme-ls-key" content="jeffaporta:swagger-ui-theme"/>
-  <link rel="stylesheet" href="${viewerBase}/swagger-viewer.min.css"/>
-  <link rel="stylesheet" href="${fsBase}/isa/css/base.css"/>
-  <script>
-  (function () {
-    var k = "jeffaporta:swagger-ui-theme";
-    try { if (localStorage.getItem(k) === "light") return; } catch (e) {}
-    document.documentElement.classList.add("dark-mode");
-  })();
-  </script>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.3.1",
-    "react-dom": "https://esm.sh/react-dom@18.3.1",
-    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?external=react",
-    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
-    "@emotion/react": "https://esm.sh/@emotion/react@11.14.0?external=react,react-dom",
-    "@emotion/styled": "https://esm.sh/@emotion/styled@11.14.1?external=react,react-dom,@emotion/react",
-    "@mui/material": "https://esm.sh/@mui/material@9.1.0?external=react,react-dom,@emotion/react,@emotion/styled",
-    "@mui/material/": "https://esm.sh/@mui/material@9.1.0/"
-  }
-}
-  </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.26.9/babel.min.js"></script>
-  <script defer src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
-</head>
-<body>
-  <div id="root"></div>
-  <script>window.__SWAGGER_CONFIG__=${cfgJson};</script>
-  <script type="module">
-    const _viewerUrl = "${viewerBase}/swagger-viewer.min.js";
-    try {
-      const { bootSwaggerApp } = await import(_viewerUrl);
-      await bootSwaggerApp();
-    } catch (e) {
-      console.error("[swagger]", e);
-      const root = document.getElementById("root");
-      if (root) {
-        root.innerHTML = "<p style=\\"padding:1.5rem;font-family:system-ui\\">No se pudo cargar el visor OpenAPI. "
-          + "Comprueba la red o recarga la página.<br><small>" + String(e && e.message || e) + "</small></p>";
-      }
-    }
-  </script>
-</body>
-</html>`;
+  return HTML_TEMPLATE.replaceAll("__TITLE__", esc(title))
+    .replaceAll("__DESCRIPTION__", esc(description))
+    .replaceAll("__APP_NAME__", esc(brandTitle))
+    .replaceAll("__APP_ICON__", esc(brandIcon))
+    .replaceAll("__THEME_LS_KEY__", themeKey)
+    .replaceAll("__FRONT_SHARED_BASE__", fsBase)
+    .replaceAll("__VIEWER_CSS__", `${viewerBase}/swagger-viewer.min.css`)
+    .replaceAll("__BOOT_MODULE__", `${viewerBase}/embed-boot.mjs`)
+    .replaceAll("__BOOT_LABEL__", esc(`Cargando ${brandTitle}…`))
+    .replaceAll("__OG_IMAGE__", iconify(512))
+    .replaceAll("__FAVICON__", iconify(32))
+    .replaceAll("__APPLE_ICON__", iconify(180))
+    .replaceAll("__CONFIG_JSON__", cfgJson);
 }
 
 /** HTML para GET /api/swagger — AyudasCP-IA y hosts similares. */
@@ -123,8 +145,7 @@ export function buildSwaggerUiHtml(openApiJsonUrl, opts = {}) {
     title: opts.title || "API",
     viewerRef: opts.viewerRef,
     frontSharedRef: opts.frontSharedRef,
-    viewerRepo: opts.viewerRepo,
-    localCdnBase: opts.localCdnBase,
+    localCdnBase: opts.localCdnBase || opts.viewerCdnBase,
     authKind: opts.authKind || "portal",
     authLoginUrl: opts.authLoginUrl,
     brand: opts.brand || { title: "ISA PatyIA", icon: "mdi:robot-happy-outline" },
@@ -145,18 +166,12 @@ function swaggerCdnPathFromSpecUrl(specUrl) {
   }
 }
 
-function resolveViewerBase(specUrl, localCdnBase) {
+function resolveViewerBase(specUrl, localCdnBase, viewerRef) {
   if (localCdnBase) return String(localCdnBase).replace(/\/$/, "");
-  return swaggerCdnPathFromSpecUrl(specUrl);
-}
-
-function apiBaseFromSpecUrl(specUrl) {
-  try {
-    const u = new URL(specUrl);
-    return `${u.origin}${u.pathname.replace(/\/swagger\.json\/?$/i, "")}`;
-  } catch {
-    return specUrl.replace(/\/swagger\.json\/?$/i, "");
+  if (viewerRef && viewerRef !== "main") {
+    return swaggerViewerCdnJsdelivr(viewerRef);
   }
+  return swaggerViewerCdnJsdelivr(SWAGGER_VIEWER_VERSION);
 }
 
 function apiOriginFromSpecUrl(specUrl) {

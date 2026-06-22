@@ -1,6 +1,6 @@
 import { IsJsonEditor } from "./IsJsonEditor.jsx";
-import { SwIcon } from "../../../src/lib/sw-icon.jsx";
-import { useGlassColors, glassSurfaceSx, glassHeaderSx, GlassToolbar } from "../../../src/lib/glass.jsx";
+import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
+import { useGlassColors, glassSurfaceSx, glassHeaderSx, GlassToolbar } from "../../../src/lib/ui/glass.jsx";
 
 const { Box, Button, Alert, Typography, Drawer, IconButton, Tooltip } = MaterialUI;
 

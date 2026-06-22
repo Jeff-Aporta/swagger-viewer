@@ -2,9 +2,9 @@
 
 
 
-import { resolveServerUrl } from "./openapi.js";
+import { resolveServerUrl } from "../openapi/openapi.js";
 
-import { encodeIssFilterB64 } from "./iss-list-filter.js";
+import { encodeIssFilterB64, LOOKUP_SEARCH_LIMIT } from "../filter/iss-list-filter.js";
 
 
 
@@ -88,7 +88,7 @@ export function resolveLookupRequestUrl(lookup, serverBase, query = "") {
 
   if (lookup.listPath && serverBase) {
 
-    const limit = lookup.searchLimit ?? 18;
+    const limit = lookup.searchLimit ?? LOOKUP_SEARCH_LIMIT;
 
     const q = String(query ?? "").trim();
 
@@ -107,6 +107,18 @@ export function resolveLookupRequestUrl(lookup, serverBase, query = "") {
 
   return "";
 
+}
+
+export function buildDistinctLookupUrl(serverBase, listPath, { columns, search, searchField, limit = LOOKUP_SEARCH_LIMIT, sort = "-count" } = {}) {
+  if (!listPath || !serverBase || !columns?.length) return "";
+  const f = { distinct: [...columns], limit, offset: 0, sort };
+  const q = String(search ?? "").trim();
+  if (q) {
+    f.search = q;
+    if (searchField) f.searchColumn = searchField;
+  }
+  const qs = `f=${encodeURIComponent(encodeIssFilterB64(JSON.stringify(f)))}`;
+  return `${joinApiUrl(serverBase, listPath)}?${qs}`;
 }
 
 

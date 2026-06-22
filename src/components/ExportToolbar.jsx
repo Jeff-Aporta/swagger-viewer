@@ -1,6 +1,6 @@
-import { SwIcon } from "../lib/sw-icon.jsx";
-import { GlassToolbar } from "../lib/glass.jsx";
-import { buildIsDocument, isDocumentText } from "../lib/is-document.js";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { GlassToolbar } from "../lib/ui/glass.jsx";
+import { buildIsDocument, isDocumentText } from "../lib/openapi/is-document.js";
 import { ServerUrlField } from "./ServerUrlField.jsx";
 
 const { useState } = React;

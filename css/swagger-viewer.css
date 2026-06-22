@@ -374,6 +374,23 @@ html[data-mui-color-scheme="dark"] .isa-sw-param-type {
   font-size: 0.6875rem;
 }
 
+/* Autocomplete: fundir input + desplegable (sin esquinas en la unión) */
+.isa-sw-autocomplete-fused--open .MuiOutlinedInput-root {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.isa-sw-autocomplete-fused__paper--open {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  margin-top: 0 !important;
+  border-top: none;
+}
+
+.isa-sw-autocomplete-fused__popper--open {
+  margin-top: 0 !important;
+}
+
 .isa-sw-param-lookup .isa-sw-lookup-loading {
   margin-right: 2px;
 }
@@ -504,6 +521,51 @@ html[data-mui-color-scheme="light"] .isa-sw-resp-card .MuiAccordionSummary-root 
   max-height: min(80vh, 640px);
 }
 
+/* Filtro ISS — neon glass (inputs, alerts, acciones; tarjeta vía isa-glass-card) */
+html[data-mui-color-scheme="dark"] .isa-sw-iss-filter-card .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline,
+html.dark-mode .isa-sw-iss-filter-card .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(99, 102, 241, 0.38);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-iss-filter-card .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline,
+html.dark-mode .isa-sw-iss-filter-card .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(30, 144, 255, 0.55);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-iss-filter-card .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline,
+html.dark-mode .isa-sw-iss-filter-card .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #1e90ff;
+  box-shadow: 0 0 0 1px rgba(30, 144, 255, 0.35), 0 0 14px rgba(30, 144, 255, 0.22);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-iss-filter-card .MuiInputLabel-root.Mui-focused,
+html.dark-mode .isa-sw-iss-filter-card .MuiInputLabel-root.Mui-focused {
+  color: #63b3ff;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-iss-filter-card .MuiAlert-standardInfo,
+html.dark-mode .isa-sw-iss-filter-card .MuiAlert-standardInfo {
+  background: rgba(30, 144, 255, 0.1);
+  border: 1px solid rgba(30, 144, 255, 0.28);
+  color: #c8e4ff;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-iss-filter-card .MuiAlert-standardError,
+html.dark-mode .isa-sw-iss-filter-card .MuiAlert-standardError {
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-iss-filter-card .MuiButton-containedPrimary,
+html.dark-mode .isa-sw-iss-filter-card .MuiButton-containedPrimary {
+  box-shadow: 0 0 18px rgba(30, 144, 255, 0.42);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-iss-filter-card .MuiAutocomplete-listbox,
+html.dark-mode .isa-sw-iss-filter-card .MuiAutocomplete-listbox {
+  background: rgba(11, 18, 32, 0.96);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
 .isa-sw-iss-filter-preview {
   min-height: 4.5rem;
   margin-bottom: 1rem;
@@ -591,6 +653,10 @@ html[data-mui-color-scheme="light"] .isa-sw-export-group + .isa-sw-export-group 
 
 .isa-sw-export-btn.MuiIconButton-root {
   padding: 5px;
+}
+
+.isa-sw-iss-filter-config-btn.MuiIconButton-root {
+  padding: 8px;
 }
 
 /* Sub-barra export — pegada bajo AppShell, ancho completo */

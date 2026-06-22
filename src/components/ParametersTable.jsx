@@ -1,6 +1,6 @@
 import { ParamLookupField } from "./ParamLookupField.jsx";
-import { GlassTableWrap } from "../lib/glass.jsx";
-import { paramInputMode, paramSchemaType, sanitizeParamInputValue } from "../lib/param-schema.js";
+import { GlassTableWrap } from "../lib/ui/glass.jsx";
+import { paramInputMode, paramSchemaType, sanitizeParamInputValue } from "../lib/openapi/param-schema.js";
 
 const {
   Table,

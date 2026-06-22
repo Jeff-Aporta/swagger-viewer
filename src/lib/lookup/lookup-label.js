@@ -1,6 +1,6 @@
 /** Etiqueta de fila para x-iss-lookup — p. ej. `1859 | Solicitar videos | JUAN GARCIA`. */
 
-import { stripContapymeEmail } from "./auth.js";
+import { stripContapymeEmail } from "../auth/auth.js";
 
 export function parseJwtClaims(token) {
   try {

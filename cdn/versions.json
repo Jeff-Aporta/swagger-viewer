@@ -3,8 +3,9 @@
   "slug": "swagger-viewer",
   "pkg": "@jeff-aporta/is-swagger",
   "cdnPath": "cdn",
-  "componentRef": "0.1.5",
+  "componentRef": "0.1.18",
   "refExport": "SWAGGER_VIEWER_REF",
-  "distribution": "npm",
-  "note": "Paquete npm privado. Runtime: /api/swagger/cdn del host (node_modules) o ruta local en demo."
+  "distribution": "cdn",
+  "note": "Runtime: jsDelivr GitHub pin o /api/swagger/cdn del host (vendor, sin npm).",
+  "jsdelivr": "https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@0.1.18/cdn"
 }

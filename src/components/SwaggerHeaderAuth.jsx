@@ -1,5 +1,5 @@
-import { formatSessionUsername, formatSessionDisplayName, stripContapymeEmail } from "../lib/auth.js";
-import { SwIcon } from "../lib/sw-icon.jsx";
+import { formatSessionDisplayName, stripContapymeEmail, resolveSessionHeaderLabel } from "../lib/auth/auth.js";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
 
 const { Box, Stack, Button, Chip, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText } = MaterialUI;
 
@@ -19,7 +19,7 @@ export function SwaggerHeaderAuth({ enabled, session, onLogin, onLogout, ns = "I
 
   if (session?.token) {
     const who = session.displayName || session.username || "";
-    const label = formatSessionUsername(who || "JWT");
+    const label = resolveSessionHeaderLabel(session.displayName, who, "JWT");
     const tooltipWho = formatSessionDisplayName(who) || stripContapymeEmail(who);
     return (
       <Box component="span" className="header-session-wrap" sx={{ display: "inline-flex", alignItems: "center" }}>

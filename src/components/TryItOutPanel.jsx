@@ -9,16 +9,16 @@ import {
   jsonPretty,
   operationRequiresBearer,
   resolveServerUrl,
-} from "../lib/openapi.js";
-import { defaultTryItBodyText, opUsesRequestBody, resolveTryItBodyExample, shouldShowTryItBody } from "../lib/tryit-body.js";
-import { getStoredJwt } from "../lib/auth.js";
-import { joinApiUrl } from "../lib/server-base.js";
-import { fetchApiRaw, extractEnvelopeError } from "../lib/api-fetch.js";
-import { formatHttpError, extractApiError } from "../lib/http-error.js";
-import { formatUnitTestSse, isEventStreamResponse, parseSseDataLines } from "../lib/sse-parse.js";
-import { renderMarkdown } from "../lib/markdown.js";
+} from "../lib/openapi/openapi.js";
+import { defaultTryItBodyText, opUsesRequestBody, resolveTryItBodyExample, shouldShowTryItBody } from "../lib/openapi/tryit-body.js";
+import { getStoredJwt } from "../lib/auth/auth.js";
+import { joinApiUrl } from "../lib/lookup/server-base.js";
+import { fetchApiRaw, extractEnvelopeError } from "../lib/http/api-fetch.js";
+import { formatHttpError, extractApiError } from "../lib/http/http-error.js";
+import { formatUnitTestSse, isEventStreamResponse, parseSseDataLines } from "../lib/http/sse-parse.js";
+import { renderMarkdown } from "../lib/ui/markdown.js";
 import { useServerBase } from "../context/ServerBaseContext.jsx";
-import { SwIcon } from "../lib/sw-icon.jsx";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
 
 const { useState, useMemo, useEffect } = React;
@@ -221,6 +221,9 @@ export function TryItOutPanel({
                   onChange={(v) => onParamChange(name, v)}
                   disabled={busy}
                   ns={ns}
+                  endpointLabel={`${op.method.toUpperCase()} ${op.path}`}
+                  authEnabled={authEnabled}
+                  onNeedLogin={onNeedLogin}
                 />
               );
             }
@@ -282,7 +285,7 @@ export function TryItOutPanel({
               dangerouslySetInnerHTML={{ __html: renderMarkdown(result.sseMarkdown) }}
             />
           ) : (
-            <JsonCodeBlock value={result.body} minHeight="10rem" />
+            <JsonCodeBlock value={result.body} />
           )}
         </Box>
       ) : null}

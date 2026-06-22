@@ -1,16 +1,18 @@
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
 const { Autocomplete, TextField, Box, Typography, CircularProgress, InputAdornment } = MaterialUI;
 
-import { getStoredJwt } from "../lib/auth.js";
-import { fetchApiJson } from "../lib/api-fetch.js";
-import { resolveLookupRequestUrl } from "../lib/server-base.js";
-import { formatLookupLabel, lookupLabelParts, lookupLabelSeparator } from "../lib/lookup-label.js";
-import { extractLookupRows } from "../lib/lookup-rows.js";
+import { getStoredJwt } from "../lib/auth/auth.js";
+import { canRunIssLookup } from "../lib/lookup/lookup-auth.js";
+import { fetchApiJson } from "../lib/http/api-fetch.js";
+import { resolveLookupRequestUrl } from "../lib/lookup/server-base.js";
+import { formatLookupLabel, lookupLabelParts, lookupLabelSeparator } from "../lib/lookup/lookup-label.js";
+import { extractLookupRows } from "../lib/lookup/lookup-rows.js";
 import { useServerBase } from "../context/ServerBaseContext.jsx";
-import { sanitizeParamInputValue, paramInputMode, paramSchemaType } from "../lib/param-schema.js";
-import { createDelayer, LOOKUP_SEARCH_DELAY_MS } from "../lib/delayer.js";
+import { sanitizeParamInputValue, paramInputMode, paramSchemaType } from "../lib/openapi/param-schema.js";
+import { createDelayer, LOOKUP_SEARCH_DELAY_MS } from "../lib/ui/delayer.js";
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
-import { recommendationSampleRequest } from "../lib/input-recommendation.js";
+import { recommendationSampleRequest } from "../lib/lookup/input-recommendation.js";
+import { autocompleteFusedClassName, autocompleteFusedSlotProps } from "../lib/ui/autocomplete-fused.js";
 
 function mapLookupRows(rows, lookup, session) {
   return rows.map((row) => ({
@@ -49,7 +51,6 @@ export function ParamLookupField({
   hideLabel,
   placeholder,
   authEnabled = false,
-  onNeedLogin,
 }) {
   const { serverBase } = useServerBase();
   const displayLimit = lookup?.displayLimit ?? 10;
@@ -63,6 +64,7 @@ export function ParamLookupField({
   const [touched, setTouched] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const requiresAuth = authEnabled && lookup?.requiresAuth !== false;
+  const canLookup = !requiresAuth || canRunIssLookup(authEnabled);
   const delayerRef = useRef(null);
   const wantOpenRef = useRef(false);
   const searchGenRef = useRef(0);
@@ -89,16 +91,15 @@ export function ParamLookupField({
 
   const search = useCallback(
     async (q) => {
+      if (!canLookup) {
+        setOptions([]);
+        setPending(false);
+        setLoading(false);
+        return;
+      }
       const url = resolveLookupRequestUrl(lookup, serverBase, q);
       if (!url) return;
       const gen = ++searchGenRef.current;
-      if (requiresAuth && !getStoredJwt()?.token) {
-        setError("Inicia sesión para buscar valores en la API.");
-        setOptions([]);
-        closeList();
-        setPending(false);
-        return;
-      }
       setLoading(true);
       setError("");
       setOptions([]);
@@ -123,12 +124,12 @@ export function ParamLookupField({
         }
       }
     },
-    [lookup, serverBase, requiresAuth, displayLimit],
+    [lookup, serverBase, canLookup, displayLimit],
   );
 
   const queueSearch = useCallback(
     (q, { immediate = false } = {}) => {
-      if (!wantOpenRef.current) return;
+      if (!canLookup || !wantOpenRef.current) return;
       const trimmed = String(q ?? "").trim();
       setPending(true);
       const run = () => search(trimmed);
@@ -139,7 +140,7 @@ export function ParamLookupField({
         delayerRef.current.isReady(run);
       }
     },
-    [search],
+    [search, canLookup],
   );
 
   const showLoading = loading || pending;
@@ -154,14 +155,13 @@ export function ParamLookupField({
 
   function onFocusField() {
     setTouched(true);
-    if (requiresAuth && !getStoredJwt()?.token) {
-      onNeedLogin?.("Inicia sesión para usar el buscador de conversaciones.");
-    }
   }
 
   return (
     <Box className="isa-sw-param-lookup" sx={{ maxWidth: "100%" }}>
       <Autocomplete
+        className={autocompleteFusedClassName(listOpen)}
+        slotProps={autocompleteFusedSlotProps(listOpen)}
         size="small"
         freeSolo
         disabled={disabled}
@@ -169,12 +169,13 @@ export function ParamLookupField({
         open={listOpen}
         onOpen={() => {
           onFocusField();
+          if (!canLookup) return;
           openList();
           const trimmed = String(input ?? "").trim();
           queueSearch(trimmed, { immediate: !trimmed });
         }}
         onClose={() => closeList()}
-        openOnFocus
+        openOnFocus={canLookup}
         blurOnSelect
         options={displayOptions}
         filterOptions={(opts) => opts}
@@ -186,20 +187,23 @@ export function ParamLookupField({
           if (reason === "clear") {
             setInput("");
             onChange("");
-            openList();
-            queueSearch("", { immediate: true });
+            if (canLookup) {
+              openList();
+              queueSearch("", { immediate: true });
+            }
             return;
           }
           if (reason === "input") {
             setTouched(true);
+            const next = sanitizeParamInputValue(schema, v);
+            setInput(next);
+            onChange(next);
+            if (!canLookup) return;
             openList();
             searchGenRef.current += 1;
             delayerRef.current?.cancel();
             setPending(true);
             setOptions([]);
-            const next = sanitizeParamInputValue(schema, v);
-            setInput(next);
-            onChange(next);
             queueSearch(next);
           }
         }}

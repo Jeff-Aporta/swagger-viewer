@@ -3,58 +3,94 @@ import {
   ISS_LIST_FILTER_QUERY_PARAM,
   bagFromFilterValue,
   emptyIssFilter,
-  encodeIssFilterB64,
-  decodeIssFilterB64,
-  parseIssFilterQueryValue,
-  parseIssFilterRaw,
-  serializeIssFilter,
   serializeIssFilterQuery,
-  sortOptions,
   validateIssFilter,
+  filterValueToJsonText,
+  jsonTextToFilterQuery,
   MAX_LIMIT,
   DEFAULT_LIMIT,
-} from "../lib/iss-list-filter.js";
-import { InputRecommendationChip } from "./InputRecommendationHints.jsx";
-import { ISS_INPUT_RECOMMENDATION_EXT } from "../lib/input-recommendation.js";
-import { SwIcon } from "../lib/sw-icon.jsx";
+  sortColumnOptions,
+  parseSortParts,
+  formatSortValue,
+} from "../lib/filter/iss-list-filter.js";
+import { IssDistinctCompoundEqField, IssDistinctEqField } from "./IssDistinctEqField.jsx";
+import { IssFusedSelectField } from "./IssFusedSelectField.jsx";
+import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import {
+  issFilterDialogProps,
+  issFilterDialogHeader,
+  loginFormContentSx,
+  loginFormActionsSx,
+} from "../lib/ui/glass-filter-dialog.js";
 
 const { useState, useMemo, useEffect } = React;
 const {
   Box,
   Button,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
   Typography,
   Alert,
-  MenuItem,
   Divider,
   InputAdornment,
   IconButton,
   Tooltip,
 } = MaterialUI;
 
+function buildEqSections(eqEntries) {
+  const compoundRendered = new Set();
+  const compoundGroups = [];
+  const singles = [];
+
+  for (const [key, def] of eqEntries) {
+    const dl = def.distinctLookup;
+    if (dl?.compound && dl.columns?.length) {
+      const gid = dl.columns.join("+");
+      let g = compoundGroups.find((x) => x.id === gid);
+      if (!g) {
+        g = { id: gid, columns: dl.columns, distinctLookup: dl, fields: [] };
+        compoundGroups.push(g);
+      }
+      g.fields.push({ key, def });
+      compoundRendered.add(key);
+    }
+  }
+  for (const [key, def] of eqEntries) {
+    if (compoundRendered.has(key)) continue;
+    singles.push([key, def]);
+  }
+  return { compoundGroups, singles };
+}
+
 function eqFieldInput(def, name, value, disabled, onChange) {
   const t = def.type || "string";
   if (def.enum?.length) {
     return (
-      <TextField select size="small" fullWidth disabled={disabled} label={def.label || name} value={value ?? ""} onChange={(e) => onChange(e.target.value)} helperText={def.description || ""}>
-        <MenuItem value="">(vacío)</MenuItem>
-        {def.enum.map((opt) => (
-          <MenuItem key={String(opt)} value={String(opt)}>{def.enumLabels?.[opt] ?? String(opt)}</MenuItem>
-        ))}
-      </TextField>
+      <IssFusedSelectField
+        disabled={disabled}
+        label={def.label || name}
+        value={value ?? ""}
+        onChange={onChange}
+        helperText={def.description || ""}
+        options={def.enum.map((opt) => ({ value: String(opt), label: def.enumLabels?.[opt] ?? String(opt) }))}
+      />
     );
   }
   if (t === "boolean") {
     return (
-      <TextField select size="small" fullWidth disabled={disabled} label={def.label || name} value={value === true || value === "true" ? "true" : value === false || value === "false" ? "false" : ""} onChange={(e) => onChange(e.target.value === "" ? "" : e.target.value === "true")} helperText={def.description || ""}>
-        <MenuItem value="">(vacío)</MenuItem>
-        <MenuItem value="true">true</MenuItem>
-        <MenuItem value="false">false</MenuItem>
-      </TextField>
+      <IssFusedSelectField
+        disabled={disabled}
+        label={def.label || name}
+        value={value === true || value === "true" ? "true" : value === false || value === "false" ? "false" : ""}
+        onChange={(v) => onChange(v === "" ? "" : v === "true")}
+        helperText={def.description || ""}
+        options={[
+          { value: "true", label: "true" },
+          { value: "false", label: "false" },
+        ]}
+      />
     );
   }
   return (
@@ -62,41 +98,86 @@ function eqFieldInput(def, name, value, disabled, onChange) {
   );
 }
 
-export function IssListFilterField({ param, value, onChange, disabled, ns = "ISA" }) {
+export function IssListFilterField({
+  param,
+  value,
+  onChange,
+  disabled,
+  ns = "ISA",
+  endpointLabel = "",
+  authEnabled = false,
+  onNeedLogin,
+}) {
   const ext = param?.[ISS_LIST_FILTER_EXT] || {};
+  const listPath = ext.listPath || "/conversaciones";
   const [open, setOpen] = useState(false);
   const [bag, setBag] = useState(() => bagFromFilterValue(value, ext));
   const [err, setErr] = useState("");
+  const [jsonText, setJsonText] = useState(() => filterValueToJsonText(value));
+  const [jsonErr, setJsonErr] = useState("");
 
   const eqEntries = useMemo(() => Object.entries(ext.eq || {}), [ext]);
-  const sorts = useMemo(() => sortOptions(ext), [ext]);
+  const eqSections = useMemo(() => buildEqSections(eqEntries), [eqEntries]);
+  const sortColumns = useMemo(() => sortColumnOptions(ext), [ext]);
+  const sortParts = useMemo(() => parseSortParts(bag.sort), [bag.sort]);
+
+  function setSortField(field) {
+    setBag((p) => ({ ...p, sort: formatSortValue(field, parseSortParts(p.sort).dir || "desc") }));
+  }
+
+  function setSortDir(dir) {
+    setBag((p) => {
+      const { field } = parseSortParts(p.sort);
+      const col = field || sortColumns[0]?.value || "iconversacion";
+      return { ...p, sort: formatSortValue(col, dir) };
+    });
+  }
 
   useEffect(() => {
     if (!open) setBag(bagFromFilterValue(value, ext));
   }, [value, ext, open]);
 
-  const summary = value?.trim() ? value : "(sin filtro)";
-  const previewQuery = useMemo(() => {
-    const r = validateIssFilter(
-      { search: bag.search || undefined, limit: bag.limit, offset: bag.offset, sort: bag.sort || undefined, eq: bag.eq },
-      ext,
-    );
-    return r.ok ? serializeIssFilterQuery(bag, ext) : "";
-  }, [bag, ext]);
-  const previewJson = useMemo(() => {
-    const r = validateIssFilter(
-      { search: bag.search || undefined, limit: bag.limit, offset: bag.offset, sort: bag.sort || undefined, eq: bag.eq },
-      ext,
-    );
-    return r.ok ? serializeIssFilter(bag, ext) || "{}" : "";
-  }, [bag, ext]);
+  useEffect(() => {
+    setJsonText(filterValueToJsonText(value));
+    setJsonErr("");
+  }, [value]);
+
+  const dialogTitle = endpointLabel
+    ? `Filtro · ${endpointLabel}`
+    : `Filtro query \`${param?.name || ISS_LIST_FILTER_QUERY_PARAM}\``;
+
+  function onManualChange(raw) {
+    const next = String(raw ?? "");
+    onChange?.(next.trim());
+    setErr("");
+    setJsonErr("");
+  }
+
+  function onJsonChange(raw) {
+    const next = String(raw ?? "");
+    setJsonText(next);
+    if (!next.trim()) {
+      setJsonErr("");
+      setErr("");
+      onChange?.("");
+      return;
+    }
+    const r = jsonTextToFilterQuery(next, ext);
+    if (!r.ok) {
+      setJsonErr(r.error);
+      return;
+    }
+    setJsonErr("");
+    setErr("");
+    onChange?.(r.value);
+  }
 
   function apply() {
     const payload = {
       search: bag.search || undefined,
       limit: bag.limit === "" ? undefined : Number(bag.limit),
       offset: bag.offset === "" ? undefined : Number(bag.offset),
-      sort: bag.sort || undefined,
+      sort: bag.sort?.trim() || undefined,
       eq: bag.eq,
     };
     const r = validateIssFilter(payload, ext);
@@ -109,40 +190,31 @@ export function IssListFilterField({ param, value, onChange, disabled, ns = "ISA
     setOpen(false);
   }
 
-  function clearFilter() {
-    const base = emptyIssFilter(ext.defaults);
-    setBag(base);
-    onChange?.("");
+  function resetBag() {
+    setBag(emptyIssFilter(ext.defaults));
     setErr("");
-    setOpen(false);
   }
 
-  function loadExample() {
-    const ex = param?.schema?.example || param?.example;
-    if (!ex) return;
-    try {
-      let raw = typeof ex === "string" ? ex : JSON.stringify(ex);
-      if (!raw.trim().startsWith("{")) raw = decodeIssFilterB64(raw);
-      const p = parseIssFilterRaw(raw);
-      if (p.ok) setBag(bagFromFilterValue(encodeIssFilterB64(raw), ext));
-    } catch { /* ignore */ }
+  function clearFilter() {
+    resetBag();
+    onChange?.("");
+    setOpen(false);
   }
 
   return (
     <>
       <Box className="isa-sw-iss-filter-field" sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-        <Typography variant="caption" color="text.secondary" component="div">
-          {param?.description?.split(".")[0] || `Filtro ISS (query \`${ISS_LIST_FILTER_QUERY_PARAM}\` en Base64)`}
-        </Typography>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "flex-end" }}>
           <TextField
             size="small"
             fullWidth
             disabled={disabled}
-            label={`${param?.name || ISS_LIST_FILTER_QUERY_PARAM} (Base64)`}
-            value={summary}
+            label="Filtro B64"
+            value={value || ""}
+            placeholder="Base64 o JSON del filtro"
+            onChange={(e) => onManualChange(e.target.value)}
+            sx={{ flex: 1, minWidth: 0 }}
             InputProps={{
-              readOnly: true,
               endAdornment: value ? (
                 <InputAdornment position="end">
                   <Tooltip title="Limpiar filtro">
@@ -154,19 +226,60 @@ export function IssListFilterField({ param, value, onChange, disabled, ns = "ISA
               ) : null,
             }}
           />
-          <Button variant="outlined" size="small" disabled={disabled} onClick={() => { setErr(""); setOpen(true); }} sx={{ flexShrink: 0, mt: 0.25 }} startIcon={<SwIcon icon="mdi:tune-variant" size={18} ns={ns} />}>
-            Configurar
-          </Button>
-          <InputRecommendationChip rec={param?.[ISS_INPUT_RECOMMENDATION_EXT]} ns={ns} onApplyF={(b64) => { onChange?.(b64); setErr(""); }} />
+          <Tooltip title="Configurar filtro">
+            <span>
+              <IconButton
+                className="isa-sw-iss-filter-config-btn"
+                size="small"
+                disabled={disabled}
+                onClick={() => { setErr(""); setOpen(true); }}
+                aria-label="Configurar filtro"
+                sx={{ flexShrink: 0, color: "text.secondary" }}
+              >
+                <SwIcon icon="mdi:tune-variant" size={18} ns={ns} />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Box>
+        <TextField
+          size="small"
+          fullWidth
+          multiline
+          minRows={2}
+          maxRows={8}
+          disabled={disabled}
+          label="Filtro JSON"
+          value={jsonText}
+          placeholder='{"search":"…","limit":10}'
+          onChange={(e) => onJsonChange(e.target.value)}
+          error={!!jsonErr}
+          helperText={jsonErr || "JSON compacto del filtro; al editarlo se actualiza el B64 de arriba."}
+          sx={{
+            "& .MuiInputBase-input": {
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+              fontSize: "0.8rem",
+              lineHeight: 1.45,
+            },
+          }}
+        />
+        {err && !open ? <Alert severity="error" sx={{ py: 0.25 }}>{err}</Alert> : null}
       </Box>
 
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth className="isa-sw-iss-filter-dialog">
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1, pb: 1 }}>
-          <SwIcon icon="mdi:filter-cog-outline" size={22} ns={ns} />
-          Filtro ISS — {param?.name || ISS_LIST_FILTER_QUERY_PARAM}
-        </DialogTitle>
-        <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Dialog {...issFilterDialogProps({ open, onClose: () => setOpen(false) })}>
+        {issFilterDialogHeader(React, MaterialUI, { Icon: (props) => <SwIcon {...props} ns={ns} /> }, { title: dialogTitle })}
+        <DialogContent
+          sx={{
+            ...loginFormContentSx(),
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            maxHeight: "min(80vh, 640px)",
+            overflowY: "auto",
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" component="div">
+            Parámetro <code>{param?.name || ISS_LIST_FILTER_QUERY_PARAM}</code> (JSON Base64)
+          </Typography>
           {err ? <Alert severity="error">{err}</Alert> : null}
           {ext.searchHint ? (
             <Alert severity="info" icon={<SwIcon icon="mdi:magnify" size={20} ns={ns} />}>{ext.searchHint}</Alert>
@@ -179,62 +292,79 @@ export function IssListFilterField({ param, value, onChange, disabled, ns = "ISA
             <TextField size="small" type="number" disabled={disabled} label="offset" value={bag.offset} onChange={(e) => setBag((p) => ({ ...p, offset: e.target.value }))} helperText="Paginación — desde 0" inputProps={{ min: 0 }} />
           </Box>
 
-          {sorts.length > 1 ? (
-            <TextField select size="small" fullWidth disabled={disabled} label="sort — orden" value={bag.sort} onChange={(e) => setBag((p) => ({ ...p, sort: e.target.value }))} helperText="Prefijo - en JSON = descendente">
-              {sorts.map((o) => <MenuItem key={o.value || "__none"} value={o.value}>{o.label}</MenuItem>)}
-            </TextField>
-          ) : (
-            <TextField size="small" fullWidth disabled={disabled} label="sort" value={bag.sort} onChange={(e) => setBag((p) => ({ ...p, sort: e.target.value }))} helperText="Campo de orden; prefijo - = descendente" />
-          )}
-
-          {eqEntries.length ? (
-            <>
-              <Divider />
-              <Typography variant="subtitle2">eq — igualdad exacta (AND)</Typography>
-              {eqEntries.map(([key, def]) => (
-                <Box key={key}>{eqFieldInput(def, key, bag.eq?.[key], disabled, (v) => setBag((p) => ({ ...p, eq: { ...p.eq, [key]: v } })))}</Box>
-              ))}
-            </>
+          {sortColumns.length > 0 ? (
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr minmax(9rem, 10.5rem)", gap: 1.5, alignItems: "start" }}>
+              <IssFusedSelectField
+                disabled={disabled}
+                label="ordenar por"
+                value={sortParts.field || sortColumns[0]?.value || ""}
+                onChange={setSortField}
+                helperText="Columna del listado"
+                allowEmpty={false}
+                options={sortColumns.map((o) => ({ value: o.value, label: o.label }))}
+              />
+              <IssFusedSelectField
+                disabled={disabled}
+                label="sentido"
+                value={sortParts.dir || "desc"}
+                onChange={setSortDir}
+                allowEmpty={false}
+                options={[
+                  { value: "asc", label: "Ascendente" },
+                  { value: "desc", label: "Descendente" },
+                ]}
+              />
+            </Box>
           ) : null}
 
-          <Box
-            className="isa-sw-iss-filter-preview"
-            sx={{
-              p: 1.25,
-              mb: 1.5,
-              minHeight: "4.5rem",
-              borderRadius: 1,
-              bgcolor: "action.hover",
-              fontFamily: "ui-monospace, monospace",
-              fontSize: "0.8rem",
-              lineHeight: 1.5,
-            }}
-          >
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.75 }}>
-              Vista previa — query <Box component="code" sx={{ fontFamily: "inherit" }}>{ISS_LIST_FILTER_QUERY_PARAM}=</Box>
-            </Typography>
-            <Box component="pre" sx={{ m: 0, mb: previewJson && previewJson !== "{}" ? 1 : 0, whiteSpace: "pre-wrap", wordBreak: "break-all", color: "text.primary" }}>
-              {previewQuery || "(vacío)"}
-            </Box>
-            {previewJson && previewJson !== "{}" ? (
-              <>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
-                  JSON decodificado
-                </Typography>
-                <Box component="pre" sx={{ m: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", color: "text.primary" }}>
-                  {previewJson}
-                </Box>
-              </>
-            ) : null}
-          </Box>
+          {eqSections.compoundGroups.length || eqSections.singles.length ? (
+            <>
+              <Divider />
+              <Typography variant="subtitle2">igualdad exacta</Typography>
+              {eqSections.compoundGroups.map((g) => (
+                <IssDistinctCompoundEqField
+                  key={g.id}
+                  listPath={listPath}
+                  distinctLookup={g.distinctLookup}
+                  fields={g.fields}
+                  values={bag.eq}
+                  onApply={(patch) => setBag((p) => ({ ...p, eq: { ...p.eq, ...patch } }))}
+                  disabled={disabled}
+                  ns={ns}
+                  authEnabled={authEnabled}
+                  onNeedLogin={onNeedLogin}
+                />
+              ))}
+              {eqSections.singles.map(([key, def]) => {
+                const dl = def.distinctLookup;
+                if (dl?.columns?.length && listPath) {
+                  return (
+                    <IssDistinctEqField
+                      key={key}
+                      listPath={listPath}
+                      fieldKey={key}
+                      distinctLookup={dl}
+                      def={def}
+                      value={bag.eq?.[key] ?? ""}
+                      onChange={(v) => setBag((p) => ({ ...p, eq: { ...p.eq, [key]: v } }))}
+                      disabled={disabled}
+                      ns={ns}
+                      authEnabled={authEnabled}
+                      onNeedLogin={onNeedLogin}
+                    />
+                  );
+                }
+                return (
+                  <Box key={key}>{eqFieldInput(def, key, bag.eq?.[key], disabled, (v) => setBag((p) => ({ ...p, eq: { ...p.eq, [key]: v } })))}</Box>
+                );
+              })}
+            </>
+          ) : null}
         </DialogContent>
-        <DialogActions sx={{ px: 2, py: 1.5, justifyContent: "space-between" }}>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            {(param?.schema?.example || param?.example) ? (
-              <Button size="small" disabled={disabled} onClick={loadExample}>Cargar ejemplo</Button>
-            ) : null}
-            <Button size="small" color="inherit" disabled={disabled} onClick={clearFilter}>Limpiar</Button>
-          </Box>
+        <DialogActions sx={{ ...loginFormActionsSx(), justifyContent: "space-between", gap: 1 }}>
+          <Button size="small" disabled={disabled} onClick={resetBag} startIcon={<SwIcon icon="mdi:restore" size={18} ns={ns} />}>
+            Reiniciar filtro
+          </Button>
           <Box sx={{ display: "flex", gap: 1 }}>
             <Button size="small" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button size="small" variant="contained" disabled={disabled} onClick={apply}>Aplicar filtro</Button>
@@ -248,4 +378,3 @@ export function IssListFilterField({ param, value, onChange, disabled, ns = "ISA
 export function isIssListFilterParam(p) {
   return p?.in === "query" && p?.name === ISS_LIST_FILTER_QUERY_PARAM && !!p?.[ISS_LIST_FILTER_EXT];
 }
-

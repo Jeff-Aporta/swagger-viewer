@@ -1,9 +1,9 @@
 import { SwaggerViewer } from "../../../src/SwaggerViewer.jsx";
-import { parseIsDocument, isDocumentText } from "../../../src/lib/is-document.js";
-import { readBrandFromMeta } from "../../../src/lib/viewer-brand.js";
+import { parseIsDocument, isDocumentText } from "../../../src/lib/openapi/is-document.js";
+import { readBrandFromMeta } from "../../../src/lib/brand/viewer-brand.js";
 import { IsEditorDrawer } from "./IsEditorDrawer.jsx";
 import { buildDemoExportUrls, revokeDemoExportUrls } from "./demo-exports.js";
-import { SwIcon } from "../../../src/lib/sw-icon.jsx";
+import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
 import sampleIsDoc from "../../openapi/sample.is.json";
 
 const { useState, useEffect, useCallback, useRef, useMemo } = React;

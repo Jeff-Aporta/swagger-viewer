@@ -1,6 +1,6 @@
 {
   "name": "@jeff-aporta/is-swagger",
-  "version": "0.1.5",
+  "version": "0.1.18",
   "description": "Visor OpenAPI React/MUI — paquete npm (@jeff-aporta/is-swagger): viewer CDN bundles + utilidades server (spec, Postman, embed HTML).",
   "type": "module",
   "sideEffects": false,
@@ -13,6 +13,9 @@
     "*": {
       "server/build-spec": [
         "dist/server/build-spec.d.ts"
+      ],
+      "server/build-exports": [
+        "dist/server/build-exports.d.ts"
       ],
       "server/envelope": [
         "dist/server/envelope.d.ts"
@@ -35,8 +38,8 @@
       "embed/build-html": [
         "dist/embed/build-html.d.ts"
       ],
-      "lib/is-document": [
-        "dist/lib/is-document.d.ts"
+      "lib/openapi/is-document": [
+        "dist/lib/openapi/is-document.d.ts"
       ]
     }
   },
@@ -48,15 +51,20 @@
       "import": "./dist/embed/build-html.js",
       "require": "./dist/embed/build-html.cjs"
     },
-    "./lib/is-document": {
-      "types": "./dist/lib/is-document.d.ts",
-      "import": "./dist/lib/is-document.js",
-      "require": "./dist/lib/is-document.cjs"
+    "./lib/openapi/is-document": {
+      "types": "./dist/lib/openapi/is-document.d.ts",
+      "import": "./dist/lib/openapi/is-document.js",
+      "require": "./dist/lib/openapi/is-document.cjs"
     },
     "./server/build-spec": {
       "types": "./dist/server/build-spec.d.ts",
       "import": "./dist/server/build-spec.js",
       "require": "./dist/server/build-spec.cjs"
+    },
+    "./server/build-exports": {
+      "types": "./dist/server/build-exports.d.ts",
+      "import": "./dist/server/build-exports.js",
+      "require": "./dist/server/build-exports.cjs"
     },
     "./server/envelope": {
       "types": "./dist/server/envelope.d.ts",

@@ -28,6 +28,7 @@ import {
     jsonRequestBody,
     jsonResponse,
 } from "./spec.js";
+import { enrichListFilterMeta } from "./list-filter-schema.js";
 
 function encodeIssFilterB64(obj: Record<string, unknown>): string {
     const json = JSON.stringify(obj);
@@ -155,6 +156,15 @@ export type IsOpenApiConfig = {
         requestBodyExamples?: Record<string, unknown[]>;
         docs?: Record<string, string>;
     };
+    /** Config del visor IS-Swagger (auth, brand, exports). URLs se resuelven en build-exports. */
+    viewer?: Record<string, unknown>;
+    /** Rutas expuestas al protocolo de tests / integración (filtro y prefijo sobre OpenAPI generado). */
+    protocol?: {
+        serverUrl?: string;
+        pathPrefix?: string;
+        excludePathPatterns?: string[];
+        ensureApiPrefix?: boolean;
+    };
     paths: Record<string, Record<string, IsOpenApiOperationConfig>>;
 };
 
@@ -259,7 +269,7 @@ function resolveParam(catalog: IsOpenApiConfig["catalog"], p: IsOpenApiParamConf
     if (typeof listFilter === "string") {
         delete raw.listFilter;
         const meta = catalog.listFilters?.[listFilter];
-        if (meta) raw[ISS_LIST_FILTER_EXTENSION] = meta;
+        if (meta) raw[ISS_LIST_FILTER_EXTENSION] = enrichListFilterMeta(meta as Record<string, unknown>);
     }
     const inputRecommend = raw.inputRecommend;
     if (typeof inputRecommend === "string") {
