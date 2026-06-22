@@ -921,8 +921,8 @@ function openApiToPostmanCollection(spec, opts = {}) {
 
 // server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "dc06816";
-var SWAGGER_FRONT_SHARED_REF = "37aa772";
+var SWAGGER_VIEWER_REF = "49ff82f";
+var SWAGGER_FRONT_SHARED_REF = "7dc17e4";
 
 // server/build-exports.ts
 var OPENAPI_CONFIG_KIND = "insoft.openapi-config";
