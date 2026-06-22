@@ -32,6 +32,7 @@ const {
   IconButton,
   InputAdornment,
   Tooltip,
+  MenuItem,
 } = MaterialUI;
 
 function swaggerUiIcon(ns) {
@@ -50,6 +51,8 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
   const [remember, setRemember] = useState(true);
   const [loginErr, setLoginErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [terceros, setTerceros] = useState([]);
+  const [selectedItercero, setSelectedItercero] = useState("");
 
   const loadForm = useCallback(() => {
     const c = readCredentials();
@@ -62,6 +65,8 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
     loadForm();
     setLoginErr("");
     setShowPass(false);
+    setTerceros([]);
+    setSelectedItercero("");
     setLoginHint(hint || "");
     setLoginOpen(true);
   }, [loadForm]);
@@ -101,15 +106,21 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
       setLoginErr("Usuario y contraseña requeridos");
       return;
     }
+    if (terceros.length && !selectedItercero) {
+      setLoginErr("Seleccione la empresa para continuar");
+      return;
+    }
     const loginId = isPortal ? normalizeContapymeLoginId(user) : user.trim();
     setBusy(true);
     setLoginErr("");
     try {
       saveCredentials(user.trim(), pass, remember);
-      const data = await fetchTestJwt(authBase, loginId, pass, {
+      const loginOpts = {
         loginKind: isPortal ? "portal" : authKind || "system-login",
         loginPath,
-      });
+      };
+      if (selectedItercero) loginOpts.itercero = selectedItercero;
+      const data = await fetchTestJwt(authBase, loginId, pass, loginOpts);
       storeJwt(data.token, {
         expiresAt: data.expiresAt,
         username: data.username || loginId,
@@ -117,6 +128,8 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
         claims: data.claims || null,
       });
       setPass("");
+      setTerceros([]);
+      setSelectedItercero("");
       setLoginOpen(false);
       setLoginHint("");
       const who = data.displayName || stripContapymeEmail(data.username || loginId) || loginId;
@@ -127,6 +140,12 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
         message: `Autorizado como ${who}${data.expiresAt ? ` · expira ${formatLocalDateTime(data.expiresAt)}` : ""}`,
       });
     } catch (e) {
+      if (e?.code === "MULTI_EMPRESA" && Array.isArray(e.terceros) && e.terceros.length) {
+        setTerceros(e.terceros);
+        setSelectedItercero(String(e.terceros[0]?.itercero || ""));
+        setLoginErr(e.message || "Elija la empresa para continuar");
+        return;
+      }
       setLoginErr(e.message || String(e));
     } finally {
       setBusy(false);
@@ -149,6 +168,9 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
         })}
         <DialogContent sx={{ pt: 2 }}>
           {loginHint ? <Alert severity="warning" sx={{ mb: 2 }}>{loginHint}</Alert> : null}
+          {terceros.length ? (
+            <Alert severity="info" sx={{ mb: 2 }}>Seleccione la empresa con la que desea ingresar.</Alert>
+          ) : null}
           {loginErr ? <HttpErrorAlert message={loginErr} sx={{ mb: 2 }} /> : null}
           <Stack spacing={2}>
             <TextField
@@ -190,6 +212,24 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
                 },
               }}
             />
+            {terceros.length ? (
+              <TextField
+                select
+                label="Empresa"
+                value={selectedItercero}
+                onChange={(e) => setSelectedItercero(e.target.value)}
+                fullWidth
+                size="small"
+                helperText="El correo está asociado a varias empresas."
+                onKeyDown={(e) => e.key === "Enter" && !busy && submitLogin()}
+              >
+                {terceros.map((t) => (
+                  <MenuItem key={t.itercero} value={t.itercero}>
+                    {t.ntercero ? `${t.ntercero} (${t.itercero})` : t.itercero}
+                  </MenuItem>
+                ))}
+              </TextField>
+            ) : null}
             <FormControlLabel
               control={<Checkbox checked={remember} onChange={(e) => setRemember(!!e.target.checked)} size="small" />}
               label={LOGIN_REMEMBER_LABEL}
@@ -198,7 +238,7 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setLoginOpen(false)} disabled={busy}>Cancelar</Button>
-          <Button variant="contained" disabled={busy || !user.trim()} onClick={submitLogin}>
+          <Button variant="contained" disabled={busy || !user.trim() || !pass || (terceros.length > 0 && !selectedItercero)} onClick={submitLogin}>
             {busy ? "Entrando…" : (isPortal ? "Entrar" : "Obtener JWT")}
           </Button>
         </DialogActions>

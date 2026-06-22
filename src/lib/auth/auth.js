@@ -156,6 +156,8 @@ export async function fetchTestJwt(authBase, username, password, opts = {}) {
   const body = portal
     ? { semail: normalizeContapymeLoginId(username), password }
     : { username, password: wrapPassword(password) };
+  const itercero = String(opts.itercero ?? "").trim();
+  if (itercero) body.itercero = itercero;
   let res;
   try {
     res = await fetch(endpoint, {
@@ -175,6 +177,12 @@ export async function fetchTestJwt(authBase, username, password, opts = {}) {
     data = await res.json();
   } catch {
     /* ignore */
+  }
+  if (data?.code === "MULTI_EMPRESA" && Array.isArray(data.terceros) && data.terceros.length) {
+    const e = new Error(String(data.error || "Elija la empresa para continuar."));
+    e.code = "MULTI_EMPRESA";
+    e.terceros = data.terceros;
+    throw e;
   }
   if (!res.ok || !data.ok || !data.token) {
     throw new Error(formatLoginError(res, data, endpoint));
