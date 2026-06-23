@@ -64,8 +64,9 @@ export function buildSwaggerViewerHtml(opts) {
   const specUrl = opts.specUrl;
   const title = opts.title || "API";
   const fsRef = opts.frontSharedRef || SWAGGER_FRONT_SHARED_REF;
-  const viewerBase = resolveViewerBase(specUrl, opts.viewerCdnBase || opts.localCdnBase, opts.viewerRef);
-  const fsBase = `https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@${fsRef}/cdn`;
+  const hostCdnBase = opts.viewerCdnBase || opts.localCdnBase;
+  const viewerBase = resolveViewerBase(specUrl, hostCdnBase, opts.viewerRef);
+  const fsBase = resolveFrontSharedBase(viewerBase, hostCdnBase, fsRef);
 
   const authKind = opts.authKind || (opts.authLoginUrl ? "system-login" : "portal");
   const loginPath =
@@ -81,14 +82,14 @@ export function buildSwaggerViewerHtml(opts) {
 
   const config = {
     specUrl,
-    ns: "ISA",
-    app: "swagger-viewer",
-    shell: true,
+    ns: opts.ns || "ISA",
+    app: opts.app || "swagger-viewer",
+    shell: opts.shell !== false,
     viewerCdnBase: viewerBase,
     cssUrl: `${viewerBase}/swagger-viewer.min.css`,
     appUrl: `${viewerBase}/swagger-viewer-app.min.js`,
     stackUrl: `${fsBase}/stack.mjs`,
-    isaUrl: `${fsBase}/isa/js/index.js`,
+    isaUrl: `${fsBase}/_dist/isa/js/index.min.js`,
     auth: {
       enabled: opts.authEnabled !== false,
       loginUrl: opts.authLoginUrl || apiOriginFromSpecUrl(specUrl),
@@ -144,7 +145,12 @@ export function buildSwaggerUiHtml(openApiJsonUrl, opts = {}) {
     localCdnBase: opts.localCdnBase || opts.viewerCdnBase,
     authKind: opts.authKind || "portal",
     authLoginUrl: opts.authLoginUrl,
-    brand: opts.brand || { title: "ISA PatyIA", icon: "mdi:robot-happy-outline" },
+    authLoginPath: opts.authLoginPath,
+    ns: opts.ns,
+    app: opts.app,
+    shell: opts.shell,
+    exports: opts.exports,
+    brand: opts.brand || { title: "ISS PatyIA", icon: "mdi:robot-happy-outline" },
     postmanUrl: openApiJsonUrl.replace(/\/swagger\.json$/i, "/swagger/postman.json"),
     postmanDownloadName: opts.postmanDownloadName || "iss-ayudascpia.postman_collection.json",
     isUrl: openApiJsonUrl.replace(/\/swagger\.json$/i, "/swagger/is.json"),
@@ -153,13 +159,9 @@ export function buildSwaggerUiHtml(openApiJsonUrl, opts = {}) {
   });
 }
 
-function swaggerCdnPathFromSpecUrl(specUrl) {
-  try {
-    const path = new URL(specUrl).pathname.replace(/\/swagger\.json\/?$/i, "/swagger/cdn");
-    return path.endsWith("/swagger/cdn") ? path : "/api/swagger/cdn";
-  } catch {
-    return "/api/swagger/cdn";
-  }
+function resolveFrontSharedBase(viewerBase, hostCdnBase, fsRef) {
+  if (hostCdnBase) return `${String(viewerBase).replace(/\/$/, "")}/fs`;
+  return `https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@${fsRef}/cdn`;
 }
 
 function resolveViewerBase(specUrl, localCdnBase, viewerRef) {
