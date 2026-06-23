@@ -2,6 +2,8 @@ import {
   readCredentials,
   saveCredentials,
   fetchTestJwt,
+  loginWithInsoftAutoRetry,
+  defaultIterceroFromTerceros,
   storeJwt,
   clearJwt,
   formatLocalDateTime,
@@ -120,7 +122,12 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
         loginPath,
       };
       if (selectedItercero) loginOpts.itercero = selectedItercero;
-      const data = await fetchTestJwt(authBase, loginId, pass, loginOpts);
+      const data = await loginWithInsoftAutoRetry(
+        (id, p, o) => fetchTestJwt(authBase, id, p, o),
+        loginId,
+        pass,
+        loginOpts,
+      );
       storeJwt(data.token, {
         expiresAt: data.expiresAt,
         username: data.username || loginId,
@@ -142,8 +149,8 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
     } catch (e) {
       if (e?.code === "MULTI_EMPRESA" && Array.isArray(e.terceros) && e.terceros.length) {
         setTerceros(e.terceros);
-        setSelectedItercero(String(e.terceros[0]?.itercero || ""));
-        setLoginErr(e.message || "Elija la empresa para continuar");
+        setSelectedItercero(defaultIterceroFromTerceros(e.terceros));
+        setLoginErr("");
         return;
       }
       setLoginErr(e.message || String(e));
