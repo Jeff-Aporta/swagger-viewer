@@ -205,8 +205,37 @@ export async function loadSpec(config) {
   if (parsed) return parsed.spec;
   if (config.spec && typeof config.spec === "object") return config.spec;
   const url = config.specUrl || config.url;
-  if (!url) throw new Error("SwaggerViewer: spec o specUrl requerido");
+  if (!url) throw new Error("IS-Swagger: spec o specUrl requerido");
   const res = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`No se pudo cargar OpenAPI (${res.status})`);
-  return res.json();
+  if (!res.ok) throw new Error(`No se pudo cargar el documento IS (${res.status})`);
+  const data = await res.json();
+  const fromIs = parseIsDocument(data);
+  if (fromIs) return fromIs.spec;
+  if (data?.paths || data?.openapi) return data;
+  throw new Error("Documento IS inválido");
+}
+
+/** Carga documento IS (viewer + spec) desde config embebido o specUrl. */
+export async function loadViewerDocument(config) {
+  const parsed = parseIsDocument(config);
+  if (parsed) {
+    const { spec: _omit, ...viewer } = parsed.config || {};
+    return { config: { ...config, ...viewer }, spec: parsed.spec };
+  }
+  if (config.spec && typeof config.spec === "object") {
+    const { spec, ...viewer } = config;
+    return { config: viewer, spec };
+  }
+  const url = config.specUrl || config.url;
+  if (!url) throw new Error("IS-Swagger: specUrl requerido");
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`No se pudo cargar el documento IS (${res.status})`);
+  const data = await res.json();
+  const fromIs = parseIsDocument(data);
+  if (fromIs) {
+    const { spec: _omit, ...viewer } = fromIs.config || {};
+    return { config: { ...config, ...viewer }, spec: fromIs.spec };
+  }
+  if (data?.paths || data?.openapi) return { config, spec: data };
+  throw new Error("Documento IS inválido");
 }

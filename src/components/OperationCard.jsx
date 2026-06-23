@@ -19,8 +19,11 @@ const {
   Tabs,
   Tab,
   Box,
-  Chip,
+  Tooltip,
 } = MaterialUI;
+
+const AUTH_LOCK_TIP =
+  "Requiere Authorization: Bearer <JWT>. Use Iniciar sesión o Pegar JWT en la barra superior.";
 
 export function OperationCard({
   tagIndex,
@@ -69,15 +72,16 @@ export function OperationCard({
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, width: "100%", pr: 1 }}>
           <MethodChip method={op.method} />
           {needsAuth ? (
-            <Box
-              component="span"
-              className="isa-sw-auth-lock"
-              title="Requiere autenticación JWT"
-              aria-label="Requiere autenticación JWT"
-              sx={{ display: "inline-flex", color: "warning.main", opacity: 0.9, flexShrink: 0 }}
-            >
-              <SwIcon icon="mdi:lock-outline" size={16} ns={ns} />
-            </Box>
+            <Tooltip title={AUTH_LOCK_TIP} arrow placement="top">
+              <Box
+                component="span"
+                className="isa-sw-auth-lock"
+                aria-label={AUTH_LOCK_TIP}
+                sx={{ display: "inline-flex", color: "warning.main", opacity: 0.9, flexShrink: 0 }}
+              >
+                <SwIcon icon="mdi:lock-outline" size={16} ns={ns} />
+              </Box>
+            </Tooltip>
           ) : null}
           <ApiPathLabel path={op.path} />
           <Typography
@@ -95,17 +99,6 @@ export function OperationCard({
           <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, opacity: 0.5, display: "block" }}>
             {op.description}
           </Typography>
-        ) : null}
-        {needsAuth ? (
-          <Chip
-            className="isa-sw-chip isa-sw-auth-chip"
-            size="small"
-            icon={<SwIcon icon="mdi:lock-outline" size={14} ns={ns} />}
-            label="Bearer JWT"
-            color="warning"
-            variant="outlined"
-            sx={{ mb: 1, alignSelf: "flex-start" }}
-          />
         ) : null}
         <Tabs
           value={tab}

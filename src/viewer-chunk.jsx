@@ -1,5 +1,5 @@
 import { SwaggerViewer } from "./SwaggerViewer.jsx";
-import { loadSpec } from "./lib/openapi/openapi.js";
+import { loadViewerDocument } from "./lib/openapi/openapi.js";
 import { parseIsDocument } from "./lib/openapi/is-document.js";
 
 /** @type {import('react-dom/client').Root | null} */
@@ -9,13 +9,16 @@ export async function mountSwaggerViewer(config, target = "#root") {
   const el = typeof target === "string" ? document.querySelector(target) : target;
   if (!el) throw new Error("mountSwaggerViewer: contenedor no encontrado");
 
-  const parsed = parseIsDocument(config);
-  const viewerConfig = parsed ? parsed.config : config;
-  const spec =
-    parsed?.spec ||
-    viewerConfig.spec ||
-    (viewerConfig.specUrl || viewerConfig.url ? await loadSpec(viewerConfig) : null);
-  if (!spec) throw new Error("mountSwaggerViewer: spec, specUrl o documento IS requerido");
+  const bootParsed = parseIsDocument(config);
+  let viewerConfig = bootParsed ? bootParsed.config : config;
+  let spec = bootParsed?.spec || viewerConfig.spec;
+
+  if (!spec && (viewerConfig.specUrl || viewerConfig.url || viewerConfig.spec)) {
+    const loaded = await loadViewerDocument(viewerConfig);
+    viewerConfig = loaded.config;
+    spec = loaded.spec;
+  }
+  if (!spec) throw new Error("mountSwaggerViewer: documento IS requerido");
 
   const createRoot = globalThis.ReactDOM?.createRoot;
   if (!createRoot) throw new Error("mountSwaggerViewer: ReactDOM.createRoot no disponible");

@@ -12,7 +12,7 @@ export async function bootSwaggerApp(config) {
   if (!globalThis.ISAFront?.registerApp) {
     await import(
       merged.isaUrl ||
-        "https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@main/cdn/isa/js/index.js",
+        "https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@main/cdn/_dist/isa/js/index.min.js",
     );
   }
 

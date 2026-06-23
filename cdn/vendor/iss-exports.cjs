@@ -16,7 +16,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// server/build-exports.ts
+// ../../components/swagger/server/build-exports.ts
 var build_exports_exports = {};
 __export(build_exports_exports, {
   IS_DOCUMENT_KIND: () => IS_DOCUMENT_KIND,
@@ -30,7 +30,7 @@ __export(build_exports_exports, {
 });
 module.exports = __toCommonJS(build_exports_exports);
 
-// server/envelope.ts
+// ../../components/swagger/server/envelope.ts
 var TS = "2026-06-19T15:30:00.000Z";
 var TS_OUT = "2026-06-19T15:30:00.042Z";
 var INSOFT_ENCABEZADO_OK = {
@@ -95,7 +95,7 @@ var EXAMPLE_503 = {
   encabezado: insoftEncabezadoError(503010, "El servicio no est\xE1 disponible temporalmente.")
 };
 
-// server/spec.ts
+// ../../components/swagger/server/spec.ts
 var ISS_DOC_MD_EXTENSION = "x-iss-doc-md";
 var ISS_LOOKUP_EXTENSION = "x-iss-lookup";
 var ISS_LIST_FILTER_EXTENSION = "x-iss-list-filter";
@@ -202,7 +202,7 @@ function issRspSseDoc(okDesc, example) {
   };
 }
 
-// server/list-filter-schema.ts
+// ../../components/swagger/server/list-filter-schema.ts
 var ISS_LIST_FILTER_DEFAULT_LIMIT = 9999;
 var ISS_LIST_FILTER_MAX_LIMIT = 9999;
 function sortKeysFromMeta(meta) {
@@ -281,7 +281,7 @@ function enrichListFilterCatalog(catalog) {
   return { ...catalog, listFilters: enriched };
 }
 
-// server/build-spec.ts
+// ../../components/swagger/server/build-spec.ts
 function encodeIssFilterB64(obj) {
   const json = JSON.stringify(obj);
   const bytes = new TextEncoder().encode(json);
@@ -512,7 +512,7 @@ function buildOpenApiFromConfig(config, serverUrl) {
   };
 }
 
-// server/docs.ts
+// ../../components/swagger/server/docs.ts
 var ISS_DOC_STANDARD = "DI-QA-001";
 function buildApiInfoDescription(baseDesc, frontLink) {
   const panel = frontLink?.url ? `
@@ -579,7 +579,7 @@ Las operaciones marcadas con seguridad en OpenAPI heredan **Bearer {{token}}** d
 `.trim();
 }
 
-// server/postman.ts
+// ../../components/swagger/server/postman.ts
 var POSTMAN_SCHEMA = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
 var HTTP_METHODS = ["get", "post", "put", "patch", "delete", "options", "head"];
 var SKIP_PATHS = /* @__PURE__ */ new Set(["/swagger", "/swagger.json", "/swagger/postman.json", "/swagger/is.json"]);
@@ -919,12 +919,12 @@ function openApiToPostmanCollection(spec, opts = {}) {
   };
 }
 
-// server/viewer-pins.ts
+// ../../components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "cd45b28";
-var SWAGGER_FRONT_SHARED_REF = "2cc2e6c";
+var SWAGGER_VIEWER_REF = "17e5836";
+var SWAGGER_FRONT_SHARED_REF = "99fb049";
 
-// server/build-exports.ts
+// ../../components/swagger/server/build-exports.ts
 var OPENAPI_CONFIG_KIND = "insoft.openapi-config";
 var OPENAPI_CONFIG_VERSION = 1;
 var IS_DOCUMENT_KIND = "insoft.swagger-viewer";
@@ -979,7 +979,9 @@ function buildViewerRuntimeConfig(config, specUrl) {
       isDownloadName: v.exports?.isDownloadName ?? "api.is.json"
     },
     viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
-    frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF
+    frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
+    ...Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {},
+    ...Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : {}
   };
 }
 function buildEmbedOpts(config, specUrl, viewer) {
@@ -993,6 +995,9 @@ function buildEmbedOpts(config, specUrl, viewer) {
     authLoginUrl: viewer.auth?.loginUrl,
     authLoginPath: viewer.auth?.loginPath,
     brand: viewer.brand,
+    ns: viewer.ns,
+    app: viewer.app,
+    shell: viewer.shell,
     frontLinks: viewer.frontLinks,
     exports: exports2,
     postmanUrl: exports2?.postmanUrl,

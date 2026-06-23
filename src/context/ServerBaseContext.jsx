@@ -3,6 +3,7 @@ import {
   normalizeServerBase,
   serverBaseStorageKey,
 } from "../lib/lookup/server-base.js";
+import { scopesFromConfig } from "../lib/lookup/server-scopes.js";
 
 const { createContext, useContext, useState, useEffect, useMemo } = React;
 
@@ -10,10 +11,12 @@ const ServerBaseContext = createContext({
   serverBase: "",
   setServerBase: () => {},
   defaultBase: "",
+  scopes: [],
 });
 
 export function ServerBaseProvider({ spec, config, children }) {
   const defaultBase = useMemo(() => inferDefaultServerBase(spec, config), [spec, config]);
+  const scopes = useMemo(() => scopesFromConfig(config), [config]);
   const storageKey = useMemo(() => serverBaseStorageKey(config), [config]);
   const [serverBase, setServerBaseState] = useState(() => {
     try {
@@ -51,7 +54,7 @@ export function ServerBaseProvider({ spec, config, children }) {
   }
 
   return (
-    <ServerBaseContext.Provider value={{ serverBase, setServerBase, defaultBase }}>
+    <ServerBaseContext.Provider value={{ serverBase, setServerBase, defaultBase, scopes }}>
       {children}
     </ServerBaseContext.Provider>
   );

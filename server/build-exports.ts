@@ -29,6 +29,8 @@ export type IssOpenApiViewerConfig = {
         isDownloadName?: string;
     };
     embed?: { title?: string; authKind?: string; localCdnBase?: string };
+    nav?: Array<{ id: string; label: string; icon?: string; tags?: string[]; access?: unknown }>;
+    scopes?: Array<{ id: string; label: string; base: string; icon?: string }>;
     viewerRef?: string;
     frontSharedRef?: string;
 };
@@ -105,6 +107,8 @@ function buildViewerRuntimeConfig(config: IsOpenApiConfig, specUrl: string): Rec
         },
         viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
         frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
+        ...(Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {}),
+        ...(Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : {}),
     };
 }
 
@@ -119,6 +123,9 @@ function buildEmbedOpts(config: IsOpenApiConfig, specUrl: string, viewer: Record
         authLoginUrl: (viewer.auth as Record<string, unknown>)?.loginUrl,
         authLoginPath: (viewer.auth as Record<string, unknown>)?.loginPath,
         brand: viewer.brand,
+        ns: viewer.ns,
+        app: viewer.app,
+        shell: viewer.shell,
         frontLinks: viewer.frontLinks,
         exports,
         postmanUrl: exports?.postmanUrl,

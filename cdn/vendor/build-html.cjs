@@ -16,7 +16,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/embed/build-html.js
+// ../../components/swagger/src/embed/build-html.js
 var build_html_exports = {};
 __export(build_html_exports, {
   buildSwaggerUiHtml: () => buildSwaggerUiHtml,
@@ -108,13 +108,13 @@ function buildSwaggerViewerHtml(opts) {
   };
   const cfgJson = JSON.stringify(config).replace(/</g, "\\u003c");
   const themeKey = "jeffaporta:swagger-ui-theme";
-  const description = opts.description || `Documentaci\xF3n interactiva OpenAPI \u2014 ${brandTitle}. Try it out, export Postman y JSON IS.`;
+  const description = opts.description || `Documentaci\xF3n interactiva IS-Swagger \u2014 ${brandTitle}. Try it out, export Postman y JSON IS.`;
   return HTML_TEMPLATE.replaceAll("__TITLE__", esc(title)).replaceAll("__DESCRIPTION__", esc(description)).replaceAll("__APP_NAME__", esc(brandTitle)).replaceAll("__APP_ICON__", esc(brandIcon)).replaceAll("__THEME_LS_KEY__", themeKey).replaceAll("__FRONT_SHARED_BASE__", fsBase).replaceAll("__VIEWER_CSS__", `${viewerBase}/swagger-viewer.min.css`).replaceAll("__BOOT_MODULE__", `${viewerBase}/embed-boot.mjs`).replaceAll("__BOOT_LABEL__", esc(`Cargando ${brandTitle}\u2026`)).replaceAll("__OG_IMAGE__", iconify(512)).replaceAll("__FAVICON__", iconify(32)).replaceAll("__APPLE_ICON__", iconify(180)).replaceAll("__CONFIG_JSON__", cfgJson);
 }
-function buildSwaggerUiHtml(openApiJsonUrl, opts = {}) {
+function buildSwaggerUiHtml(documentUrl, opts = {}) {
   const frontLinks = opts.frontLinks?.length ? opts.frontLinks : opts.frontLinkKey && opts.frontLinksByKey?.[opts.frontLinkKey] ? [opts.frontLinksByKey[opts.frontLinkKey]] : [];
   return buildSwaggerViewerHtml({
-    specUrl: openApiJsonUrl,
+    specUrl: documentUrl,
     title: opts.title || "API",
     viewerRef: opts.viewerRef,
     frontSharedRef: opts.frontSharedRef,
@@ -127,9 +127,9 @@ function buildSwaggerUiHtml(openApiJsonUrl, opts = {}) {
     shell: opts.shell,
     exports: opts.exports,
     brand: opts.brand || { title: "ISS PatyIA", icon: "mdi:robot-happy-outline" },
-    postmanUrl: openApiJsonUrl.replace(/\/swagger\.json$/i, "/swagger/postman.json"),
+    postmanUrl: opts.postmanUrl || String(documentUrl).replace(/\/swagger\/is\.json$/i, "/swagger/postman.json"),
     postmanDownloadName: opts.postmanDownloadName || "iss-ayudascpia.postman_collection.json",
-    isUrl: openApiJsonUrl.replace(/\/swagger\.json$/i, "/swagger/is.json"),
+    isUrl: opts.isUrl || documentUrl,
     isDownloadName: opts.isDownloadName || "iss-ayudascpia.is.json",
     frontLinks
   });

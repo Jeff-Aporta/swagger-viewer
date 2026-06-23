@@ -6,26 +6,31 @@ export function readBrandFromMeta() {
   return { title: title || undefined, icon: icon || undefined };
 }
 
-/** Prioridad: config.brand → meta index.html → spec.info.title (solo título) → defaults. */
+/** Prioridad: config.brand (brandLock ignora spec) → meta → spec.info.title → defaults. */
 export function resolveViewerBrand(config, spec) {
   const meta = readBrandFromMeta();
   const from = config?.brand || {};
-  const specTitle = typeof spec?.info?.title === "string" ? spec.info.title.trim() : "";
+  const specTitle =
+    config?.brandLock || config?.brandLocked
+      ? ""
+      : typeof spec?.info?.title === "string"
+        ? spec.info.title.trim()
+        : "";
   return {
     title: from.title || meta.title || specTitle || "API",
     icon: from.icon || meta.icon || "mdi:api",
   };
 }
 
-export function applyBrandToDocument(brand) {
+export function applyBrandToDocument(brand, { lockMeta } = {}) {
   if (!brand?.title) return;
-  document.title = brand.title;
+  if (!lockMeta) document.title = brand.title;
   const appName = document.querySelector('meta[name="application-name"]');
-  if (appName) appName.setAttribute("content", brand.title);
+  if (appName && !lockMeta) appName.setAttribute("content", brand.title);
   const ogTitle = document.querySelector('meta[property="og:title"]');
-  if (ogTitle) ogTitle.setAttribute("content", brand.title);
+  if (ogTitle && !lockMeta) ogTitle.setAttribute("content", brand.title);
   if (brand.icon) {
     const appIcon = document.querySelector('meta[name="app-icon"]');
-    if (appIcon) appIcon.setAttribute("content", brand.icon);
+    if (appIcon && !lockMeta) appIcon.setAttribute("content", brand.icon);
   }
 }

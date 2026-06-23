@@ -643,6 +643,18 @@ html.dark-mode .isa-sw-toolbar .isa-sw-front-link iconify-icon {
   min-width: 0;
 }
 
+.isa-sw-scope-select {
+  min-width: 0;
+}
+
+.isa-sw-scope-select .MuiInputBase-input {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+
+.isa-sw-toolbar__exports .isa-sw-scope-select {
+  max-width: min(360px, 42vw);
+}
+
 html[data-mui-color-scheme="light"] .isa-sw-export-group + .isa-sw-export-group {
   border-left-color: rgba(100, 116, 139, 0.22);
 }

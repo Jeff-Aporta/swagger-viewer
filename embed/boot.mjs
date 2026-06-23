@@ -1,5 +1,5 @@
 /**
- * Arranque del visor OpenAPI embebido (hosts Azure / ISS).
+ * Arranque IS-Swagger embebido (hosts Azure / ISS).
  * Requiere window.__SWAGGER_CONFIG__ y swagger-viewer.min.js en viewerCdnBase.
  */
 
@@ -40,7 +40,7 @@ boot().catch((err) => {
   if (root) {
     root.innerHTML =
       '<div style="padding:1.5rem;font-family:system-ui,sans-serif;max-width:36rem;margin:2rem auto">' +
-      "<p><strong>No se pudo cargar el visor OpenAPI.</strong></p>" +
+      "<p><strong>No se pudo cargar IS-Swagger.</strong></p>" +
       `<p style="color:#64748b;font-size:0.9rem">${msg}</p>` +
       '<p style="color:#64748b;font-size:0.85rem">Comprueba la red o recarga la página.</p></div>';
   }

@@ -13,11 +13,10 @@ import {
 } from "./lib/openapi/openapi.js";
 import { getStoredJwt, clearJwt } from "./lib/auth/auth.js";
 import { applyBrandToDocument, resolveViewerBrand } from "./lib/brand/viewer-brand.js";
+import { buildNavRows, filterGroupsByNavTab, activeSectionTabId } from "./lib/nav/viewer-nav.js";
 
 const { useState, useEffect, useMemo } = React;
 const { Box, Typography, Alert } = MaterialUI;
-
-const API_TAB = { id: "api", label: "API", icon: "mdi:api" };
 
 export function SwaggerViewer({ config, spec: specProp }) {
   const authEnabled =
@@ -28,6 +27,7 @@ export function SwaggerViewer({ config, spec: specProp }) {
   const [spec, setSpec] = useState(specProp || null);
   const [err, setErr] = useState("");
   const [session, setSession] = useState(() => (authEnabled ? getStoredJwt() : null));
+  const [navTab, setNavTab] = useState("");
 
   useEffect(() => {
     if (specProp) {
@@ -62,6 +62,12 @@ export function SwaggerViewer({ config, spec: specProp }) {
       return ia - ib;
     });
   }, [spec]);
+  const navRows = useMemo(() => buildNavRows(config, session, navTab, setNavTab), [config, session, navTab]);
+  const visibleGroups = useMemo(() => {
+    const active = activeSectionTabId(navRows, config);
+    if (!active) return groups;
+    return filterGroupsByNavTab(groups, config, active);
+  }, [groups, config, navRows]);
   const docIndex = useMemo(() => (spec ? buildDocIndex(spec) : {}), [spec]);
   const lookupIndex = useMemo(() => (spec ? buildLookupIndex(spec) : {}), [spec]);
   const brand = useMemo(() => resolveViewerBrand(config, spec), [config, spec]);
@@ -70,8 +76,8 @@ export function SwaggerViewer({ config, spec: specProp }) {
   const ns = config?.ns || "ISA";
 
   useEffect(() => {
-    applyBrandToDocument(brand);
-  }, [brandTitle, brandIcon]);
+    applyBrandToDocument(brand, { lockMeta: !!(config?.brandLock || config?.brandLocked) });
+  }, [brandTitle, brandIcon, config?.brandLock, config?.brandLocked]);
 
   useEffect(() => {
     if (!authEnabled) return;
@@ -157,7 +163,7 @@ export function SwaggerViewer({ config, spec: specProp }) {
               )}
               <ServerHealthBanner ns={ns} />
               <InfoHeader spec={spec} showTitle={!shellLayout} ns={ns} />
-              {groups.map((group, tagIndex) => (
+              {visibleGroups.map((group, tagIndex) => (
                 <OperationTagGroup
                   key={group.name}
                   tagIndex={tagIndex}
@@ -199,14 +205,7 @@ export function SwaggerViewer({ config, spec: specProp }) {
       icon={brandIcon}
       showTarget={false}
       bodyScroll
-      navRows={[
-        {
-          id: "api",
-          value: API_TAB.id,
-          onChange: () => {},
-          tabs: [API_TAB],
-        },
-      ]}
+      navRows={navRows}
       toolbarEnd={
         authEnabled ? (
           <SwaggerHeaderAuth

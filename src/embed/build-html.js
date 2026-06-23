@@ -113,7 +113,7 @@ export function buildSwaggerViewerHtml(opts) {
   const themeKey = "jeffaporta:swagger-ui-theme";
   const description =
     opts.description ||
-    `Documentación interactiva OpenAPI — ${brandTitle}. Try it out, export Postman y JSON IS.`;
+    `Documentación interactiva IS-Swagger — ${brandTitle}. Try it out, export Postman y JSON IS.`;
 
   return HTML_TEMPLATE.replaceAll("__TITLE__", esc(title))
     .replaceAll("__DESCRIPTION__", esc(description))
@@ -130,15 +130,15 @@ export function buildSwaggerViewerHtml(opts) {
     .replaceAll("__CONFIG_JSON__", cfgJson);
 }
 
-/** HTML para GET /api/swagger — AyudasCP-IA y hosts similares. */
-export function buildSwaggerUiHtml(openApiJsonUrl, opts = {}) {
+/** HTML para GET /api/swagger — carga documento IS desde /api/swagger/is.json (BD). */
+export function buildSwaggerUiHtml(documentUrl, opts = {}) {
   const frontLinks = opts.frontLinks?.length
     ? opts.frontLinks
     : opts.frontLinkKey && opts.frontLinksByKey?.[opts.frontLinkKey]
       ? [opts.frontLinksByKey[opts.frontLinkKey]]
       : [];
   return buildSwaggerViewerHtml({
-    specUrl: openApiJsonUrl,
+    specUrl: documentUrl,
     title: opts.title || "API",
     viewerRef: opts.viewerRef,
     frontSharedRef: opts.frontSharedRef,
@@ -151,9 +151,9 @@ export function buildSwaggerUiHtml(openApiJsonUrl, opts = {}) {
     shell: opts.shell,
     exports: opts.exports,
     brand: opts.brand || { title: "ISS PatyIA", icon: "mdi:robot-happy-outline" },
-    postmanUrl: openApiJsonUrl.replace(/\/swagger\.json$/i, "/swagger/postman.json"),
+    postmanUrl: opts.postmanUrl || String(documentUrl).replace(/\/swagger\/is\.json$/i, "/swagger/postman.json"),
     postmanDownloadName: opts.postmanDownloadName || "iss-ayudascpia.postman_collection.json",
-    isUrl: openApiJsonUrl.replace(/\/swagger\.json$/i, "/swagger/is.json"),
+    isUrl: opts.isUrl || documentUrl,
     isDownloadName: opts.isDownloadName || "iss-ayudascpia.is.json",
     frontLinks,
   });

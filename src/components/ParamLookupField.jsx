@@ -1,5 +1,5 @@
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
-const { Autocomplete, TextField, Box, Typography, CircularProgress, InputAdornment } = MaterialUI;
+const { Autocomplete, TextField, Box, CircularProgress, InputAdornment } = MaterialUI;
 
 import { getStoredJwt } from "../lib/auth/auth.js";
 import { canRunIssLookup } from "../lib/lookup/lookup-auth.js";
@@ -11,7 +11,6 @@ import { useServerBase } from "../context/ServerBaseContext.jsx";
 import { sanitizeParamInputValue, paramInputMode, paramSchemaType } from "../lib/openapi/param-schema.js";
 import { createDelayer, LOOKUP_SEARCH_DELAY_MS } from "../lib/ui/delayer.js";
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
-import { recommendationSampleRequest } from "../lib/lookup/input-recommendation.js";
 import { autocompleteFusedClassName, autocompleteFusedSlotProps } from "../lib/ui/autocomplete-fused.js";
 
 function mapLookupRows(rows, lookup, session) {
@@ -151,8 +150,6 @@ export function ParamLookupField({
 
   if (!lookup) return null;
 
-  const sample = recommendationSampleRequest(lookup, serverBase);
-
   function onFocusField() {
     setTouched(true);
   }
@@ -248,7 +245,7 @@ export function ParamLookupField({
           <TextField
             {...params}
             onFocus={onFocusField}
-            placeholder={placeholder || lookup.placeholder || lookup.hint || ""}
+            placeholder={placeholder || lookup.placeholder || ""}
             label={hideLabel ? undefined : lookup.label || paramName}
             inputProps={{
               ...(params.inputProps || {}),
@@ -273,16 +270,6 @@ export function ParamLookupField({
           );
         }}
       />
-      {lookup.hint ? (
-        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
-          {lookup.hint}
-        </Typography>
-      ) : null}
-      {sample ? (
-        <Typography variant="caption" color="text.secondary" component="div" sx={{ display: "block", mt: 0.25, fontFamily: "ui-monospace, monospace", fontSize: "0.72rem", wordBreak: "break-all" }}>
-          {sample.method} {sample.url.replace(/^https?:\/\/[^/]+/i, "")}
-        </Typography>
-      ) : null}
       {error ? (
         <Box sx={{ mt: 0.5 }}>
           <HttpErrorAlert severity="error" message={error} />
