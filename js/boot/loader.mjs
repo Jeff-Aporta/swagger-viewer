@@ -3,7 +3,7 @@ import { bootHelperUrl, ensureSwaggerViewerCss, demoAppUrl } from "./cdn.mjs";
 async function boot() {
   if (new URLSearchParams(location.search).has("isa_boot_hold")) return;
 
-  const { importShared, assertStack, loadSharedUi } = await import(bootHelperUrl);
+  const { importShared, assertStack, loadSharedUi, loadIsaFront } = await import(bootHelperUrl);
 
   const stackMod = await importShared("stack.mjs");
   await stackMod.stackReady;
@@ -12,11 +12,11 @@ async function boot() {
   const Babel = globalThis.Babel;
   if (!Babel?.transform) throw new Error("Babel standalone no cargó");
 
-  await importShared("isa/js/index.js");
+  await loadIsaFront();
   await loadSharedUi(Babel);
 
   window.ISAFront.registerApp({
-    ns: "ISA",
+    ns: "ISS",
     app: "swagger-viewer-demo",
     theme: true,
     session: false,

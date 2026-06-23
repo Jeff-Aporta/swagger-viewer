@@ -3,7 +3,7 @@
   "meta": {
     "title": "IS-Swagger",
     "applicationName": "IS-Swagger",
-    "description": "Visor OpenAPI reutilizable — React, MUI, editor JSON IS, export Postman/OpenAPI/IS.",
+    "description": "IS-Swagger — constructor y visor InSoft con AppShell, neon-glass y export Postman/OpenAPI/IS.",
     "keywords": "openapi, swagger, api, documentación, MUI, IS-Swagger, ISA",
     "themeColor": "#1e90ff",
     "themeLsKey": "jeffaporta:swagger-ui-theme",
@@ -11,7 +11,7 @@
     "canonical": "./",
     "ogSiteName": "IS-Swagger",
     "ogTitle": "IS-Swagger",
-    "imageAlt": "Visor OpenAPI IS-Swagger con tabs, ejemplos y Try it out"
+    "imageAlt": "IS-Swagger con AppShell, neon-glass y tabs de documentación API"
   },
   "frontSharedPin": "99fb049",
   "useDist": true,
@@ -19,7 +19,7 @@
   "fonts": false,
   "loader": "mjs-module",
   "themeInit": true,
-  "appMeta": false,
+  "appMeta": true,
   "headIndent": "  ",
   "viewport": "width=device-width, initial-scale=1",
   "styles": [

@@ -78,6 +78,18 @@
   flex-shrink: 0;
 }
 
+.isa-sw-demo__page {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.isa-sw-demo__welcome code {
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgba(30, 144, 255, 0.12);
+}
+
 /* Drawer editor IS — portal MUI (fuera de .isa-sw-viewer); sigue data-mui-color-scheme */
 html[data-mui-color-scheme="dark"] .isa-sw-demo__drawer-paper.MuiPaper-root,
 html.dark-mode .isa-sw-demo__drawer-paper.MuiPaper-root {

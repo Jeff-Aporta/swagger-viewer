@@ -1,11 +1,12 @@
 import { IsJsonEditor } from "./IsJsonEditor.jsx";
+import { ApiBaseSelect } from "./ApiBaseSelect.jsx";
 import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
 import { useGlassColors, glassSurfaceSx, glassHeaderSx, GlassToolbar } from "../../../src/lib/ui/glass.jsx";
 
 const { Box, Button, Alert, Typography, Drawer, IconButton, Tooltip } = MaterialUI;
 
 /** Drawer inferior — editor JSON IS (tema ISA / neon-glass). */
-export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, onFormat, getTextRef, parseErr, ns = "ISA" }) {
+export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, onFormat, getTextRef, parseErr, ns = "ISA", apiBase, onApiBaseChange, onConnectApi, onPullConfig, onPushConfig, connectBusy, scopes }) {
   const c = useGlassColors();
 
   return (
@@ -50,6 +51,12 @@ export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, o
             Constructor IS-Swagger
           </Typography>
           <Box className="isa-sw-demo__drawer-actions">
+            <Button size="small" variant="outlined" color="info" disabled={!apiBase?.trim() || connectBusy} onClick={() => onPullConfig?.()} startIcon={<SwIcon icon="mdi:cloud-download-outline" size={18} ns={ns} />}>
+              Obtener config
+            </Button>
+            <Button size="small" variant="outlined" color="warning" disabled={!apiBase?.trim() || connectBusy} onClick={() => onPushConfig?.()} startIcon={<SwIcon icon="mdi:cloud-upload-outline" size={18} ns={ns} />}>
+              Publicar PUT
+            </Button>
             <Button size="small" variant="contained" color="primary" onClick={onApply} startIcon={<SwIcon icon="mdi:play-circle-outline" size={18} ns={ns} />}>
               Aplicar vista
             </Button>
@@ -63,6 +70,7 @@ export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, o
             </Tooltip>
           </Box>
         </GlassToolbar>
+        <ApiBaseSelect value={apiBase || ""} onChange={onApiBaseChange} onConnect={onConnectApi} busy={connectBusy} ns={ns} scopes={scopes} />
         <IsJsonEditor value={sourceText} onChange={onChange} onApply={onApply} getTextRef={getTextRef} active={open} ns={ns} />
         {parseErr ? (
           <Alert severity="error" sx={{ mx: 1.5, mb: 1.5, py: 0 }} className="isa-sw-demo__parse-err">

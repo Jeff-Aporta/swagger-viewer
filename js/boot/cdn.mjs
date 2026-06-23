@@ -4,18 +4,33 @@ export const PIN = "99fb049";
 const isDevHost =
   typeof location !== "undefined" && /localhost|127\.0\.0\.1|\[::1\]/.test(location.hostname);
 
+/** Demo embebido vía ISS (/api/swagger/demo). */
+function isIssSwaggerDemoHost() {
+  return typeof location !== "undefined" && /\/api\/swagger\/demo\/?/i.test(location.pathname);
+}
+
+/** Demo publicado en jeff-aporta.github.io/swagger-viewer. */
+function isGhPagesSwaggerDemo() {
+  return typeof location !== "undefined" && /github\.io$/i.test(location.hostname) && /\/swagger-viewer\/?/i.test(location.pathname);
+}
+
 function devCdnBase() {
   const base = document.querySelector("base")?.href || location.href;
   return new URL("../../front-shared/cdn/", base).href.replace(/\/?$/, "/");
 }
 
-export const CDN = isDevHost
-  ? devCdnBase()
-  : `https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@${PIN}/cdn`;
+function frontSharedCdn() {
+  if (isIssSwaggerDemoHost()) return `${location.origin}/api/swagger/cdn/fs/`;
+  if (isDevHost && !isGhPagesSwaggerDemo()) return devCdnBase();
+  return `https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@${PIN}/cdn`;
+}
 
-export const bootHelperUrl = isDevHost
-  ? `${CDN}boot-helper.mjs`
-  : `${CDN}/boot-helper.mjs?v=${PIN}`;
+export const CDN = frontSharedCdn();
+
+export const bootHelperUrl =
+  isDevHost && !isIssSwaggerDemoHost() && !isGhPagesSwaggerDemo()
+    ? `${CDN}boot-helper.mjs`
+    : `${CDN.replace(/\/?$/, "/")}/boot-helper.mjs?v=${PIN}`;
 
 /* @isa-swagger-boot:start */
 /** Jeff-Aporta/swagger-viewer — pin CDN git (sync-component-refs.mjs) */
@@ -23,10 +38,8 @@ export const SWAGGER_VIEWER_REF = "cd45b28";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;
-  if (isDevHost) {
-    return new URL("../../../components/swagger/cdn/", base).href.replace(/\/?$/, "/");
-  }
-  return `${location.origin}/api/swagger/cdn/`;
+  if (isIssSwaggerDemoHost()) return `${location.origin}/api/swagger/cdn/`;
+  return new URL("cdn/", base).href.replace(/\/?$/, "/");
 }
 
 function ensureSwaggerStylesheet(href) {
