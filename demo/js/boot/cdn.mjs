@@ -27,10 +27,16 @@ function frontSharedCdn() {
 
 export const CDN = frontSharedCdn();
 
+function joinCdn(path) {
+  const base = CDN.replace(/\/+$/, "");
+  const rel = String(path || "").replace(/^\/+/, "");
+  return rel ? `${base}/${rel}` : base;
+}
+
 export const bootHelperUrl =
   isDevHost && !isIssSwaggerDemoHost() && !isGhPagesSwaggerDemo()
-    ? `${CDN}boot-helper.mjs`
-    : `${CDN.replace(/\/?$/, "/")}/boot-helper.mjs?v=${PIN}`;
+    ? joinCdn("boot-helper.mjs")
+    : `${joinCdn("boot-helper.mjs")}?v=${PIN}`;
 
 /* @isa-swagger-boot:start */
 /** Jeff-Aporta/swagger-viewer — pin CDN git (sync-component-refs.mjs) */
