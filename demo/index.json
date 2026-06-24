@@ -28,7 +28,7 @@
     "local:css/demo.css"
   ],
   "componentStyles": [
-    "cdn/swagger-viewer.min.css"
+    "https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@0e6f1e3/cdn/swagger-viewer.min.css"
   ],
   "preconnect": [
     "https://cdn.jsdelivr.net",

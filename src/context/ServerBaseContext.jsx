@@ -3,7 +3,7 @@ import {
   normalizeServerBase,
   serverBaseStorageKey,
 } from "../lib/lookup/server-base.js";
-import { scopesFromConfig } from "../lib/lookup/server-scopes.js";
+import { scopesFromConfig, matchScope } from "../lib/lookup/server-scopes.js";
 
 const { createContext, useContext, useState, useEffect, useMemo } = React;
 
@@ -15,32 +15,33 @@ const ServerBaseContext = createContext({
 });
 
 export function ServerBaseProvider({ spec, config, children }) {
-  const defaultBase = useMemo(() => inferDefaultServerBase(spec, config), [spec, config]);
   const scopes = useMemo(() => scopesFromConfig(config), [config]);
+  const defaultBase = useMemo(() => {
+    const fromScopes = scopes[0]?.base;
+    if (fromScopes) return normalizeServerBase(fromScopes);
+    return inferDefaultServerBase(spec, config);
+  }, [spec, config, scopes]);
   const storageKey = useMemo(() => serverBaseStorageKey(config), [config]);
-  const [serverBase, setServerBaseState] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem(storageKey);
-      if (saved) return normalizeServerBase(saved);
-    } catch {
-      /* ignore */
-    }
-    return defaultBase;
-  });
 
-  useEffect(() => {
-    if (!defaultBase) return;
+  function resolveInitialBase() {
     try {
-      const saved = sessionStorage.getItem(storageKey);
+      const saved = normalizeServerBase(sessionStorage.getItem(storageKey) || "");
       if (saved) {
-        setServerBaseState(normalizeServerBase(saved));
-        return;
+        if (scopes.length && !matchScope(scopes, saved)) return defaultBase;
+        return saved;
       }
     } catch {
       /* ignore */
     }
-    setServerBaseState(defaultBase);
-  }, [defaultBase, storageKey]);
+    return defaultBase;
+  }
+
+  const [serverBase, setServerBaseState] = useState(resolveInitialBase);
+
+  useEffect(() => {
+    if (!defaultBase) return;
+    setServerBaseState(resolveInitialBase());
+  }, [defaultBase, storageKey, scopes]);
 
   function setServerBase(value) {
     const next = normalizeServerBase(value);

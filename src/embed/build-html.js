@@ -98,12 +98,9 @@ export function buildSwaggerViewerHtml(opts) {
     },
     brand,
     exports: opts.exports || {
-      openApiUrl: specUrl,
       openApiDownloadName: "openapi.json",
-      postmanUrl: opts.postmanUrl || specUrl.replace(/\/swagger\.json$/i, "/swagger/postman.json"),
-      postmanDownloadName: opts.postmanDownloadName || "collection.postman.json",
-      isUrl: opts.isUrl || specUrl.replace(/\/swagger\.json$/i, "/swagger/is.json"),
-      isDownloadName: opts.isDownloadName || "api.is.json",
+      postmanDownloadName: "collection.postman.json",
+      isDownloadName: "api.is.json",
     },
     frontLinks: opts.frontLinks || [],
     ...(opts.config || {}),
@@ -130,7 +127,7 @@ export function buildSwaggerViewerHtml(opts) {
     .replaceAll("__CONFIG_JSON__", cfgJson);
 }
 
-/** HTML para GET /api/swagger — carga documento IS desde /api/swagger/is.json (BD). */
+/** @deprecated El host ISS sirve iframe GH Pages; no cargar IS desde el servidor. */
 export function buildSwaggerUiHtml(documentUrl, opts = {}) {
   const frontLinks = opts.frontLinks?.length
     ? opts.frontLinks
@@ -151,9 +148,7 @@ export function buildSwaggerUiHtml(documentUrl, opts = {}) {
     shell: opts.shell,
     exports: opts.exports,
     brand: opts.brand || { title: "ISS PatyIA", icon: "mdi:robot-happy-outline" },
-    postmanUrl: opts.postmanUrl || String(documentUrl).replace(/\/swagger\/is\.json$/i, "/swagger/postman.json"),
     postmanDownloadName: opts.postmanDownloadName || "iss-ayudascpia.postman_collection.json",
-    isUrl: opts.isUrl || documentUrl,
     isDownloadName: opts.isDownloadName || "iss-ayudascpia.is.json",
     frontLinks,
   });

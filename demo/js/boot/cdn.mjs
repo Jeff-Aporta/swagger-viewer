@@ -1,9 +1,6 @@
 /** Pin jsDelivr front-shared + rutas del paquete swagger-viewer. */
 export const PIN = "99fb049";
 
-const isDevHost =
-  typeof location !== "undefined" && /localhost|127\.0\.0\.1|\[::1\]/.test(location.hostname);
-
 /** Demo embebido vía ISS (/api/swagger/demo). */
 function isIssSwaggerDemoHost() {
   return typeof location !== "undefined" && /\/api\/swagger\/demo\/?/i.test(location.pathname);
@@ -14,14 +11,18 @@ function isGhPagesSwaggerDemo() {
   return typeof location !== "undefined" && /github\.io$/i.test(location.hostname) && /\/swagger-viewer\/?/i.test(location.pathname);
 }
 
-function devCdnBase() {
+function isLocalDevHost() {
+  return typeof location !== "undefined" && /localhost|127\.0\.0\.1|\[::1\]/.test(location.hostname);
+}
+
+function devMonorepoCdnBase() {
   const base = document.querySelector("base")?.href || location.href;
   return new URL("../../front-shared/cdn/", base).href.replace(/\/?$/, "/");
 }
 
 function frontSharedCdn() {
   if (isIssSwaggerDemoHost()) return `${location.origin}/api/swagger/cdn/fs/`;
-  if (isDevHost && !isGhPagesSwaggerDemo()) return devCdnBase();
+  if (isLocalDevHost() && !isGhPagesSwaggerDemo()) return devMonorepoCdnBase();
   return `https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@${PIN}/cdn`;
 }
 
@@ -34,18 +35,21 @@ function joinCdn(path) {
 }
 
 export const bootHelperUrl =
-  isDevHost && !isIssSwaggerDemoHost() && !isGhPagesSwaggerDemo()
+  isLocalDevHost() && !isIssSwaggerDemoHost() && !isGhPagesSwaggerDemo()
     ? joinCdn("boot-helper.mjs")
     : `${joinCdn("boot-helper.mjs")}?v=${PIN}`;
 
 /* @isa-swagger-boot:start */
 /** Jeff-Aporta/swagger-viewer — pin CDN git (sync-component-refs.mjs) */
-export const SWAGGER_VIEWER_REF = "cd45b28";
+export const SWAGGER_VIEWER_REF = "0e6f1e3";
 
 export function swaggerViewerBase() {
-  const base = document.querySelector("base")?.href || location.href;
   if (isIssSwaggerDemoHost()) return `${location.origin}/api/swagger/cdn/`;
-  return new URL("cdn/", base).href.replace(/\/?$/, "/");
+  if (isLocalDevHost() && !isGhPagesSwaggerDemo()) {
+    const base = document.querySelector("base")?.href || location.href;
+    return new URL("cdn/", base).href.replace(/\/?$/, "/");
+  }
+  return `https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@${SWAGGER_VIEWER_REF}/cdn/`;
 }
 
 function ensureSwaggerStylesheet(href) {

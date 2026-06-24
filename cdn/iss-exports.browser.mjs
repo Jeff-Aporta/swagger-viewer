@@ -1,35 +1,3 @@
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-// ../../components/swagger/server/build-exports.ts
-var build_exports_exports = {};
-__export(build_exports_exports, {
-  IS_DOCUMENT_KIND: () => IS_DOCUMENT_KIND,
-  IS_DOCUMENT_VERSION: () => IS_DOCUMENT_VERSION,
-  OPENAPI_CONFIG_KIND: () => OPENAPI_CONFIG_KIND,
-  OPENAPI_CONFIG_VERSION: () => OPENAPI_CONFIG_VERSION,
-  buildIssExportsFromConfig: () => buildIssExportsFromConfig,
-  normalizeOpenApiConfig: () => normalizeOpenApiConfig,
-  openApiProtocolPaths: () => openApiProtocolPaths,
-  protocolPathsFromConfig: () => protocolPathsFromConfig
-});
-module.exports = __toCommonJS(build_exports_exports);
-
 // ../../components/swagger/server/envelope.ts
 var TS = "2026-06-19T15:30:00.000Z";
 var TS_OUT = "2026-06-19T15:30:00.042Z";
@@ -925,8 +893,6 @@ var SWAGGER_VIEWER_REF = "0e6f1e3";
 var SWAGGER_FRONT_SHARED_REF = "99fb049";
 
 // ../../components/swagger/server/build-exports.ts
-var OPENAPI_CONFIG_KIND = "insoft.openapi-config";
-var OPENAPI_CONFIG_VERSION = 1;
 var IS_DOCUMENT_KIND = "insoft.swagger-viewer";
 var IS_DOCUMENT_VERSION = 1;
 var RUNTIME_VIEWER_KEYS = /* @__PURE__ */ new Set(["cssUrl", "stackUrl", "isaUrl", "appUrl", "specUrl", "url", "spec", "root", "exports", "loadMarked"]);
@@ -983,7 +949,7 @@ function buildViewerRuntimeConfig(config, apiBase) {
 function buildEmbedOpts(config, apiBase, viewer) {
   const v = config.viewer ?? {};
   const embed = v.embed ?? {};
-  const exports2 = viewer.exports;
+  const exports = viewer.exports;
   return {
     apiBase,
     configUrl: viewer.configUrl,
@@ -996,48 +962,17 @@ function buildEmbedOpts(config, apiBase, viewer) {
     app: viewer.app,
     shell: viewer.shell,
     frontLinks: viewer.frontLinks,
-    exports: exports2,
-    postmanDownloadName: exports2?.postmanDownloadName,
-    isDownloadName: exports2?.isDownloadName,
+    exports,
+    postmanDownloadName: exports?.postmanDownloadName,
+    isDownloadName: exports?.isDownloadName,
     viewerRef: viewer.viewerRef,
     frontSharedRef: viewer.frontSharedRef,
     viewerRepo: SWAGGER_VIEWER_GH_REPO,
     localCdnBase: embed.localCdnBase
   };
 }
-function openApiProtocolPaths(paths, opts = {}) {
-  const pathPrefix = opts.pathPrefix ?? "/api";
-  const exclude = (opts.excludePathPatterns ?? []).map((p) => new RegExp(p));
-  const ensureApi = opts.ensureApiPrefix !== false;
-  const out = {};
-  for (const [path, ops] of Object.entries(paths)) {
-    if (exclude.some((re) => re.test(path))) continue;
-    let key = path;
-    if (ensureApi && !path.startsWith(pathPrefix)) {
-      key = path === "/" ? pathPrefix : `${pathPrefix}${path}`;
-    }
-    out[key] = ops;
-  }
-  return out;
-}
-function protocolPathsFromConfig(raw, opts = {}) {
-  const { openApi, config } = buildIssExportsFromConfig(raw, opts);
-  const protocol = config.protocol ?? {};
-  const paths = openApi.paths ?? {};
-  return openApiProtocolPaths(paths, protocol);
-}
 function buildIsDocument(viewer, spec) {
   return { kind: IS_DOCUMENT_KIND, version: IS_DOCUMENT_VERSION, viewer: viewerConfigFromBoot(viewer), spec };
-}
-function normalizeOpenApiConfig(raw) {
-  if (!raw || typeof raw !== "object") throw new Error("openapi-config: documento inv\xE1lido");
-  const cfg = raw;
-  if (cfg.kind && cfg.kind !== OPENAPI_CONFIG_KIND) {
-    throw new Error(`openapi-config: kind esperado \xAB${OPENAPI_CONFIG_KIND}\xBB, recibido \xAB${cfg.kind}\xBB`);
-  }
-  if (!cfg.info?.title) throw new Error("openapi-config: info.title es requerido");
-  if (!cfg.paths || typeof cfg.paths !== "object") throw new Error("openapi-config: paths es requerido");
-  return prepareOpenApiConfig(cfg);
 }
 function buildIssExportsFromConfig(raw, opts = {}) {
   const config = prepareOpenApiConfig(raw);
@@ -1055,14 +990,6 @@ function buildIssExportsFromConfig(raw, opts = {}) {
   const embed = buildEmbedOpts(config, apiBase, viewer);
   return { config, openApi, postman, viewer, is, embed };
 }
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  IS_DOCUMENT_KIND,
-  IS_DOCUMENT_VERSION,
-  OPENAPI_CONFIG_KIND,
-  OPENAPI_CONFIG_VERSION,
-  buildIssExportsFromConfig,
-  normalizeOpenApiConfig,
-  openApiProtocolPaths,
-  protocolPathsFromConfig
-});
+export {
+  buildIssExportsFromConfig
+};

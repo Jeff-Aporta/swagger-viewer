@@ -46,7 +46,7 @@ export function OperationCard({
   const needsAuth = authEnabled && operationRequiresBearer(op, spec);
 
   const tabs = [
-    { id: "try", label: "Try it out", icon: "mdi:play-circle-outline" },
+    { id: "try", label: "Probar", icon: "mdi:play-circle-outline" },
     { id: "overview", label: "Ejemplos", icon: "mdi:file-document-outline" },
     { id: "doc", label: "Doc", icon: "mdi:book-open-page-variant" },
   ];

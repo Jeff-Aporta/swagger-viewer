@@ -18,7 +18,11 @@ function prettyJson(text) {
 }
 
 async function fetchExportJson({ url, getDocument }) {
-  if (getDocument) return isDocumentText(getDocument());
+  if (getDocument) {
+    const doc = getDocument();
+    if (doc == null) return "";
+    return typeof doc === "string" ? doc : JSON.stringify(doc);
+  }
   if (!url) return "";
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) throw new Error(String(res.status));
@@ -104,7 +108,7 @@ function ExportJsonModal({ open, onClose, title, downloadName, ns, url, getDocum
 }
 
 /** Grupo export: etiqueta + ver JSON (modal) + copiar portapapeles. */
-function ExportJsonGroup({ label, downloadName, ns, url, getDocument }) {
+function ExportJsonGroup({ label, downloadName, ns, url, getDocument, dense = false }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -120,20 +124,22 @@ function ExportJsonGroup({ label, downloadName, ns, url, getDocument }) {
     }
   }
 
+  const iconSize = dense ? 14 : 18;
+
   return (
     <>
-      <Box className="isa-sw-export-group" sx={{ display: "inline-flex", alignItems: "center", gap: 0.25 }}>
-        <Typography component="span" variant="caption" className="isa-sw-export-label" sx={{ fontWeight: 600, letterSpacing: "0.02em", mr: 0.25, whiteSpace: "nowrap" }}>
+      <Box className="isa-sw-export-group" sx={{ display: "inline-flex", alignItems: "center", gap: dense ? 0 : 0.25 }}>
+        <Typography component="span" variant="caption" className="isa-sw-export-label" sx={{ fontWeight: 600, letterSpacing: "0.02em", mr: dense ? 0.125 : 0.25, whiteSpace: "nowrap", fontSize: dense ? "0.7rem" : undefined, lineHeight: dense ? 1.15 : undefined }}>
           {label}
         </Typography>
         <Tooltip title={`Ver ${label}`} arrow>
-          <IconButton size="small" onClick={() => setOpen(true)} aria-label={`Ver ${label}`} className="isa-sw-export-btn isa-sw-export-btn--view">
-            <SwIcon icon="mdi:eye-outline" size={18} ns={ns} />
+          <IconButton size="small" onClick={() => setOpen(true)} aria-label={`Ver ${label}`} className="isa-sw-export-btn isa-sw-export-btn--view" sx={dense ? { p: "2px" } : undefined}>
+            <SwIcon icon="mdi:eye-outline" size={iconSize} ns={ns} />
           </IconButton>
         </Tooltip>
         <Tooltip title={copied ? "Copiado" : "Copiar al portapapeles"} arrow>
-          <IconButton size="small" onClick={copyToClipboard} aria-label={`Copiar ${label} al portapapeles`} className="isa-sw-export-btn isa-sw-export-btn--copy" color={copied ? "success" : "default"}>
-            <SwIcon icon={copied ? "mdi:check" : "mdi:content-copy"} size={18} ns={ns} />
+          <IconButton size="small" onClick={copyToClipboard} aria-label={`Copiar ${label} al portapapeles`} className="isa-sw-export-btn isa-sw-export-btn--copy" color={copied ? "success" : "default"} sx={dense ? { p: "2px" } : undefined}>
+            <SwIcon icon={copied ? "mdi:check" : "mdi:content-copy"} size={iconSize} ns={ns} />
           </IconButton>
         </Tooltip>
       </Box>
@@ -143,44 +149,55 @@ function ExportJsonGroup({ label, downloadName, ns, url, getDocument }) {
 }
 
 /** Fila superior: paneles QA (izq) · export + servidor API (der). */
-export function ExportToolbar({ exports: exp, frontLinks = [], ns = "ISA", docked = false, brandIcon, viewerConfig, spec, showServer = false }) {
+export function ExportToolbar({ exports: exp, frontLinks = [], ns = "ISA", docked = false, header = false, brandIcon, viewerConfig, spec, showServer = false }) {
   const links = Array.isArray(frontLinks) ? frontLinks.filter((l) => l?.url) : [];
-  const hasIs = !!(spec && viewerConfig) || !!exp?.isUrl;
-  const hasExports = !!(exp?.openApiUrl || exp?.postmanUrl || hasIs);
+  const hasIs = !!(exp?.isGetDocument || (spec && viewerConfig));
+  const hasExports = !!(exp?.openApiGetDocument || exp?.postmanGetDocument || exp?.isGetDocument || exp?.openApiUrl || exp?.postmanUrl || hasIs);
 
   if (!links.length && !hasExports && !showServer) return null;
 
+  const dense = header;
+  const linkIconSize = dense ? 13 : 16;
+
   const inner = (
     <>
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center", minWidth: 0, flex: "1 1 auto" }}>
+      <Box sx={{ display: "flex", flexWrap: "nowrap", gap: dense ? 0.75 : 1, alignItems: "center", minWidth: 0, flex: "1 1 auto", overflow: "hidden" }}>
         {links.map((l) => (
-          <Link key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="isa-sw-front-link" underline="hover">
-            <SwIcon icon={l.icon || brandIcon || "mdi:link-variant"} size={16} ns={ns} aria-hidden />
+          <Link key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="isa-sw-front-link" underline="hover" sx={dense ? { fontSize: "0.7rem", lineHeight: 1.15, gap: 0.375, display: "inline-flex", alignItems: "center" } : undefined}>
+            <SwIcon icon={l.icon || brandIcon || "mdi:link-variant"} size={linkIconSize} ns={ns} aria-hidden />
             <span>{l.label}</span>
           </Link>
         ))}
       </Box>
 
-      <Box className="isa-sw-toolbar__exports" sx={{ display: "flex", flexWrap: "nowrap", gap: 1, alignItems: "center", ml: "auto", minWidth: 0, flexShrink: 0 }}>
-        {exp?.openApiUrl ? (
-          <ExportJsonGroup label="OpenAPI" url={exp.openApiUrl} downloadName={exp.openApiDownloadName || "openapi.json"} ns={ns} />
+      <Box className="isa-sw-toolbar__exports" sx={{ display: "flex", flexWrap: "nowrap", gap: dense ? 0.5 : 1, alignItems: "center", ml: "auto", minWidth: 0, flexShrink: 0 }}>
+        {exp?.openApiUrl || exp?.openApiGetDocument ? (
+          <ExportJsonGroup label="OpenAPI" url={exp.openApiUrl} getDocument={exp.openApiGetDocument} downloadName={exp.openApiDownloadName || "openapi.json"} ns={ns} dense={dense} />
         ) : null}
-        {exp?.postmanUrl ? (
-          <ExportJsonGroup label="Postman" url={exp.postmanUrl} downloadName={exp.postmanDownloadName || "collection.postman.json"} ns={ns} />
+        {exp?.postmanUrl || exp?.postmanGetDocument ? (
+          <ExportJsonGroup label="Postman" url={exp.postmanUrl} getDocument={exp.postmanGetDocument} downloadName={exp.postmanDownloadName || "collection.postman.json"} ns={ns} dense={dense} />
         ) : null}
         {hasIs ? (
           <ExportJsonGroup
             label="IS"
             downloadName={exp?.isDownloadName || "api.is.json"}
             ns={ns}
-            url={exp?.isUrl}
-            getDocument={spec && viewerConfig ? () => buildIsDocument(viewerConfig, spec) : undefined}
+            dense={dense}
+            getDocument={exp?.isGetDocument || (spec && viewerConfig ? () => buildIsDocument(viewerConfig, spec) : undefined)}
           />
         ) : null}
-        {showServer ? <ServerUrlField ns={ns} compact /> : null}
+        {showServer ? <ServerUrlField ns={ns} compact={!dense} dense={dense} /> : null}
       </Box>
     </>
   );
+
+  if (header) {
+    return (
+      <Box className="isa-sw-toolbar isa-sw-toolbar--header" sx={{ width: "100%", display: "flex", alignItems: "center", gap: 0.75, minHeight: 26, maxHeight: 30, overflow: "hidden" }}>
+        {inner}
+      </Box>
+    );
+  }
 
   return (
     <GlassToolbar className={["isa-sw-toolbar", docked ? "isa-sw-toolbar--docked" : ""].filter(Boolean).join(" ")} sx={docked ? { borderRadius: 0, width: "100%", maxWidth: "none", mb: 0, px: { xs: 1.5, sm: 2 }, py: { xs: 0.75, sm: 1 } } : { mb: 2 }}>

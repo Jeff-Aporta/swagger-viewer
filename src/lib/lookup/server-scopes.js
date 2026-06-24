@@ -42,7 +42,6 @@ export function resolveScopePresetId(scopes, serverBase) {
 
 /** Presets demo IS-Swagger cuando el JSON aún no define scopes. */
 export const DEMO_API_SCOPES = [
-  { id: "local", label: "Local (8802)", base: "http://127.0.0.1:8802/api", icon: "mdi:laptop" },
-  { id: "staging", label: "Staging", base: "https://ayudascp-ia-staging.azurewebsites.net/api", icon: "mdi:cloud-outline" },
-  { id: "prod", label: "Producción", base: "https://ayudascp-ia.azurewebsites.net/api", icon: "mdi:cloud-check-outline" },
+  { id: "web", label: "Web", base: "https://ayudascp-ia.azurewebsites.net/api", icon: "mdi:web" },
+  { id: "local", label: "Local", base: "http://127.0.0.1:8802/api", icon: "mdi:laptop" },
 ];

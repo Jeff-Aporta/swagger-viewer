@@ -72,20 +72,19 @@ function prepareOpenApiConfig(raw: IsOpenApiConfig): IsOpenApiConfig {
     return { ...raw, catalog: { ...raw.catalog, ...catalog } };
 }
 
-function resolveSpecUrl(specUrl: string | undefined, serverUrl: string | undefined): string {
-    if (specUrl?.trim()) return specUrl.trim();
-    const base = (serverUrl ?? "/api").replace(/\/$/, "");
-    return `${base}/swagger.json`;
+function resolveApiBase(serverUrl: string | undefined, absoluteBaseUrl?: string): string {
+    const raw = (absoluteBaseUrl ?? serverUrl ?? "/api").replace(/\/$/, "");
+    return raw;
 }
 
-function buildViewerRuntimeConfig(config: IsOpenApiConfig, specUrl: string): Record<string, unknown> {
+function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Record<string, unknown> {
     const v = (config.viewer ?? {}) as IssOpenApiViewerConfig;
+    const base = apiBase.replace(/\/$/, "");
     let origin = "";
-    try { origin = new URL(specUrl).origin; } catch { origin = ""; }
-    const postmanUrl = specUrl.replace(/\/swagger\.json$/i, "/swagger/postman.json");
-    const isUrl = specUrl.replace(/\/swagger\.json$/i, "/swagger/is.json");
+    try { origin = new URL(base).origin; } catch { origin = ""; }
     return {
-        specUrl,
+        apiBase: base,
+        configUrl: `${base}/swagger/config.json`,
         ns: v.ns ?? "ISA",
         app: v.app ?? "swagger-viewer",
         shell: v.shell ?? true,
@@ -98,11 +97,8 @@ function buildViewerRuntimeConfig(config: IsOpenApiConfig, specUrl: string): Rec
         brand: v.brand ?? { title: config.info?.title ?? "API", icon: "mdi:api" },
         frontLinks: v.frontLinks ?? [],
         exports: {
-            openApiUrl: specUrl,
             openApiDownloadName: v.exports?.openApiDownloadName ?? "openapi.json",
-            postmanUrl,
             postmanDownloadName: v.exports?.postmanDownloadName ?? "postman_collection.json",
-            isUrl,
             isDownloadName: v.exports?.isDownloadName ?? "api.is.json",
         },
         viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
@@ -112,12 +108,13 @@ function buildViewerRuntimeConfig(config: IsOpenApiConfig, specUrl: string): Rec
     };
 }
 
-function buildEmbedOpts(config: IsOpenApiConfig, specUrl: string, viewer: Record<string, unknown>): Record<string, unknown> {
+function buildEmbedOpts(config: IsOpenApiConfig, apiBase: string, viewer: Record<string, unknown>): Record<string, unknown> {
     const v = (config.viewer ?? {}) as IssOpenApiViewerConfig;
     const embed = v.embed ?? {};
     const exports = viewer.exports as Record<string, unknown> | undefined;
     return {
-        specUrl,
+        apiBase,
+        configUrl: viewer.configUrl,
         title: embed.title ?? config.info?.title ?? "API",
         authKind: embed.authKind ?? (viewer.auth as Record<string, unknown>)?.loginKind ?? "portal",
         authLoginUrl: (viewer.auth as Record<string, unknown>)?.loginUrl,
@@ -128,8 +125,6 @@ function buildEmbedOpts(config: IsOpenApiConfig, specUrl: string, viewer: Record
         shell: viewer.shell,
         frontLinks: viewer.frontLinks,
         exports,
-        postmanUrl: exports?.postmanUrl,
-        isUrl: exports?.isUrl,
         postmanDownloadName: exports?.postmanDownloadName,
         isDownloadName: exports?.isDownloadName,
         viewerRef: viewer.viewerRef,
@@ -190,16 +185,16 @@ export function normalizeOpenApiConfig(raw: unknown): IsOpenApiConfig {
 export function buildIssExportsFromConfig(raw: IsOpenApiConfig, opts: BuildIssExportsOpts = {}): IssExportsResult {
     const config = prepareOpenApiConfig(raw);
     const serverUrl = opts.serverUrl ?? config.protocol?.serverUrl ?? "/api";
-    const specUrl = resolveSpecUrl(opts.specUrl, serverUrl);
+    const apiBase = resolveApiBase(serverUrl, opts.absoluteBaseUrl);
     const openApi = buildOpenApiFromConfig(config, serverUrl) as Record<string, unknown>;
     const frontLink = opts.frontLink ?? (config.viewer as IssOpenApiViewerConfig)?.frontLinks?.[0] ?? null;
     const postman = openApiToPostmanCollection(openApi, {
-        absoluteBaseUrl: opts.absoluteBaseUrl,
+        absoluteBaseUrl: opts.absoluteBaseUrl ?? apiBase,
         apiSummary: opts.apiSummary ?? config.info?.description ?? config.info?.title,
         frontLink,
     });
-    const viewer = buildViewerRuntimeConfig(config, specUrl);
+    const viewer = buildViewerRuntimeConfig(config, apiBase);
     const is = buildIsDocument(viewer, openApi);
-    const embed = buildEmbedOpts(config, specUrl, viewer);
+    const embed = buildEmbedOpts(config, apiBase, viewer);
     return { config, openApi, postman, viewer, is, embed };
 }

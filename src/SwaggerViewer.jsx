@@ -3,6 +3,9 @@ import { OperationTagGroup } from "./components/OperationTagGroup.jsx";
 import { ExportToolbar } from "./components/ExportToolbar.jsx";
 import { AuthDialogs } from "./components/AuthDialogs.jsx";
 import { SwaggerHeaderAuth } from "./components/SwaggerHeaderAuth.jsx";
+import { SwaggerOpenGhPagesBtn } from "./components/SwaggerOpenGhPagesBtn.jsx";
+import { SwaggerReloadBtn } from "./components/SwaggerReloadBtn.jsx";
+import { AppHeaderSub } from "./components/AppHeaderSub.jsx";
 import { ServerHealthBanner } from "./components/ServerHealthBanner.jsx";
 import { ExpandStackProvider } from "./context/ExpandStackContext.jsx";
 import { ServerBaseProvider } from "./context/ServerBaseContext.jsx";
@@ -18,7 +21,7 @@ import { buildNavRows, filterGroupsByNavTab, activeSectionTabId } from "./lib/na
 const { useState, useEffect, useMemo } = React;
 const { Box, Typography, Alert } = MaterialUI;
 
-export function SwaggerViewer({ config, spec: specProp }) {
+export function SwaggerViewer({ config, spec: specProp, onReload, reloadBusy = false }) {
   const authEnabled =
     config?.auth?.enabled !== false &&
     (!!config?.auth?.loginUrl ||
@@ -89,7 +92,6 @@ export function SwaggerViewer({ config, spec: specProp }) {
   const embed = config?.embed === true;
   const useShell = config?.shell !== false && Shell && !embed;
   const externalAuth = config?.authUi === "external";
-  const dockedToolbar = useShell || embed;
   const shellLayout = useShell || embed;
 
   function onNeedLogin(hint) {
@@ -105,124 +107,96 @@ export function SwaggerViewer({ config, spec: specProp }) {
     setSession(getStoredJwt());
   }
 
-  const body = (
-    <ServerBaseProvider spec={spec} config={config}>
-      <ExpandStackProvider>
-      <Box
-        className={shellLayout ? "isa-sw-shell" : undefined}
-        sx={shellLayout ? { width: "100%" } : undefined}
-      >
-        <Box
-          className="isa-sw-viewer"
-          sx={{
-            p: shellLayout ? { xs: 1.5, sm: 2 } : 2,
-            maxWidth: 1160,
-            mx: "auto",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
-        >
-          {err ? (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {err}
-            </Alert>
-          ) : null}
-          {spec ? (
-            <>
-              {dockedToolbar ? (
-                <Box
-                  className="isa-sw-toolbar-bleed"
-                  sx={{
-                    mx: { xs: -1.5, sm: -2 },
-                    width: { xs: "calc(100% + 24px)", sm: "calc(100% + 32px)" },
-                    mb: 0,
-                  }}
-                >
-                  <ExportToolbar
-                    exports={config?.exports}
-                    frontLinks={config?.frontLinks || []}
-                    ns={ns}
-                    brandIcon={brandIcon}
-                    viewerConfig={config}
-                    spec={spec}
-                    showServer
-                    docked
-                  />
-                </Box>
-              ) : (
-                <ExportToolbar
-                  exports={config?.exports}
-                  frontLinks={config?.frontLinks || []}
-                  ns={ns}
-                  brandIcon={brandIcon}
-                  viewerConfig={config}
-                  spec={spec}
-                  showServer
-                  docked={false}
-                />
-              )}
-              <ServerHealthBanner ns={ns} />
-              <InfoHeader spec={spec} showTitle={!shellLayout} ns={ns} />
-              {visibleGroups.map((group, tagIndex) => (
-                <OperationTagGroup
-                  key={group.name}
-                  tagIndex={tagIndex}
-                  group={group}
-                  spec={spec}
-                  docIndex={docIndex}
-                  lookupIndex={lookupIndex}
-                  authEnabled={authEnabled}
-                  onNeedLogin={onNeedLogin}
-                  ns={ns}
-                />
-              ))}
-            </>
-          ) : !err ? (
-            <Typography color="text.secondary">Cargando especificación OpenAPI…</Typography>
-          ) : null}
-          {!externalAuth ? (
-            <AuthDialogs
-              enabled={authEnabled}
-              authBase={config?.auth?.loginUrl}
-              authKind={config?.auth?.loginKind}
-              loginPath={config?.auth?.loginPath}
-              onSessionChange={onSessionChange}
+  const toolbarProps = {
+    exports: config?.exports,
+    frontLinks: config?.frontLinks || [],
+    ns,
+    brandIcon,
+    viewerConfig: config,
+    spec,
+    showServer: true,
+  };
+  const exportToolbarHeader = useShell && spec ? <ExportToolbar {...toolbarProps} header /> : null;
+  const exportToolbarBody = !useShell && spec ? <ExportToolbar {...toolbarProps} docked={embed} /> : null;
+
+  const viewerBody = (
+    <Box className="isa-sw-viewer" sx={{ p: shellLayout ? { xs: 1.5, sm: 2 } : 2, maxWidth: 1160, mx: "auto", width: "100%", boxSizing: "border-box" }}>
+      {err ? <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert> : null}
+      {spec ? (
+        <>
+          {exportToolbarBody}
+          <ServerHealthBanner ns={ns} />
+          {!shellLayout ? <InfoHeader spec={spec} showTitle ns={ns} /> : null}
+          {visibleGroups.map((group, tagIndex) => (
+            <OperationTagGroup
+              key={group.name}
+              tagIndex={tagIndex}
+              group={group}
+              spec={spec}
+              docIndex={docIndex}
+              lookupIndex={lookupIndex}
+              authEnabled={authEnabled}
+              onNeedLogin={onNeedLogin}
               ns={ns}
             />
-          ) : null}
-        </Box>
-      </Box>
-      </ExpandStackProvider>
-    </ServerBaseProvider>
+          ))}
+        </>
+      ) : !err ? (
+        <Typography color="text.secondary">Cargando especificación OpenAPI…</Typography>
+      ) : null}
+      {!externalAuth ? (
+        <AuthDialogs
+          enabled={authEnabled}
+          authBase={config?.auth?.loginUrl}
+          authKind={config?.auth?.loginKind}
+          loginPath={config?.auth?.loginPath}
+          onSessionChange={onSessionChange}
+          ns={ns}
+        />
+      ) : null}
+    </Box>
   );
 
-  if (!useShell) return body;
+  const framed = useShell ? (
+    <>
+      <AppHeaderSub>{exportToolbarHeader}</AppHeaderSub>
+      <Shell
+        ns={config.ns || "ISA"}
+        title={brandTitle}
+        icon={brandIcon}
+        showTarget={false}
+        bodyScroll
+        navRows={navRows}
+        toolbarEnd={
+          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+            <SwaggerReloadBtn onReload={onReload} busy={reloadBusy} ns={ns} />
+            <SwaggerOpenGhPagesBtn config={config} ns={ns} />
+            {authEnabled ? (
+              <SwaggerHeaderAuth
+                enabled={authEnabled}
+                session={session}
+                ns={ns}
+                onLogin={() => globalThis.__isaSwaggerAuth?.openLogin?.()}
+                onLogout={() => {
+                  clearJwt();
+                  globalThis.__isaSwaggerAuth?.clear?.();
+                  onSessionChange(null);
+                }}
+              />
+            ) : null}
+          </Box>
+        }
+      >
+        <Box className="isa-sw-shell" sx={{ width: "100%" }}>{viewerBody}</Box>
+      </Shell>
+    </>
+  ) : (
+    <Box className={shellLayout ? "isa-sw-shell" : undefined} sx={shellLayout ? { width: "100%" } : undefined}>{viewerBody}</Box>
+  );
 
   return (
-    <Shell
-      ns={config.ns || "ISA"}
-      title={brandTitle}
-      icon={brandIcon}
-      showTarget={false}
-      bodyScroll
-      navRows={navRows}
-      toolbarEnd={
-        authEnabled ? (
-          <SwaggerHeaderAuth
-            enabled={authEnabled}
-            session={session}
-            ns={ns}
-            onLogin={() => globalThis.__isaSwaggerAuth?.openLogin?.()}
-            onLogout={() => {
-              clearJwt();
-              globalThis.__isaSwaggerAuth?.clear?.();
-              onSessionChange(null);
-            }}
-          />
-        ) : null
-      }
-    >
-      {body}
-    </Shell>
+    <ServerBaseProvider spec={spec} config={config}>
+      <ExpandStackProvider>{framed}</ExpandStackProvider>
+    </ServerBaseProvider>
   );
 }

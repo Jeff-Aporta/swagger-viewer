@@ -7,6 +7,11 @@ async function boot() {
 
   const stackMod = await importShared("stack.mjs");
   await stackMod.stackReady;
+  if (typeof globalThis.ReactDOM?.createPortal !== "function") {
+    const domMod = await import("react-dom");
+    const dom = domMod.default ?? domMod;
+    globalThis.ReactDOM = { ...globalThis.ReactDOM, createPortal: dom.createPortal.bind(dom) };
+  }
   assertStack();
 
   const Babel = globalThis.Babel;
@@ -51,9 +56,13 @@ async function boot() {
 
 boot().catch((err) => {
   const root = document.getElementById("root");
-  const msg = err instanceof Error ? err.stack || err.message : String(err);
+  const msg = err instanceof Error ? err.message : String(err);
   if (root) {
-    root.innerHTML = `<pre style="color:#ff8a80;padding:24px;font-family:monospace">Error de arranque:\n${msg}</pre>`;
+    root.innerHTML = `<div style="max-width:560px;margin:48px auto;padding:24px;font-family:system-ui,sans-serif;color:#e8eef5;text-align:center">
+      <p style="font-size:1.1rem;font-weight:600;margin:0 0 12px">No se pudo iniciar IS-Swagger</p>
+      <p style="color:#ff8a80;margin:0 0 16px;font-size:0.9rem">${msg.replace(/</g, "&lt;")}</p>
+      <button type="button" onclick="location.reload()" style="cursor:pointer;padding:8px 16px;border-radius:8px;border:1px solid #1e90ff;background:transparent;color:#1e90ff">Reintentar</button>
+    </div>`;
   }
   console.error(err);
 });

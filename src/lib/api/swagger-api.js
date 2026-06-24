@@ -1,5 +1,7 @@
 /** Rutas OpenAPI inferidas desde la base `/api` del host. */
 
+export const OPENAPI_CONFIG_KIND = "insoft.openapi-config";
+
 export function normalizeApiBase(input) {
   let s = String(input ?? "").trim();
   if (!s) return "";
@@ -23,36 +25,43 @@ export function apiOrigin(apiBase) {
 
 export function inferSwaggerUrls(apiBase) {
   const base = normalizeApiBase(apiBase);
-  if (!base) return { apiBase: "", get: "", put: "", config: "", is: "", postman: "" };
+  if (!base) return { apiBase: "", get: "", put: "", config: "" };
   const root = base.replace(/\/$/, "");
   return {
     apiBase: root,
     get: `${root}/swagger.json`,
     put: `${root}/swagger.json`,
     config: `${root}/swagger/config.json`,
-    is: `${root}/swagger/is.json`,
-    postman: `${root}/swagger/postman.json`,
   };
 }
 
-export async function fetchRemoteIsDocument(apiBase) {
-  const urls = inferSwaggerUrls(apiBase);
-  if (!urls.is) throw new Error("Base API inválida");
-  const res = await fetch(urls.is, { cache: "no-store", headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`GET ${urls.is} → ${res.status}`);
-  const doc = await res.json();
-  if (!doc || typeof doc !== "object") throw new Error("Respuesta IS vacía");
-  return { doc, urls };
+async function readJsonResponse(res, url) {
+  const text = await res.text();
+  if (!text.trim()) throw new Error(`GET ${url} → respuesta vacía (${res.status})`);
+  try {
+    return JSON.parse(text);
+  } catch {
+    const preview = text.slice(0, 120).replace(/\s+/g, " ");
+    throw new Error(`GET ${url} → JSON inválido (${res.status}): ${preview}`);
+  }
 }
 
 /** GET público — insoft.openapi-config (fuente BD; par PUT). */
 export async function fetchRemoteOpenApiConfig(apiBase) {
   const urls = inferSwaggerUrls(apiBase);
   if (!urls.config) throw new Error("Base API inválida");
-  const res = await fetch(urls.config, { cache: "no-store", headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`GET ${urls.config} → ${res.status}`);
-  const doc = await res.json();
-  if (!doc || typeof doc !== "object") throw new Error("Config vacía");
+  let res;
+  try {
+    res = await fetch(urls.config, { cache: "no-store", headers: { Accept: "application/json" } });
+  } catch (e) {
+    throw new Error(`No se pudo conectar con ${urls.config}: ${e?.message || e}`);
+  }
+  if (!res.ok) throw new Error(`GET ${urls.config} → ${res.status} ${res.statusText || ""}`.trim());
+  const doc = await readJsonResponse(res, urls.config);
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new Error("Config vacía o con formato inesperado");
+  if (doc.kind && doc.kind !== OPENAPI_CONFIG_KIND) {
+    throw new Error(`Config con kind «${doc.kind}»; se espera «${OPENAPI_CONFIG_KIND}».`);
+  }
   return { doc, urls };
 }
 

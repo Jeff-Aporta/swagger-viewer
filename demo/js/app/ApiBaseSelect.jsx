@@ -20,13 +20,17 @@ export function readStoredApiBase() {
 
   try {
 
-    return normalizeApiBase(localStorage.getItem(LS_KEY) || "");
+    const saved = normalizeApiBase(localStorage.getItem(LS_KEY) || "");
+
+    if (saved) return saved;
 
   } catch {
 
-    return "";
+    /* ignore */
 
   }
+
+  return normalizeApiBase(DEMO_API_SCOPES[0]?.base || "");
 
 }
 
@@ -72,7 +76,7 @@ export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISA", sc
 
         <ServerScopeSelect value={value} onChange={onChange} scopes={scopeList} ns={ns} />
 
-        <Tooltip title="GET público /swagger/is.json" arrow>
+        <Tooltip title="GET público /swagger/config.json" arrow>
 
           <Button size="small" variant="contained" disabled={!value?.trim() || busy} onClick={() => onConnect?.()} startIcon={<SwIcon icon="mdi:lan-connect" size={18} ns={ns} />}>
 
@@ -88,7 +92,6 @@ export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISA", sc
 
         <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.75, display: "flex", flexWrap: "wrap", gap: 0.5, alignItems: "center" }}>
 
-          <Chip size="small" label={`GET ${urls.is || urls.get}`} variant="outlined" />
           <Chip size="small" label={`GET ${urls.config}`} variant="outlined" color="info" />
           <Chip size="small" label={`PUT ${urls.put}`} variant="outlined" color="warning" />
 

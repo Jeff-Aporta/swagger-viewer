@@ -96,12 +96,9 @@ function buildSwaggerViewerHtml(opts) {
     },
     brand,
     exports: opts.exports || {
-      openApiUrl: specUrl,
       openApiDownloadName: "openapi.json",
-      postmanUrl: opts.postmanUrl || specUrl.replace(/\/swagger\.json$/i, "/swagger/postman.json"),
-      postmanDownloadName: opts.postmanDownloadName || "collection.postman.json",
-      isUrl: opts.isUrl || specUrl.replace(/\/swagger\.json$/i, "/swagger/is.json"),
-      isDownloadName: opts.isDownloadName || "api.is.json"
+      postmanDownloadName: "collection.postman.json",
+      isDownloadName: "api.is.json"
     },
     frontLinks: opts.frontLinks || [],
     ...opts.config || {}
@@ -127,9 +124,7 @@ function buildSwaggerUiHtml(documentUrl, opts = {}) {
     shell: opts.shell,
     exports: opts.exports,
     brand: opts.brand || { title: "ISS PatyIA", icon: "mdi:robot-happy-outline" },
-    postmanUrl: opts.postmanUrl || String(documentUrl).replace(/\/swagger\/is\.json$/i, "/swagger/postman.json"),
     postmanDownloadName: opts.postmanDownloadName || "iss-ayudascpia.postman_collection.json",
-    isUrl: opts.isUrl || documentUrl,
     isDownloadName: opts.isDownloadName || "iss-ayudascpia.is.json",
     frontLinks
   });

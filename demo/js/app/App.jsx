@@ -1,8 +1,10 @@
 import { SwaggerViewer } from "../../../src/SwaggerViewer.jsx";
 import { parseIsDocument, isDocumentText } from "../../../src/lib/openapi/is-document.js";
 import { readBrandFromMeta } from "../../../src/lib/brand/viewer-brand.js";
-import { apiOrigin, fetchRemoteIsDocument, fetchRemoteOpenApiConfig, inferSwaggerUrls, normalizeApiBase, putRemoteOpenApiConfig } from "../../../src/lib/api/swagger-api.js";
-import { parseEmbedParams } from "../../../src/lib/api/conn-config.js";
+import { apiOrigin, fetchRemoteOpenApiConfig, inferSwaggerUrls, normalizeApiBase, putRemoteOpenApiConfig } from "../../../src/lib/api/swagger-api.js";
+import { fetchRemoteIsDocument } from "../../../src/lib/api/swagger-remote.js";
+import { notifyApiError } from "../../../src/lib/api/api-notify.js";
+import { parseEmbedParams, resolveConnBrand } from "../../../src/lib/api/conn-config.js";
 import { getStoredJwt } from "../../../src/lib/auth/auth.js";
 import { IsEditorDrawer } from "./IsEditorDrawer.jsx";
 import { WelcomeScreen } from "./WelcomeScreen.jsx";
@@ -12,7 +14,7 @@ import { buildDemoExportUrls, revokeDemoExportUrls } from "./demo-exports.js";
 import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
 
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const { Fab, Tooltip, Box, Alert, CircularProgress } = MaterialUI;
+const { Fab, Tooltip, Box, Alert, CircularProgress, Button, Typography } = MaterialUI;
 
 const DEMO_EXPORT_NAMES = {
   openApiDownloadName: "openapi.json",
@@ -20,18 +22,19 @@ const DEMO_EXPORT_NAMES = {
   isDownloadName: "iss-ayudascpia.is.json",
 };
 
-function demoBrandDefaults() {
+function demoBrandDefaults(conn) {
+  const connBrand = resolveConnBrand(conn);
   const meta = readBrandFromMeta();
   return {
-    title: meta.title || "IS-Swagger",
-    icon: meta.icon || "mdi:file-code-outline",
+    title: connBrand?.title || meta.title || "IS-Swagger",
+    icon: connBrand?.icon || meta.icon || "mdi:file-code-outline",
   };
 }
 
 const DEMO_NS = "ISS";
 
-function enrichViewerConfig(viewer = {}, { remoteApiBase } = {}) {
-  const defaults = demoBrandDefaults();
+function enrichViewerConfig(viewer = {}, { remoteApiBase, conn } = {}) {
+  const defaults = demoBrandDefaults(conn);
   const origin = remoteApiBase ? apiOrigin(remoteApiBase) : viewer.auth?.loginUrl;
   const auth = { enabled: true, loginKind: "portal", loginPath: "/api/auth/portal-login", ...viewer.auth };
   if (origin) auth.loginUrl = origin.replace(/\/$/, "");
@@ -50,8 +53,16 @@ function applyIsDocument(doc, opts = {}) {
   if (!parsed?.spec) {
     throw new Error("Se espera kind «insoft.swagger-viewer» con objetos viewer y spec.");
   }
-  const { spec: _omit, ...viewer } = parsed.config || {};
+  const { spec: _omit, specUrl: _specUrl, ...viewer } = parsed.config || {};
   return { config: enrichViewerConfig(viewer, opts), spec: parsed.spec };
+}
+
+function formatConnectError(e, apiBase) {
+  const raw = e?.message || String(e);
+  if (/failed to fetch|networkerror|load failed/i.test(raw)) {
+    return `No se pudo contactar la API (${apiBase || "…/api"}). Compruebe que el servicio esté en marcha y CORS habilitado.`;
+  }
+  return raw;
 }
 
 export function App() {
@@ -68,6 +79,7 @@ export function App() {
   const [apiBase, setApiBase] = useState(() => connApiBase || normalizeApiBase(apiParam ? decodeURIComponent(apiParam) : "") || readStoredApiBase());
   const [connectBusy, setConnectBusy] = useState(() => !!(connApiBase && conn?.auto !== false));
   const [remoteUrls, setRemoteUrls] = useState(null);
+  const [remoteBuilt, setRemoteBuilt] = useState(null);
   const getEditorTextRef = useRef(() => "");
   const exportRevokeRef = useRef([]);
   const ns = applied?.config?.ns ?? DEMO_NS;
@@ -82,19 +94,23 @@ export function App() {
       setConnectBusy(true);
       setParseErr("");
       try {
-        const { doc, urls } = await fetchRemoteIsDocument(base);
+        const { doc, urls, built } = await fetchRemoteIsDocument(base);
         setRemoteUrls(urls);
+        setRemoteBuilt(built);
         setApiBase(urls.apiBase);
         setSourceText(isDocumentText(doc));
-        setApplied(applyIsDocument(doc, { remoteApiBase: urls.apiBase }));
+        setApplied(applyIsDocument(doc, { remoteApiBase: urls.apiBase, conn }));
+        setParseErr("");
         setDrawerOpen(false);
       } catch (e) {
-        setParseErr(e?.message || String(e));
+        const msg = formatConnectError(e, base);
+        notifyApiError(msg);
+        setParseErr(msg);
       } finally {
         setConnectBusy(false);
       }
     },
-    [apiBase],
+    [apiBase, conn],
   );
 
   useEffect(() => {
@@ -116,7 +132,9 @@ export function App() {
       const { doc } = await fetchRemoteOpenApiConfig(apiBase);
       setSourceText(isDocumentText(doc));
     } catch (e) {
-      setParseErr(e?.message || String(e));
+      const msg = formatConnectError(e, apiBase);
+      notifyApiError(msg);
+      setParseErr(msg);
     } finally {
       setConnectBusy(false);
     }
@@ -150,7 +168,8 @@ export function App() {
       await putRemoteOpenApiConfig(apiBase, doc, jwt);
       await connectApi(apiBase);
     } catch (e) {
-      setParseErr(e?.message || String(e));
+      const msg = notifyApiError(e?.message || String(e));
+      setParseErr(msg);
     } finally {
       setConnectBusy(false);
     }
@@ -165,7 +184,7 @@ export function App() {
       }
       try {
         const doc = JSON.parse(raw);
-        setApplied(applyIsDocument(doc, { remoteApiBase: apiBase }));
+        setApplied(applyIsDocument(doc, { remoteApiBase: apiBase, conn }));
         setParseErr("");
         setSourceText(isDocumentText(doc));
         setDrawerOpen(false);
@@ -173,7 +192,7 @@ export function App() {
         setParseErr(e?.message || String(e));
       }
     },
-    [sourceText, apiBase],
+    [sourceText, apiBase, conn],
   );
 
   const handleFormat = useCallback(() => {
@@ -203,17 +222,20 @@ export function App() {
     if (!applied?.spec) return null;
     revokeDemoExportUrls(exportRevokeRef.current);
     const urls = remoteUrls || (apiBase ? inferSwaggerUrls(apiBase) : null);
-    if (urls?.get) {
+    if (urls?.apiBase && remoteBuilt) {
+      const names = applied.config.exports || {};
       return {
         ...applied.config,
         shell: true,
+        apiBase: urls.apiBase,
         exports: {
-          openApiUrl: urls.get,
-          openApiDownloadName: applied.config.exports?.openApiDownloadName || DEMO_EXPORT_NAMES.openApiDownloadName,
-          postmanUrl: urls.postman,
-          postmanDownloadName: applied.config.exports?.postmanDownloadName || DEMO_EXPORT_NAMES.postmanDownloadName,
-          isUrl: urls.is,
-          isDownloadName: applied.config.exports?.isDownloadName || DEMO_EXPORT_NAMES.isDownloadName,
+          apiBase: urls.apiBase,
+          openApiDownloadName: names.openApiDownloadName || DEMO_EXPORT_NAMES.openApiDownloadName,
+          postmanDownloadName: names.postmanDownloadName || DEMO_EXPORT_NAMES.postmanDownloadName,
+          isDownloadName: names.isDownloadName || DEMO_EXPORT_NAMES.isDownloadName,
+          openApiGetDocument: () => remoteBuilt.openApi,
+          postmanGetDocument: () => remoteBuilt.postman,
+          isGetDocument: () => remoteBuilt.is,
         },
       };
     }
@@ -231,7 +253,7 @@ export function App() {
         isDownloadName: runtime.isDownloadName,
       },
     };
-  }, [applied, apiBase, remoteUrls]);
+  }, [applied, apiBase, remoteUrls, remoteBuilt]);
 
   const drawer = (
     <IsEditorDrawer
@@ -270,10 +292,23 @@ export function App() {
 
   if (!viewerConfig || !applied?.spec) {
     if (embedMode) {
+      const brand = demoBrandDefaults(conn);
+      const retryBase = connApiBase || apiBase;
       return (
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 2, px: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>{brand.title}</Typography>
           {connectBusy ? <CircularProgress /> : null}
-          {parseErr ? <Alert severity="error" sx={{ maxWidth: 560 }}>{parseErr}</Alert> : null}
+          {!connectBusy && parseErr ? (
+            <>
+              <Alert severity="error" sx={{ maxWidth: 560 }}>{parseErr}</Alert>
+              {retryBase ? (
+                <Button variant="outlined" size="small" onClick={() => connectApi(retryBase)} disabled={connectBusy}>
+                  Reintentar conexión
+                </Button>
+              ) : null}
+            </>
+          ) : null}
+          {!connectBusy && !parseErr ? <Typography color="text.secondary">Cargando documentación API…</Typography> : null}
           {drawer}
         </Box>
       );
@@ -293,7 +328,7 @@ export function App() {
 
   return (
     <>
-      <SwaggerViewer config={viewerConfig} spec={applied.spec} />
+      <SwaggerViewer config={viewerConfig} spec={applied.spec} onReload={apiBase ? () => connectApi(apiBase) : null} reloadBusy={connectBusy} />
       {!embedMode ? (
         <Tooltip title="Constructor IS-Swagger" placement="left" arrow>
           <Fab className="isa-sw-demo__fab" color="primary" aria-label="Abrir constructor" onClick={() => setDrawerOpen(true)}>

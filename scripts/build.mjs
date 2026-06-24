@@ -127,6 +127,14 @@ function buildVendorBundles() {
         format: "cjs",
         target: "node18",
     });
+    esbuild.buildSync({
+        entryPoints: [join(root, "server", "build-exports-browser.ts")],
+        outfile: join(CDN_DIR, "iss-exports.browser.mjs"),
+        bundle: true,
+        platform: "browser",
+        format: "esm",
+        target: "es2022",
+    });
 }
 
 function build() {
