@@ -41,14 +41,15 @@ export const bootHelperUrl =
 
 /* @isa-swagger-boot:start */
 /** Jeff-Aporta/swagger-viewer — pin CDN git (sync-component-refs.mjs) */
-export const SWAGGER_VIEWER_REF = "c2ee7f7";
+export const SWAGGER_VIEWER_REF = "f2aaef2";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;
-  if (isDevHost) {
-    return new URL("../../../components/swagger/cdn/", base).href.replace(/\/?$/, "/");
+  if (isIssSwaggerDemoHost()) return `${location.origin}/api/swagger/cdn/`;
+  if (isLocalDevHost() && !isGhPagesSwaggerDemo()) {
+    return new URL("../cdn/", base).href.replace(/\/?$/, "/");
   }
-  return `${location.origin}/api/swagger/cdn/`;
+  return new URL("cdn/", base).href.replace(/\/?$/, "/");
 }
 
 function ensureSwaggerStylesheet(href) {
