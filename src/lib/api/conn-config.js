@@ -60,3 +60,9 @@ export function buildGhPagesSwaggerUrl(apiBase, extra = {}) {
   if (s) u.searchParams.set("s", String(s).trim());
   return u.href;
 }
+
+/** Query de una URL incluyendo el `?`. */
+export function queryFromUrl(href) {
+  const i = String(href || "").indexOf("?");
+  return i >= 0 ? href.slice(i) : "";
+}

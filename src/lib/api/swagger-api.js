@@ -68,7 +68,7 @@ export async function fetchRemoteOpenApiConfig(apiBase) {
 /** PUT insoft.openapi-config — requiere JWT (swagger_editors). */
 export async function putRemoteOpenApiConfig(apiBase, config, jwt) {
   const token = String(jwt || "").trim().replace(/^bearer\s+/i, "");
-  if (!token) throw new Error("Inicie sesión para publicar (PUT /swagger.json).");
+  if (!token) throw new Error("Inicie sesión para guardar la config IS en BD (PUT /swagger.json).");
   const urls = inferSwaggerUrls(apiBase);
   const res = await fetch(urls.put, {
     method: "PUT",

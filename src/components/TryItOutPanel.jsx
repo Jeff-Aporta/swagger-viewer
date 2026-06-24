@@ -1,6 +1,5 @@
 import { ParametersTable, pathParamsOnly } from "./ParametersTable.jsx";
 import { RequestBodySection } from "./RequestBodySection.jsx";
-import { ResponsesSection } from "./ResponsesSection.jsx";
 import { DocPanel } from "./DocPanel.jsx";
 import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
 import { QueryFiltersPanel } from "./QueryFiltersPanel.jsx";
@@ -25,8 +24,6 @@ const { useState, useMemo, useEffect } = React;
 const {
   Box,
   Button,
-  Tabs,
-  Tab,
   Typography,
   CircularProgress,
   Chip,

@@ -1,9 +1,7 @@
 import { MethodChip, TryItOutPanel } from "./TryItOutPanel.jsx";
-import { RequestBodySection } from "./RequestBodySection.jsx";
 import { ResponsesSection } from "./ResponsesSection.jsx";
 import { DocPanel } from "./DocPanel.jsx";
 import { ApiPathLabel } from "./ApiPathLabel.jsx";
-import { resolveTryItBodyExample } from "../lib/openapi/tryit-body.js";
 import { operationRequiresBearer } from "../lib/openapi/openapi.js";
 import { SwIcon, tabLabel } from "../lib/ui/sw-icon.jsx";
 import { opExpandIndex } from "../lib/nav/expand-stack.js";
@@ -42,7 +40,6 @@ export function OperationCard({
   const expanded = isOpen(expandId);
   const glassC = useGlassColors();
   const accent = methodAccent(op.method);
-  const specExample = resolveTryItBodyExample(op);
   const needsAuth = authEnabled && operationRequiresBearer(op, spec);
 
   const tabs = [
@@ -61,6 +58,7 @@ export function OperationCard({
       className={`isa-sw-operation isa-sw-operation--${op.method}`}
       data-sw-expand={expandId}
       disableGutters
+      slotProps={{ transition: { unmountOnExit: true } }}
       sx={{
         ...glassAccordionSx(glassC, { accent }),
         mb: 1,
@@ -95,55 +93,49 @@ export function OperationCard({
         </Box>
       </AccordionSummary>
       <AccordionDetails>
-        {op.description ? (
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, opacity: 0.5, display: "block" }}>
-            {op.description}
-          </Typography>
-        ) : null}
-        <Tabs
-          value={tab}
-          onChange={(_e, v) => setTab(v)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{ mb: 1.5, minHeight: 36, "& .MuiTab-root": { minHeight: 36, textTransform: "none" } }}
-        >
-          {tabs.map((t) => (
-            <Tab key={t.id} value={t.id} label={tabLabel(t.icon, t.label, ns)} />
-          ))}
-        </Tabs>
-
-        {tab === "try" ? (
-          <TryItOutPanel
-            op={op}
-            spec={spec}
-            lookupIndex={lookupIndex}
-            authEnabled={authEnabled}
-            onNeedLogin={onNeedLogin}
-            ns={ns}
-          />
-        ) : null}
-
-        {tab === "overview" ? (
-          <Box>
-            <RequestBodySection op={op} example={specExample} disabled ns={ns} />
-            <Typography
-              variant="overline"
-              color="text.secondary"
-              sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 2, mb: 0.5 }}
+        {expanded ? (
+          <>
+            {op.description ? (
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, opacity: 0.5, display: "block" }}>
+                {op.description}
+              </Typography>
+            ) : null}
+            <Tabs
+              value={tab}
+              onChange={(_e, v) => setTab(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{ mb: 1.5, minHeight: 36, "& .MuiTab-root": { minHeight: 36, textTransform: "none" } }}
             >
-              <SwIcon icon="mdi:reply-outline" size={14} ns={ns} />
-              Respuestas
-            </Typography>
-            <ResponsesSection
-              responses={op.responses}
-              tagIndex={tagIndex}
-              opIndex={opIndex}
-              ns={ns}
-            />
-          </Box>
-        ) : null}
+              {tabs.map((t) => (
+                <Tab key={t.id} value={t.id} label={tabLabel(t.icon, t.label, ns)} />
+              ))}
+            </Tabs>
 
-        {tab === "doc" ? <DocPanel markdown={docMd} /> : null}
+            {tab === "try" ? (
+              <TryItOutPanel
+                op={op}
+                spec={spec}
+                lookupIndex={lookupIndex}
+                authEnabled={authEnabled}
+                onNeedLogin={onNeedLogin}
+                ns={ns}
+              />
+            ) : null}
+
+            {tab === "overview" ? (
+              <Box>
+                <Typography variant="overline" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.5 }}>
+                  <SwIcon icon="mdi:reply-outline" size={14} ns={ns} />
+                  Respuestas
+                </Typography>
+                <ResponsesSection responses={op.responses} tagIndex={tagIndex} opIndex={opIndex} ns={ns} />
+              </Box>
+            ) : null}
+
+            {tab === "doc" ? <DocPanel markdown={docMd} /> : null}
+          </>
+        ) : null}
       </AccordionDetails>
     </Accordion>
   );

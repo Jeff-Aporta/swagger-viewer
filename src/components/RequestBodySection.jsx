@@ -80,8 +80,8 @@ export function RequestBodySection({
             ))}
           </Box>
         )}
+        <InputRecommendationHints schema={bodySchema} ns={ns} />
       </Box>
-      <InputRecommendationHints schema={bodySchema} ns={ns} />
       <JsonCodeBlock
         className="isa-sw-request-body__editor"
         value={raw}

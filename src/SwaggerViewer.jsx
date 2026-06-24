@@ -1,11 +1,11 @@
 import { InfoHeader } from "./components/InfoHeader.jsx";
 import { OperationTagGroup } from "./components/OperationTagGroup.jsx";
-import { ExportToolbar } from "./components/ExportToolbar.jsx";
+import { ExportToolbar, SwaggerFrontLinks, buildExportFormats } from "./components/ExportToolbar.jsx";
 import { AuthDialogs } from "./components/AuthDialogs.jsx";
 import { SwaggerHeaderAuth } from "./components/SwaggerHeaderAuth.jsx";
 import { SwaggerOpenGhPagesBtn } from "./components/SwaggerOpenGhPagesBtn.jsx";
 import { SwaggerReloadBtn } from "./components/SwaggerReloadBtn.jsx";
-import { AppHeaderSub } from "./components/AppHeaderSub.jsx";
+import { ServerUrlField } from "./components/ServerUrlField.jsx";
 import { ServerHealthBanner } from "./components/ServerHealthBanner.jsx";
 import { ExpandStackProvider } from "./context/ExpandStackContext.jsx";
 import { ServerBaseProvider } from "./context/ServerBaseContext.jsx";
@@ -107,17 +107,40 @@ export function SwaggerViewer({ config, spec: specProp, onReload, reloadBusy = f
     setSession(getStoredJwt());
   }
 
-  const toolbarProps = {
-    exports: config?.exports,
-    frontLinks: config?.frontLinks || [],
-    ns,
-    brandIcon,
-    viewerConfig: config,
-    spec,
-    showServer: true,
-  };
-  const exportToolbarHeader = useShell && spec ? <ExportToolbar {...toolbarProps} header /> : null;
-  const exportToolbarBody = !useShell && spec ? <ExportToolbar {...toolbarProps} docked={embed} /> : null;
+  const exportFormats = useMemo(() => {
+    const exp = config?.exports;
+    const hasIs = !!(exp?.isGetDocument || (spec && config));
+    return buildExportFormats(exp, { hasIs, spec, viewerConfig: config });
+  }, [config, spec]);
+
+  const authToolbarEnd = authEnabled ? (
+    <SwaggerHeaderAuth
+      enabled={authEnabled}
+      session={session}
+      ns={ns}
+      exportFormats={exportFormats}
+      onLogin={() => globalThis.__isaSwaggerAuth?.openLogin?.()}
+      onLogout={() => {
+        clearJwt();
+        globalThis.__isaSwaggerAuth?.clear?.();
+        onSessionChange(null);
+      }}
+    />
+  ) : null;
+
+  const shellToolbarEnd = (
+    <Box className="isa-sw-toolbar-tools" sx={{ display: "inline-flex", alignItems: "center", gap: { xs: 1.75, sm: 2.25 }, flexShrink: 0, minWidth: 0 }}>
+      <SwaggerFrontLinks frontLinks={config?.frontLinks || []} brandIcon={brandIcon} ns={ns} dense />
+      {spec ? <ServerUrlField ns={ns} compact dense /> : null}
+      <SwaggerReloadBtn onReload={onReload} busy={reloadBusy} ns={ns} />
+      <SwaggerOpenGhPagesBtn config={config} ns={ns} />
+      {authToolbarEnd}
+    </Box>
+  );
+
+  const exportToolbarBody = !useShell && spec ? (
+    <ExportToolbar frontLinks={config?.frontLinks || []} ns={ns} brandIcon={brandIcon} docked={embed} showServer toolbarEnd={authToolbarEnd} />
+  ) : null;
 
   const viewerBody = (
     <Box className="isa-sw-viewer" sx={{ p: shellLayout ? { xs: 1.5, sm: 2 } : 2, maxWidth: 1160, mx: "auto", width: "100%", boxSizing: "border-box" }}>
@@ -158,38 +181,17 @@ export function SwaggerViewer({ config, spec: specProp, onReload, reloadBusy = f
   );
 
   const framed = useShell ? (
-    <>
-      <AppHeaderSub>{exportToolbarHeader}</AppHeaderSub>
-      <Shell
-        ns={config.ns || "ISA"}
-        title={brandTitle}
-        icon={brandIcon}
-        showTarget={false}
-        bodyScroll
-        navRows={navRows}
-        toolbarEnd={
-          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-            <SwaggerReloadBtn onReload={onReload} busy={reloadBusy} ns={ns} />
-            <SwaggerOpenGhPagesBtn config={config} ns={ns} />
-            {authEnabled ? (
-              <SwaggerHeaderAuth
-                enabled={authEnabled}
-                session={session}
-                ns={ns}
-                onLogin={() => globalThis.__isaSwaggerAuth?.openLogin?.()}
-                onLogout={() => {
-                  clearJwt();
-                  globalThis.__isaSwaggerAuth?.clear?.();
-                  onSessionChange(null);
-                }}
-              />
-            ) : null}
-          </Box>
-        }
-      >
-        <Box className="isa-sw-shell" sx={{ width: "100%" }}>{viewerBody}</Box>
-      </Shell>
-    </>
+    <Shell
+      ns={config.ns || "ISA"}
+      title={brandTitle}
+      icon={brandIcon}
+      showTarget={false}
+      bodyScroll
+      navRows={navRows}
+      toolbarEnd={shellToolbarEnd}
+    >
+      <Box className="isa-sw-shell" sx={{ width: "100%" }}>{viewerBody}</Box>
+    </Shell>
   ) : (
     <Box className={shellLayout ? "isa-sw-shell" : undefined} sx={shellLayout ? { width: "100%" } : undefined}>{viewerBody}</Box>
   );

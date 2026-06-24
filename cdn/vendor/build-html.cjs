@@ -16,7 +16,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// ../../components/swagger/src/embed/build-html.js
+// components/swagger/src/embed/build-html.js
 var build_html_exports = {};
 __export(build_html_exports, {
   buildSwaggerUiHtml: () => buildSwaggerUiHtml,

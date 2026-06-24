@@ -189,3 +189,9 @@ html.dark-mode .isa-sw-demo__drawer-actions .MuiIconButton-root {
 html[data-mui-color-scheme="light"] .isa-sw-demo__drawer-actions .MuiIconButton-root {
   color: #4a6278;
 }
+
+/* Drawer cerrado: evitar fieldset outlined fugado del ApiBaseSelect (keepMounted / portal MUI) */
+.MuiDrawer-root:not(.MuiModal-open) .isa-sw-demo__drawer,
+.MuiDrawer-root:not(.MuiModal-open) .isa-sw-demo__api-base {
+  display: none !important;
+}

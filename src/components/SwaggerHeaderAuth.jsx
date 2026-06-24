@@ -1,7 +1,8 @@
 import { formatSessionDisplayName, stripContapymeEmail, resolveSessionHeaderLabel } from "../lib/auth/auth.js";
 import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { ExportFormatControls } from "./ExportToolbar.jsx";
 
-const { Box, Stack, Button, Chip, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText } = MaterialUI;
+const { Box, Stack, Button, Chip, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, Divider } = MaterialUI;
 
 const HEADER_CHIP_SX = {
   height: "auto",
@@ -11,9 +12,10 @@ const HEADER_CHIP_SX = {
   "& .MuiChip-label": { px: 0.25, py: 0.25 },
 };
 
-/** Botón de sesión en AppBar — mismo estilo que isa-patyia LoginButton. */
-export function SwaggerHeaderAuth({ enabled, session, onLogin, onLogout, ns = "ISA" }) {
+/** Botón de sesión en AppBar — export OpenAPI/Postman solo con JWT activo. */
+export function SwaggerHeaderAuth({ enabled, session, onLogin, onLogout, ns = "ISA", exportFormats = [] }) {
   const [menuEl, setMenuEl] = React.useState(null);
+  const hasExports = Array.isArray(exportFormats) && exportFormats.length > 0;
 
   if (!enabled) return null;
 
@@ -35,7 +37,20 @@ export function SwaggerHeaderAuth({ enabled, session, onLogin, onLogout, ns = "I
             sx={HEADER_CHIP_SX}
           />
         </Tooltip>
-        <Menu anchorEl={menuEl} open={Boolean(menuEl)} onClose={() => setMenuEl(null)}>
+        <Menu
+          anchorEl={menuEl}
+          open={Boolean(menuEl)}
+          onClose={() => setMenuEl(null)}
+          slotProps={{ paper: { className: "isa-sw-session-menu", sx: { minWidth: hasExports ? 220 : undefined } } }}
+        >
+          {hasExports ? (
+            <>
+              <Box className="isa-sw-session-menu__exports" sx={{ px: 1.25, py: 0.75 }} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                <ExportFormatControls formats={exportFormats} ns={ns} dense />
+              </Box>
+              <Divider />
+            </>
+          ) : null}
           <MenuItem
             onClick={() => {
               setMenuEl(null);

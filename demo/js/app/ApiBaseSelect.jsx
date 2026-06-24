@@ -74,7 +74,7 @@ export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISA", sc
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }}>
 
-        <ServerScopeSelect value={value} onChange={onChange} scopes={scopeList} ns={ns} />
+        <ServerScopeSelect value={value} onChange={onChange} scopes={scopeList} ns={ns} compact />
 
         <Tooltip title="GET público /swagger/config.json" arrow>
 

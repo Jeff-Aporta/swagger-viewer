@@ -8,7 +8,7 @@ export function ServerUrlField({ ns = "ISA", compact = false, dense = false }) {
   const { serverBase, setServerBase, defaultBase, scopes } = useServerBase();
 
   return (
-    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.25, minWidth: 0 }}>
+    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, minWidth: 0 }}>
       <ServerScopeSelect value={serverBase} onChange={setServerBase} scopes={scopes} ns={ns} compact={compact} dense={dense} />
       {!dense && defaultBase && serverBase !== defaultBase ? (
         <Tooltip title={`Restaurar ${defaultBase}`} arrow>

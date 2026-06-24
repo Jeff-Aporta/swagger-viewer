@@ -209,6 +209,26 @@ html.dark-mode .isa-sw-tag-head__icon {
 .isa-sw-operation--head,
 .isa-sw-operation--options { --isa-sw-accent: 148, 163, 184; }
 
+/* Tabs internos (Probar/Ejemplos/Doc): ocultar detalle colapsado (evita indicador MUI y CodeMirror fugados) */
+.isa-sw-operation:not(.Mui-expanded) .MuiAccordionDetails,
+.isa-sw-operation:not(.Mui-expanded) .MuiCollapse-root {
+  display: none !important;
+}
+
+.isa-sw-operation:not(.Mui-expanded) .MuiTabs-root,
+.isa-sw-operation:not(.Mui-expanded) .MuiTabs-indicator {
+  display: none !important;
+}
+
+/* Nav secundaria AppShell (Conversaciones/Sistema/Testing): contener indicador en la franja del header */
+.isa-layout-root > header.MuiAppBar-root .isa-nav-row--secondary.MuiTabs-root {
+  overflow: hidden !important;
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-nav-row--secondary .MuiTabs-scroller {
+  overflow: hidden !important;
+}
+
 html[data-mui-color-scheme="dark"] .isa-sw-viewer .isa-sw-operation,
 html.dark-mode .isa-sw-viewer .isa-sw-operation {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -600,6 +620,12 @@ html.dark-mode .isa-sw-iss-filter-card .MuiAutocomplete-listbox {
   transition: color 0.15s ease, opacity 0.15s ease;
 }
 
+.isa-sw-front-link--static {
+  cursor: default;
+  color: var(--mui-palette-text-secondary, rgba(255, 255, 255, 0.7));
+  pointer-events: none;
+}
+
 .isa-sw-front-link:hover {
   opacity: 0.88;
 }
@@ -647,7 +673,42 @@ html.dark-mode .isa-sw-toolbar .isa-sw-front-link iconify-icon {
   min-width: 0;
 }
 
+/* Toolbar AppShell / export docked: sin fieldset outlined ni URL si hay preset */
+.isa-sw-scope-select--toolbar {
+  overflow: hidden;
+  max-height: 28px;
+  align-self: center;
+}
+
+.isa-sw-scope-select--toolbar .MuiInputBase-root,
+.isa-sw-toolbar-tools .isa-sw-scope-select .MuiInputBase-root {
+  overflow: hidden;
+}
+
+.isa-sw-toolbar-tools .MuiOutlinedInput-root,
+.isa-sw-scope-select--toolbar .MuiOutlinedInput-root {
+  overflow: hidden;
+}
+
+.isa-sw-toolbar-tools .MuiOutlinedInput-notchedOutline,
+.isa-sw-scope-select--toolbar .MuiOutlinedInput-notchedOutline,
+.isa-sw-scope-select--toolbar fieldset.MuiOutlinedInput-notchedOutline {
+  display: none !important;
+}
+
+.isa-sw-toolbar-tools .isa-sw-server-field {
+  max-width: min(180px, 28vw);
+}
+
 .isa-sw-scope-select .MuiInputBase-input {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+
+.isa-sw-export-select {
+  min-width: 0;
+}
+
+.isa-sw-export-select .MuiInputBase-input {
   font-family: "IBM Plex Sans", system-ui, sans-serif;
 }
 
@@ -667,59 +728,151 @@ html[data-mui-color-scheme="light"] .isa-sw-export-group + .isa-sw-export-group 
   padding: 5px;
 }
 
+/* Herramientas en AppBar principal (scope, export en menú sesión) */
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-label {
+  color: rgba(255, 255, 255, 0.94);
+  opacity: 1;
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-btn.MuiIconButton-root {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-btn.MuiIconButton-root:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-btn iconify-icon {
+  color: currentColor;
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-scope-select .MuiInputBase-root {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-scope-select .MuiSelect-select {
+  color: inherit;
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-scope-select .MuiSvgIcon-root {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-select .MuiInputBase-root {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-select .MuiSelect-select {
+  color: inherit;
+}
+
+.isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-select .MuiSvgIcon-root {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-label {
+  color: rgba(15, 23, 42, 0.9);
+}
+
+html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-btn.MuiIconButton-root {
+  color: rgba(15, 23, 42, 0.78);
+}
+
+html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-btn.MuiIconButton-root:hover {
+  color: rgba(15, 23, 42, 0.95);
+  background-color: rgba(15, 23, 42, 0.06);
+}
+
+html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-scope-select .MuiInputBase-root {
+  color: rgba(15, 23, 42, 0.88);
+}
+
+html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-scope-select .MuiSvgIcon-root {
+  color: rgba(15, 23, 42, 0.62);
+}
+
+html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-select .MuiInputBase-root {
+  color: rgba(15, 23, 42, 0.88);
+}
+
+html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .isa-sw-toolbar-tools .isa-sw-export-select .MuiSvgIcon-root {
+  color: rgba(15, 23, 42, 0.62);
+}
+
+/* Menú scope: opción seleccionada legible sobre fondo blanco */
+.isa-sw-scope-menu .MuiMenuItem-root {
+  color: rgba(15, 23, 42, 0.87);
+}
+
+.isa-sw-scope-menu .MuiMenuItem-root.Mui-selected {
+  color: #0f172a;
+  font-weight: 600;
+  background-color: rgba(30, 144, 255, 0.12);
+}
+
+.isa-sw-scope-menu .MuiMenuItem-root.Mui-selected:hover,
+.isa-sw-scope-menu .MuiMenuItem-root.Mui-selected.Mui-focusVisible {
+  background-color: rgba(30, 144, 255, 0.18);
+}
+
+.isa-sw-scope-menu .MuiMenuItem-root iconify-icon {
+  color: currentColor;
+  opacity: 0.88;
+}
+
 .isa-sw-iss-filter-config-btn.MuiIconButton-root {
   padding: 8px;
 }
 
-.isa-layout-root > header.MuiAppBar-root .isa-header-sub,
-.isa-layout-root > header.MuiAppBar-root .isa-sw-header-sub-host {
-  border-top: 1px solid;
-  border-color: var(--mui-palette-divider, rgba(148, 163, 184, 0.28));
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  min-height: 26px;
-  max-height: 30px;
-  padding-left: 6px;
-  padding-right: 6px;
-  overflow: hidden;
+.isa-sw-session-menu__exports .isa-sw-export-group {
   width: 100%;
-  box-sizing: border-box;
+  justify-content: flex-start;
 }
 
-/* Sub-barra export en AppShell header */
-.isa-layout-root > header.MuiAppBar-root .isa-header-sub .isa-sw-toolbar--header {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  margin: 0;
-  padding: 0;
+.isa-sw-toolbar-tools {
+  min-width: 0;
+  gap: 1.125rem;
 }
 
-.isa-sw-toolbar--header .isa-sw-export-group + .isa-sw-export-group {
-  margin-left: 0.25rem;
-  padding-left: 0.375rem;
-  border-left: 1px solid rgba(148, 163, 184, 0.22);
+.isa-sw-toolbar-tools .isa-sw-front-links {
+  margin-right: 0.5rem;
+  padding-right: 1rem;
+  border-right: 1px solid rgba(148, 163, 184, 0.22);
 }
 
-.isa-sw-toolbar--header .isa-sw-front-link {
+html[data-mui-color-scheme="light"] .isa-sw-toolbar-tools .isa-sw-front-links {
+  border-right-color: rgba(100, 116, 139, 0.2);
+}
+
+.isa-sw-toolbar-tools .isa-sw-scope-select--toolbar {
+  margin-left: 0.35rem;
+}
+
+.isa-sw-toolbar-tools .isa-sw-front-link {
   opacity: 0.92;
   white-space: nowrap;
+  font-size: 0.75rem;
+  line-height: 1.2;
 }
 
-.isa-sw-toolbar--header .MuiOutlinedInput-notchedOutline {
+.isa-sw-toolbar-tools .MuiOutlinedInput-notchedOutline {
   border-color: rgba(148, 163, 184, 0.28) !important;
 }
 
-.isa-sw-toolbar--header .MuiInputBase-root {
+.isa-sw-toolbar-tools .MuiInput-underline:before,
+.isa-sw-toolbar-tools .MuiInput-underline:after {
+  display: none;
+}
+
+.isa-sw-toolbar-tools .MuiInputBase-root {
   background: rgba(148, 163, 184, 0.06);
 }
 
-html[data-mui-color-scheme="light"] .isa-sw-toolbar--header .MuiInputBase-root {
+html[data-mui-color-scheme="light"] .isa-sw-toolbar-tools .MuiInputBase-root {
   background: rgba(15, 23, 42, 0.04);
 }
 
-/* Sub-barra export — pegada bajo AppShell body (embed) */
 .isa-sw-shell {
   width: 100%;
 }

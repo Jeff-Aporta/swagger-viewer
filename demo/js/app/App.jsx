@@ -309,7 +309,7 @@ export function App() {
             </>
           ) : null}
           {!connectBusy && !parseErr ? <Typography color="text.secondary">Cargando documentación API…</Typography> : null}
-          {drawer}
+          {drawerOpen ? drawer : null}
         </Box>
       );
     }
@@ -321,7 +321,7 @@ export function App() {
             <Alert severity="error">{parseErr}</Alert>
           </Box>
         ) : null}
-        {drawer}
+        {drawerOpen ? drawer : null}
       </DemoShell>
     );
   }
@@ -336,7 +336,7 @@ export function App() {
           </Fab>
         </Tooltip>
       ) : null}
-      {drawer}
+      {drawerOpen ? drawer : null}
     </>
   );
 }

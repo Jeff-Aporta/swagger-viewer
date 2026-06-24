@@ -14,7 +14,6 @@ export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, o
       anchor="bottom"
       open={open}
       onClose={onClose}
-      keepMounted
       ModalProps={{ disableEnforceFocus: true, disableAutoFocus: true, disableRestoreFocus: true }}
       slotProps={{
         backdrop: { sx: { backdropFilter: "blur(2px)" } },
@@ -32,6 +31,7 @@ export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, o
       }}
       aria-labelledby="isa-sw-demo-drawer-title"
     >
+      {open ? (
       <Box className="isa-sw-demo__drawer" role="dialog">
         <GlassToolbar
           className="isa-sw-demo__drawer-bar"
@@ -78,6 +78,7 @@ export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, o
           </Alert>
         ) : null}
       </Box>
+      ) : null}
     </Drawer>
   );
 }

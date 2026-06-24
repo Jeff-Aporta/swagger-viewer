@@ -17,7 +17,8 @@
     },
     "frontLinks": [
       {
-        "label": "QA Testing tool (jeff-aporta.github.io/isa-patyia/)",
+        "label": "ISA PatyIA",
+        "icon": "mdi:robot-happy-outline",
         "url": "https://jeff-aporta.github.io/isa-patyia/"
       }
     ],
