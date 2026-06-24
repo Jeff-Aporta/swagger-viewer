@@ -835,6 +835,10 @@ html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .is
   gap: 1.125rem;
 }
 
+.isa-sw-toolbar-tools .isa-sw-toolbar-theme {
+  margin-left: 0.15rem;
+}
+
 .isa-sw-toolbar-tools .isa-sw-front-links {
   margin-right: 0.5rem;
   padding-right: 1rem;

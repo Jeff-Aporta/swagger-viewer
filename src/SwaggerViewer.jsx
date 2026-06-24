@@ -5,6 +5,7 @@ import { AuthDialogs } from "./components/AuthDialogs.jsx";
 import { SwaggerHeaderAuth } from "./components/SwaggerHeaderAuth.jsx";
 import { SwaggerOpenGhPagesBtn } from "./components/SwaggerOpenGhPagesBtn.jsx";
 import { SwaggerReloadBtn } from "./components/SwaggerReloadBtn.jsx";
+import { SwaggerToolbarThemeBtn } from "./components/SwaggerToolbarThemeBtn.jsx";
 import { ServerUrlField } from "./components/ServerUrlField.jsx";
 import { ServerHealthBanner } from "./components/ServerHealthBanner.jsx";
 import { ExpandStackProvider } from "./context/ExpandStackContext.jsx";
@@ -135,6 +136,7 @@ export function SwaggerViewer({ config, spec: specProp, onReload, reloadBusy = f
       <SwaggerReloadBtn onReload={onReload} busy={reloadBusy} ns={ns} />
       <SwaggerOpenGhPagesBtn config={config} ns={ns} />
       {authToolbarEnd}
+      <SwaggerToolbarThemeBtn ns={ns} />
     </Box>
   );
 
@@ -186,6 +188,7 @@ export function SwaggerViewer({ config, spec: specProp, onReload, reloadBusy = f
       title={brandTitle}
       icon={brandIcon}
       showTarget={false}
+      showTheme={false}
       bodyScroll
       navRows={navRows}
       toolbarEnd={shellToolbarEnd}
