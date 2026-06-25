@@ -921,7 +921,7 @@ function openApiToPostmanCollection(spec, opts = {}) {
 
 // components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "073b350";
+var SWAGGER_VIEWER_REF = "6363077";
 var SWAGGER_FRONT_SHARED_REF = "99fb049";
 
 // components/swagger/server/orchestrator-auth.ts
