@@ -6,6 +6,7 @@ import { buildOpenApiFromConfig, type IsOpenApiConfig } from "./build-spec.js";
 import { enrichListFilterCatalog } from "./list-filter-schema.js";
 import { openApiToPostmanCollection, type PostmanExportOpts } from "./postman.js";
 import { SWAGGER_FRONT_SHARED_REF, SWAGGER_VIEWER_GH_REPO, SWAGGER_VIEWER_REF } from "./viewer-pins.js";
+import { DEFAULT_AUTH_LOGIN_PATH, resolveOrchestratorBase } from "./orchestrator-auth.js";
 
 export type { IsOpenApiConfig } from "./build-spec.js";
 
@@ -80,8 +81,6 @@ function resolveApiBase(serverUrl: string | undefined, absoluteBaseUrl?: string)
 function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Record<string, unknown> {
     const v = (config.viewer ?? {}) as IssOpenApiViewerConfig;
     const base = apiBase.replace(/\/$/, "");
-    let origin = "";
-    try { origin = new URL(base).origin; } catch { origin = ""; }
     return {
         apiBase: base,
         configUrl: `${base}/swagger/config.json`,
@@ -90,9 +89,11 @@ function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Rec
         shell: v.shell ?? true,
         auth: {
             enabled: v.auth?.enabled ?? true,
-            loginUrl: v.auth?.loginUrl ?? origin,
+            loginUrl: resolveOrchestratorBase(apiBase),
             loginKind: v.auth?.loginKind ?? "portal",
-            loginPath: v.auth?.loginPath ?? "/api/auth/portal-login",
+            loginPath: String(v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH).includes("portal-login")
+                ? DEFAULT_AUTH_LOGIN_PATH
+                : (v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH),
         },
         brand: v.brand ?? { title: config.info?.title ?? "API", icon: "mdi:api" },
         frontLinks: v.frontLinks ?? [],

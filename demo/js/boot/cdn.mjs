@@ -41,7 +41,7 @@ export const bootHelperUrl =
 
 /* @isa-swagger-boot:start */
 /** Jeff-Aporta/swagger-viewer — pin CDN git (sync-component-refs.mjs) */
-export const SWAGGER_VIEWER_REF = "f2aaef2";
+export const SWAGGER_VIEWER_REF = "073b350";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;

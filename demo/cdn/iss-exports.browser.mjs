@@ -889,8 +889,25 @@ function openApiToPostmanCollection(spec, opts = {}) {
 
 // components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "9dfa8a6";
+var SWAGGER_VIEWER_REF = "073b350";
 var SWAGGER_FRONT_SHARED_REF = "99fb049";
+
+// components/swagger/server/orchestrator-auth.ts
+var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
+var ORCHESTRATOR_URL_LOCAL = "http://localhost:8790";
+var DEFAULT_AUTH_LOGIN_PATH = "/api/auth/test-token";
+function resolveOrchestratorBase(apiBase) {
+  const raw = String(apiBase || "").trim();
+  if (raw) {
+    try {
+      const u = new URL(/^https?:\/\//i.test(raw) ? raw.replace(/\/api\/?$/i, "") : `http://${raw}`);
+      const h = u.hostname;
+      if (h === "localhost" || h === "127.0.0.1" || h === "[::1]") return ORCHESTRATOR_URL_LOCAL;
+    } catch {
+    }
+  }
+  return ORCHESTRATOR_URL_PROD;
+}
 
 // components/swagger/server/build-exports.ts
 var IS_DOCUMENT_KIND = "insoft.swagger-viewer";
@@ -915,12 +932,6 @@ function resolveApiBase(serverUrl, absoluteBaseUrl) {
 function buildViewerRuntimeConfig(config, apiBase) {
   const v = config.viewer ?? {};
   const base = apiBase.replace(/\/$/, "");
-  let origin = "";
-  try {
-    origin = new URL(base).origin;
-  } catch {
-    origin = "";
-  }
   return {
     apiBase: base,
     configUrl: `${base}/swagger/config.json`,
@@ -929,9 +940,9 @@ function buildViewerRuntimeConfig(config, apiBase) {
     shell: v.shell ?? true,
     auth: {
       enabled: v.auth?.enabled ?? true,
-      loginUrl: v.auth?.loginUrl ?? origin,
+      loginUrl: resolveOrchestratorBase(apiBase),
       loginKind: v.auth?.loginKind ?? "portal",
-      loginPath: v.auth?.loginPath ?? "/api/auth/portal-login"
+      loginPath: String(v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH).includes("portal-login") ? DEFAULT_AUTH_LOGIN_PATH : v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH
     },
     brand: v.brand ?? { title: config.info?.title ?? "API", icon: "mdi:api" },
     frontLinks: v.frontLinks ?? [],

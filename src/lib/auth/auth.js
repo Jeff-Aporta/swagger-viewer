@@ -1,6 +1,7 @@
 /** Sesión JWT para Try it out (system-login). */
 
 import { formatLoginError } from "../http/http-error.js";
+import { resolveOrchestratorBase } from "./orchestrator-base.js";
 import {
   stripContapymeEmail,
   formatSessionDisplayName,
@@ -141,11 +142,11 @@ function isPortalLogin(opts = {}) {
   return opts.loginKind === "portal" || path.includes("portal-login");
 }
 
-/** Portal: mismo origen por defecto; authBase (loginUrl) si el visor está en otro host. */
+/** Portal: authBase = main-orchestrator (loginUrl en documento IS). */
 function resolveLoginEndpoint(authBase, loginPath, loginKind) {
-  const portal = isPortalLogin({ loginKind, loginPath });
-  const path = loginPath || (portal ? "/api/auth/portal-login" : "/api/auth/test-token");
-  const base = (authBase || location.origin).replace(/\/$/, "");
+  let path = loginPath || "/api/auth/test-token";
+  if (String(path).includes("portal-login")) path = "/api/auth/test-token";
+  const base = resolveOrchestratorBase(authBase).replace(/\/$/, "");
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
@@ -184,7 +185,7 @@ export async function loginWithInsoftAutoRetry(loginFn, loginId, pass, opts = {}
 
 export async function fetchTestJwt(authBase, username, password, opts = {}) {
   const portal = isPortalLogin(opts);
-  const loginPath = opts.loginPath || (portal ? "/api/auth/portal-login" : "/api/auth/test-token");
+  const loginPath = opts.loginPath || "/api/auth/test-token";
   const endpoint = resolveLoginEndpoint(authBase, loginPath, portal ? "portal" : opts.loginKind || "system-login");
   const body = portal
     ? { semail: normalizeContapymeLoginId(username), password }

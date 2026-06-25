@@ -14,6 +14,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveOrchestratorBase } from "../lib/auth/orchestrator-base.js";
 
 function moduleDir() {
   try {
@@ -69,9 +70,7 @@ export function buildSwaggerViewerHtml(opts) {
   const fsBase = resolveFrontSharedBase(viewerBase, hostCdnBase, fsRef);
 
   const authKind = opts.authKind || (opts.authLoginUrl ? "system-login" : "portal");
-  const loginPath =
-    opts.authLoginPath ||
-    (authKind === "portal" ? "/api/auth/portal-login" : "/api/auth/test-token");
+  const loginPath = opts.authLoginPath || "/api/auth/test-token";
 
   const brand = opts.brand || { title: opts.brandTitle || title, icon: opts.brandIcon || "mdi:api" };
   const brandIcon = String(brand.icon || "mdi:api");
@@ -92,7 +91,7 @@ export function buildSwaggerViewerHtml(opts) {
     isaUrl: `${fsBase}/_dist/isa/js/index.min.js`,
     auth: {
       enabled: opts.authEnabled !== false,
-      loginUrl: opts.authLoginUrl || apiOriginFromSpecUrl(specUrl),
+      loginUrl: opts.authLoginUrl || resolveOrchestratorBase(specUrl),
       loginKind: authKind,
       loginPath,
     },

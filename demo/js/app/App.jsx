@@ -1,11 +1,12 @@
 import { SwaggerViewer } from "../../../src/SwaggerViewer.jsx";
 import { parseIsDocument, isDocumentText } from "../../../src/lib/openapi/is-document.js";
 import { readBrandFromMeta } from "../../../src/lib/brand/viewer-brand.js";
-import { apiOrigin, fetchRemoteOpenApiConfig, inferSwaggerUrls, normalizeApiBase, putRemoteOpenApiConfig } from "../../../src/lib/api/swagger-api.js";
+import { fetchRemoteOpenApiConfig, inferSwaggerUrls, normalizeApiBase, putRemoteOpenApiConfig } from "../../../src/lib/api/swagger-api.js";
 import { fetchRemoteIsDocument } from "../../../src/lib/api/swagger-remote.js";
 import { notifyApiError } from "../../../src/lib/api/api-notify.js";
 import { parseEmbedParams, resolveConnBrand } from "../../../src/lib/api/conn-config.js";
 import { getStoredJwt } from "../../../src/lib/auth/auth.js";
+import { resolveAuthConfig } from "../../../src/lib/auth/orchestrator-base.js";
 import { IsEditorDrawer } from "./IsEditorDrawer.jsx";
 import { WelcomeScreen } from "./WelcomeScreen.jsx";
 import { DemoShell } from "./DemoShell.jsx";
@@ -35,9 +36,7 @@ const DEMO_NS = "ISS";
 
 function enrichViewerConfig(viewer = {}, { remoteApiBase, conn } = {}) {
   const defaults = demoBrandDefaults(conn);
-  const origin = remoteApiBase ? apiOrigin(remoteApiBase) : viewer.auth?.loginUrl;
-  const auth = { enabled: true, loginKind: "portal", loginPath: "/api/auth/portal-login", ...viewer.auth };
-  if (origin) auth.loginUrl = origin.replace(/\/$/, "");
+  const auth = resolveAuthConfig({ enabled: true, loginKind: "portal", ...viewer.auth }, remoteApiBase || viewer.apiBase);
   return {
     shell: true,
     brandLock: true,

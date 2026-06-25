@@ -26,6 +26,27 @@ module.exports = __toCommonJS(build_html_exports);
 var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
 var import_node_url = require("node:url");
+
+// components/swagger/src/lib/auth/orchestrator-base.js
+var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
+var ORCHESTRATOR_URL_LOCAL = "http://localhost:8790";
+function resolveOrchestratorBase(apiBase) {
+  const raw = String(apiBase || "").trim();
+  if (raw) {
+    try {
+      const u = new URL(/^https?:\/\//i.test(raw) ? raw.replace(/\/api\/?$/i, "") : `http://${raw}`);
+      const h = u.hostname;
+      if (h === "localhost" || h === "127.0.0.1" || h === "[::1]") return ORCHESTRATOR_URL_LOCAL;
+    } catch {
+    }
+  }
+  if (typeof location !== "undefined" && /localhost|127\.0\.0\.1|\[::1\]/.test(location.hostname)) {
+    return ORCHESTRATOR_URL_LOCAL;
+  }
+  return ORCHESTRATOR_URL_PROD;
+}
+
+// components/swagger/src/embed/build-html.js
 var import_meta = {};
 function moduleDir() {
   try {
@@ -72,7 +93,7 @@ function buildSwaggerViewerHtml(opts) {
   const viewerBase = resolveViewerBase(specUrl, hostCdnBase, opts.viewerRef);
   const fsBase = resolveFrontSharedBase(viewerBase, hostCdnBase, fsRef);
   const authKind = opts.authKind || (opts.authLoginUrl ? "system-login" : "portal");
-  const loginPath = opts.authLoginPath || (authKind === "portal" ? "/api/auth/portal-login" : "/api/auth/test-token");
+  const loginPath = opts.authLoginPath || "/api/auth/test-token";
   const brand = opts.brand || { title: opts.brandTitle || title, icon: opts.brandIcon || "mdi:api" };
   const brandIcon = String(brand.icon || "mdi:api");
   const brandTitle = String(brand.title || title);
@@ -90,7 +111,7 @@ function buildSwaggerViewerHtml(opts) {
     isaUrl: `${fsBase}/_dist/isa/js/index.min.js`,
     auth: {
       enabled: opts.authEnabled !== false,
-      loginUrl: opts.authLoginUrl || apiOriginFromSpecUrl(specUrl),
+      loginUrl: opts.authLoginUrl || resolveOrchestratorBase(specUrl),
       loginKind: authKind,
       loginPath
     },
@@ -139,13 +160,6 @@ function resolveViewerBase(specUrl, localCdnBase, viewerRef) {
     return swaggerViewerCdnJsdelivr(viewerRef);
   }
   return swaggerViewerCdnJsdelivr(SWAGGER_VIEWER_REF);
-}
-function apiOriginFromSpecUrl(specUrl) {
-  try {
-    return new URL(specUrl).origin;
-  } catch {
-    return "";
-  }
 }
 function esc(s) {
   return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

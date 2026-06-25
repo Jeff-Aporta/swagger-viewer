@@ -16,13 +16,18 @@ import {
   buildLookupIndex,
 } from "./lib/openapi/openapi.js";
 import { getStoredJwt, clearJwt } from "./lib/auth/auth.js";
+import { resolveAuthConfig } from "./lib/auth/orchestrator-base.js";
 import { applyBrandToDocument, resolveViewerBrand } from "./lib/brand/viewer-brand.js";
 import { buildNavRows, filterGroupsByNavTab, activeSectionTabId } from "./lib/nav/viewer-nav.js";
 
 const { useState, useEffect, useMemo } = React;
 const { Box, Typography, Alert } = MaterialUI;
 
-export function SwaggerViewer({ config, spec: specProp, onReload, reloadBusy = false }) {
+export function SwaggerViewer({ config: configProp, spec: specProp, onReload, reloadBusy = false }) {
+  const config = useMemo(
+    () => (configProp ? { ...configProp, auth: resolveAuthConfig(configProp.auth, configProp.apiBase) } : configProp),
+    [configProp],
+  );
   const authEnabled =
     config?.auth?.enabled !== false &&
     (!!config?.auth?.loginUrl ||
