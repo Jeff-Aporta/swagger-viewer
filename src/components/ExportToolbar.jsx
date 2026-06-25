@@ -139,7 +139,7 @@ export function ExportFormatControls({ formats, ns, dense = false }) {
 
   return (
     <>
-      <Box className="isa-sw-export-group" sx={{ display: "inline-flex", alignItems: "center", gap: dense ? 0.25 : 0.375, flexShrink: 0 }}>
+      <Box className="isa-sw-export-group" sx={{ display: dense ? "flex" : "inline-flex", alignItems: "center", gap: dense ? 0.25 : 0.375, flexShrink: dense ? undefined : 0, width: dense ? "100%" : undefined, minWidth: dense ? 0 : undefined }}>
         {formats.length > 1 ? (
           <TextField
             select
@@ -147,7 +147,7 @@ export function ExportFormatControls({ formats, ns, dense = false }) {
             value={format.id}
             onChange={(e) => setFormatId(e.target.value)}
             className="isa-sw-export-select"
-            sx={{ minWidth: dense ? 76 : 88, width: dense ? 84 : 96, flexShrink: 0, "& .MuiInputBase-root": { height: inputH }, "& .MuiSelect-select": { fontSize: inputFs, py: dense ? 0 : undefined, fontWeight: 600, letterSpacing: "0.02em" } }}
+            sx={{ minWidth: dense ? 0 : 88, width: dense ? "100%" : 96, flex: dense ? 1 : undefined, flexShrink: dense ? undefined : 0, "& .MuiInputBase-root": { height: inputH, width: dense ? "100%" : undefined }, "& .MuiSelect-select": { fontSize: inputFs, py: dense ? 0 : undefined, fontWeight: 600, letterSpacing: "0.02em" } }}
             slotProps={{ select: { "aria-label": "Formato export", MenuProps: { PaperProps: { className: "isa-sw-scope-menu" } } } }}
           >
             {formats.map((f) => (

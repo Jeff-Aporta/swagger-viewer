@@ -16,7 +16,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// components/swagger/src/embed/build-html.js
+// ../../components/swagger/src/embed/build-html.js
 var build_html_exports = {};
 __export(build_html_exports, {
   buildSwaggerUiHtml: () => buildSwaggerUiHtml,
@@ -27,7 +27,7 @@ var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
 var import_node_url = require("node:url");
 
-// components/front-shared/cdn/isa/js/core/config/constants.js
+// ../../components/front-shared/cdn/isa/js/core/config/constants.js
 var MAIN_ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
 var FRONT_SHARED_REF = "99fb049";
 var CDN_BASE = "https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@" + FRONT_SHARED_REF + "/cdn/isa";
@@ -36,12 +36,12 @@ var FEEDBACK_CSS_URL = CDN_BASE + "/css/feedback.css";
 var CODEMIRROR_VERSION = "5.65.18";
 var CODEMIRROR_CDN = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/" + CODEMIRROR_VERSION;
 
-// components/swagger/src/lib/auth/orchestrator-base.js
+// ../../components/swagger/src/lib/auth/orchestrator-base.js
 function resolveOrchestratorBase(_apiBase) {
   return MAIN_ORCHESTRATOR_URL_PROD;
 }
 
-// components/swagger/src/embed/build-html.js
+// ../../components/swagger/src/embed/build-html.js
 var import_meta = {};
 function moduleDir() {
   try {

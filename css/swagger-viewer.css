@@ -830,6 +830,11 @@ html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .is
   justify-content: flex-start;
 }
 
+.isa-sw-session-menu__exports .isa-sw-export-select {
+  flex: 1;
+  min-width: 0;
+}
+
 .isa-sw-toolbar-tools {
   min-width: 0;
   gap: 1.125rem;
