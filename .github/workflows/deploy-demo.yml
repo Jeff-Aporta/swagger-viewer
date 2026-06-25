@@ -1,0 +1,107 @@
+# swagger-viewer — despliegue dual:
+#   dev  → Cloudflare Pages (automático en push a dev)
+#   main → GitHub Pages (solo workflow_dispatch explícito)
+name: Deploy swagger-viewer demo
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Destino de publicación"
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - github-pages
+          - cloudflare-dev
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  deployments: write
+
+concurrency:
+  group: deploy-swagger-viewer-${{ github.ref }}-${{ github.event.inputs.target || 'push' }}
+  cancel-in-progress: true
+
+jobs:
+  github-pages:
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      && github.ref == 'refs/heads/main'
+      && github.event.inputs.target == 'github-pages'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar demo
+        run: |
+          test -f demo/index.html || (echo "::error::Falta demo/index.html" && exit 1)
+          test -d demo/_dist || (echo "::error::Falta demo/_dist — ejecutar gen-component-demo antes del deploy" && exit 1)
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: demo
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  cloudflare-dev:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'cloudflare-dev')
+      || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
+      || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'auto' && github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-latest
+    environment:
+      name: cloudflare-pages-dev
+      url: https://swagger-viewer-dev.pages.dev/
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar secretos Cloudflare
+        run: |
+          missing=""
+          [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] && missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ] && missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          if [ -n "$missing" ]; then
+            echo "::error::Faltan secretos en swagger-viewer:$missing"
+            echo "Ejecutar: scripts/setup-github-secrets.ps1"
+            exit 1
+          fi
+
+      - name: Verificar token Cloudflare
+        run: |
+          code=$(curl -sS -o /tmp/cf-verify.json -w "%{http_code}" \
+            "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          if [ "$code" != "200" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN inválido (HTTP $code)."
+            cat /tmp/cf-verify.json || true
+            exit 1
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Verificar demo
+        run: |
+          test -f demo/index.html || (echo "::error::Falta demo/index.html" && exit 1)
+          test -d demo/_dist || (echo "::error::Falta demo/_dist" && exit 1)
+
+      - name: Publicar en Cloudflare Pages (dev)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: swagger-viewer-dev
+          directory: demo
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: dev
