@@ -27,23 +27,18 @@ var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
 var import_node_url = require("node:url");
 
+// components/front-shared/cdn/isa/js/core/config/constants.js
+var MAIN_ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
+var FRONT_SHARED_REF = "99fb049";
+var CDN_BASE = "https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@" + FRONT_SHARED_REF + "/cdn/isa";
+var UI_CDN_BASE = "https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@" + FRONT_SHARED_REF + "/cdn/ui";
+var FEEDBACK_CSS_URL = CDN_BASE + "/css/feedback.css";
+var CODEMIRROR_VERSION = "5.65.18";
+var CODEMIRROR_CDN = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/" + CODEMIRROR_VERSION;
+
 // components/swagger/src/lib/auth/orchestrator-base.js
-var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
-var ORCHESTRATOR_URL_LOCAL = "http://localhost:8790";
-function resolveOrchestratorBase(apiBase) {
-  const raw = String(apiBase || "").trim();
-  if (raw) {
-    try {
-      const u = new URL(/^https?:\/\//i.test(raw) ? raw.replace(/\/api\/?$/i, "") : `http://${raw}`);
-      const h = u.hostname;
-      if (h === "localhost" || h === "127.0.0.1" || h === "[::1]") return ORCHESTRATOR_URL_LOCAL;
-    } catch {
-    }
-  }
-  if (typeof location !== "undefined" && /localhost|127\.0\.0\.1|\[::1\]/.test(location.hostname)) {
-    return ORCHESTRATOR_URL_LOCAL;
-  }
-  return ORCHESTRATOR_URL_PROD;
+function resolveOrchestratorBase(_apiBase) {
+  return MAIN_ORCHESTRATOR_URL_PROD;
 }
 
 // components/swagger/src/embed/build-html.js

@@ -889,23 +889,13 @@ function openApiToPostmanCollection(spec, opts = {}) {
 
 // components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "6363077";
+var SWAGGER_VIEWER_REF = "364a68a";
 var SWAGGER_FRONT_SHARED_REF = "99fb049";
 
 // components/swagger/server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
-var ORCHESTRATOR_URL_LOCAL = "http://localhost:8790";
 var DEFAULT_AUTH_LOGIN_PATH = "/api/auth/test-token";
-function resolveOrchestratorBase(apiBase) {
-  const raw = String(apiBase || "").trim();
-  if (raw) {
-    try {
-      const u = new URL(/^https?:\/\//i.test(raw) ? raw.replace(/\/api\/?$/i, "") : `http://${raw}`);
-      const h = u.hostname;
-      if (h === "localhost" || h === "127.0.0.1" || h === "[::1]") return ORCHESTRATOR_URL_LOCAL;
-    } catch {
-    }
-  }
+function resolveOrchestratorBase(_apiBase) {
   return ORCHESTRATOR_URL_PROD;
 }
 

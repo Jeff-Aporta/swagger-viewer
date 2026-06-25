@@ -202,7 +202,7 @@ export async function fetchTestJwt(authBase, username, password, opts = {}) {
   } catch {
     throw new Error(
       portal
-        ? `No se pudo conectar con ${endpoint}. Comprueba que la API esté en ejecución y recarga con Ctrl+F5.`
+        ? `No se pudo conectar con main-orchestrator (${endpoint}). Comprueba red o firewall y recarga con Ctrl+F5.`
         : `No se pudo conectar con el servicio de autenticación (${endpoint}).`,
     );
   }
