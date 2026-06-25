@@ -6,7 +6,7 @@ import { buildOpenApiFromConfig, type IsOpenApiConfig } from "./build-spec.js";
 import { enrichListFilterCatalog } from "./list-filter-schema.js";
 import { openApiToPostmanCollection, type PostmanExportOpts } from "./postman.js";
 import { SWAGGER_FRONT_SHARED_REF, SWAGGER_VIEWER_GH_REPO, SWAGGER_VIEWER_REF } from "./viewer-pins.js";
-import { DEFAULT_AUTH_LOGIN_PATH, resolveOrchestratorBase } from "./orchestrator-auth.js";
+import { DEFAULT_AUTH_LOGIN_PATH, resolveOrchestratorBase, resolveAuthAppId } from "./orchestrator-auth.js";
 
 export type { IsOpenApiConfig } from "./build-spec.js";
 
@@ -91,9 +91,10 @@ function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Rec
             enabled: v.auth?.enabled ?? true,
             loginUrl: resolveOrchestratorBase(apiBase),
             loginKind: v.auth?.loginKind ?? "portal",
-            loginPath: String(v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH).includes("portal-login")
+            loginPath: /portal-login|test-token/.test(String(v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH))
                 ? DEFAULT_AUTH_LOGIN_PATH
                 : (v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH),
+            app: resolveAuthAppId(String(v.auth?.app ?? v.app ?? "")),
         },
         brand: v.brand ?? { title: config.info?.title ?? "API", icon: "mdi:api" },
         frontLinks: v.frontLinks ?? [],

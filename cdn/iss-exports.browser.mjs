@@ -1,4 +1,4 @@
-// server/envelope.ts
+// components/swagger/server/envelope.ts
 var TS = "2026-06-19T15:30:00.000Z";
 var TS_OUT = "2026-06-19T15:30:00.042Z";
 var INSOFT_ENCABEZADO_OK = {
@@ -63,7 +63,7 @@ var EXAMPLE_503 = {
   encabezado: insoftEncabezadoError(503010, "El servicio no est\xE1 disponible temporalmente.")
 };
 
-// server/spec.ts
+// components/swagger/server/spec.ts
 var ISS_DOC_MD_EXTENSION = "x-iss-doc-md";
 var ISS_LOOKUP_EXTENSION = "x-iss-lookup";
 var ISS_LIST_FILTER_EXTENSION = "x-iss-list-filter";
@@ -170,7 +170,7 @@ function issRspSseDoc(okDesc, example) {
   };
 }
 
-// server/list-filter-schema.ts
+// components/swagger/server/list-filter-schema.ts
 var ISS_LIST_FILTER_DEFAULT_LIMIT = 9999;
 var ISS_LIST_FILTER_MAX_LIMIT = 9999;
 function sortKeysFromMeta(meta) {
@@ -249,7 +249,7 @@ function enrichListFilterCatalog(catalog) {
   return { ...catalog, listFilters: enriched };
 }
 
-// server/build-spec.ts
+// components/swagger/server/build-spec.ts
 function encodeIssFilterB64(obj) {
   const json = JSON.stringify(obj);
   const bytes = new TextEncoder().encode(json);
@@ -480,7 +480,7 @@ function buildOpenApiFromConfig(config, serverUrl) {
   };
 }
 
-// server/docs.ts
+// components/swagger/server/docs.ts
 var ISS_DOC_STANDARD = "DI-QA-001";
 function buildApiInfoDescription(baseDesc, frontLink) {
   const panel = frontLink?.url ? `
@@ -547,7 +547,7 @@ Las operaciones marcadas con seguridad en OpenAPI heredan **Bearer {{token}}** d
 `.trim();
 }
 
-// server/postman.ts
+// components/swagger/server/postman.ts
 var POSTMAN_SCHEMA = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
 var HTTP_METHODS = ["get", "post", "put", "patch", "delete", "options", "head"];
 var SKIP_PATHS = /* @__PURE__ */ new Set(["/swagger", "/swagger.json", "/swagger/postman.json", "/swagger/is.json"]);
@@ -887,19 +887,24 @@ function openApiToPostmanCollection(spec, opts = {}) {
   };
 }
 
-// server/viewer-pins.ts
+// components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "d4ce3c4";
+var SWAGGER_VIEWER_REF = "b2df9bf";
 var SWAGGER_FRONT_SHARED_REF = "99fb049";
 
-// server/orchestrator-auth.ts
+// components/swagger/server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
-var DEFAULT_AUTH_LOGIN_PATH = "/api/auth/test-token";
+var DEFAULT_AUTH_LOGIN_PATH = "/api/auth/token";
 function resolveOrchestratorBase(_apiBase) {
   return ORCHESTRATOR_URL_PROD;
 }
+var AUTH_APP_ALIASES = { "swagger-viewer": "isa-patyia", "swagger-viewer-demo": "isa-patyia", ISS: "isa-patyia" };
+function resolveAuthAppId(app) {
+  const raw = String(app ?? "").trim();
+  return AUTH_APP_ALIASES[raw] || raw || "isa-patyia";
+}
 
-// server/build-exports.ts
+// components/swagger/server/build-exports.ts
 var IS_DOCUMENT_KIND = "insoft.swagger-viewer";
 var IS_DOCUMENT_VERSION = 1;
 var RUNTIME_VIEWER_KEYS = /* @__PURE__ */ new Set(["cssUrl", "stackUrl", "isaUrl", "appUrl", "specUrl", "url", "spec", "root", "exports", "loadMarked"]);
@@ -932,7 +937,8 @@ function buildViewerRuntimeConfig(config, apiBase) {
       enabled: v.auth?.enabled ?? true,
       loginUrl: resolveOrchestratorBase(apiBase),
       loginKind: v.auth?.loginKind ?? "portal",
-      loginPath: String(v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH).includes("portal-login") ? DEFAULT_AUTH_LOGIN_PATH : v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH
+      loginPath: /portal-login|test-token/.test(String(v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH)) ? DEFAULT_AUTH_LOGIN_PATH : v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH,
+      app: resolveAuthAppId(String(v.auth?.app ?? v.app ?? ""))
     },
     brand: v.brand ?? { title: config.info?.title ?? "API", icon: "mdi:api" },
     frontLinks: v.frontLinks ?? [],

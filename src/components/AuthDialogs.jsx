@@ -43,7 +43,7 @@ function swaggerUiIcon(ns) {
   };
 }
 
-export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionChange, ns = "ISA" }) {
+export function AuthDialogs({ authBase, authKind, loginPath, appId = "isa-patyia", enabled, onSessionChange, ns = "ISA" }) {
   const isPortal = authKind === "portal" || String(loginPath || "").includes("portal-login");
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginHint, setLoginHint] = useState("");
@@ -120,6 +120,7 @@ export function AuthDialogs({ authBase, authKind, loginPath, enabled, onSessionC
       const loginOpts = {
         loginKind: isPortal ? "portal" : authKind || "system-login",
         loginPath,
+        app: appId,
       };
       if (selectedItercero) loginOpts.itercero = selectedItercero;
       const data = await loginWithInsoftAutoRetry(

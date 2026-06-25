@@ -25,7 +25,7 @@ const { Box, Typography, Alert } = MaterialUI;
 
 export function SwaggerViewer({ config: configProp, spec: specProp, onReload, reloadBusy = false }) {
   const config = useMemo(
-    () => (configProp ? { ...configProp, auth: resolveAuthConfig(configProp.auth, configProp.apiBase) } : configProp),
+    () => (configProp ? { ...configProp, auth: resolveAuthConfig(configProp.auth, configProp.apiBase, configProp) } : configProp),
     [configProp],
   );
   const authEnabled =
@@ -180,6 +180,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
           authBase={config?.auth?.loginUrl}
           authKind={config?.auth?.loginKind}
           loginPath={config?.auth?.loginPath}
+          appId={config?.auth?.app}
           onSessionChange={onSessionChange}
           ns={ns}
         />

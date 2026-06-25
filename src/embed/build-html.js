@@ -70,7 +70,7 @@ export function buildSwaggerViewerHtml(opts) {
   const fsBase = resolveFrontSharedBase(viewerBase, hostCdnBase, fsRef);
 
   const authKind = opts.authKind || (opts.authLoginUrl ? "system-login" : "portal");
-  const loginPath = opts.authLoginPath || "/api/auth/test-token";
+  const loginPath = opts.authLoginPath || "/api/auth/token";
 
   const brand = opts.brand || { title: opts.brandTitle || title, icon: opts.brandIcon || "mdi:api" };
   const brandIcon = String(brand.icon || "mdi:api");

@@ -889,14 +889,19 @@ function openApiToPostmanCollection(spec, opts = {}) {
 
 // components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "d4ce3c4";
+var SWAGGER_VIEWER_REF = "b2df9bf";
 var SWAGGER_FRONT_SHARED_REF = "99fb049";
 
 // components/swagger/server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
-var DEFAULT_AUTH_LOGIN_PATH = "/api/auth/test-token";
+var DEFAULT_AUTH_LOGIN_PATH = "/api/auth/token";
 function resolveOrchestratorBase(_apiBase) {
   return ORCHESTRATOR_URL_PROD;
+}
+var AUTH_APP_ALIASES = { "swagger-viewer": "isa-patyia", "swagger-viewer-demo": "isa-patyia", ISS: "isa-patyia" };
+function resolveAuthAppId(app) {
+  const raw = String(app ?? "").trim();
+  return AUTH_APP_ALIASES[raw] || raw || "isa-patyia";
 }
 
 // components/swagger/server/build-exports.ts
@@ -932,7 +937,8 @@ function buildViewerRuntimeConfig(config, apiBase) {
       enabled: v.auth?.enabled ?? true,
       loginUrl: resolveOrchestratorBase(apiBase),
       loginKind: v.auth?.loginKind ?? "portal",
-      loginPath: String(v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH).includes("portal-login") ? DEFAULT_AUTH_LOGIN_PATH : v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH
+      loginPath: /portal-login|test-token/.test(String(v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH)) ? DEFAULT_AUTH_LOGIN_PATH : v.auth?.loginPath ?? DEFAULT_AUTH_LOGIN_PATH,
+      app: resolveAuthAppId(String(v.auth?.app ?? v.app ?? ""))
     },
     brand: v.brand ?? { title: config.info?.title ?? "API", icon: "mdi:api" },
     frontLinks: v.frontLinks ?? [],

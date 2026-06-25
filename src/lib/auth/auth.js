@@ -1,7 +1,7 @@
 /** Sesión JWT para Try it out (system-login). */
 
 import { formatLoginError } from "../http/http-error.js";
-import { resolveOrchestratorBase } from "./orchestrator-base.js";
+import { resolveOrchestratorBase, DEFAULT_AUTH_LOGIN_PATH, resolveAuthAppId } from "./orchestrator-base.js";
 import {
   stripContapymeEmail,
   formatSessionDisplayName,
@@ -143,9 +143,9 @@ function isPortalLogin(opts = {}) {
 }
 
 /** Portal: authBase = main-orchestrator (loginUrl en documento IS). */
-function resolveLoginEndpoint(authBase, loginPath, loginKind) {
-  let path = loginPath || "/api/auth/test-token";
-  if (String(path).includes("portal-login")) path = "/api/auth/test-token";
+function resolveLoginEndpoint(authBase, loginPath) {
+  let path = loginPath || DEFAULT_AUTH_LOGIN_PATH;
+  if (String(path).includes("portal-login") || String(path).includes("test-token")) path = DEFAULT_AUTH_LOGIN_PATH;
   const base = resolveOrchestratorBase(authBase).replace(/\/$/, "");
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
@@ -185,18 +185,19 @@ export async function loginWithInsoftAutoRetry(loginFn, loginId, pass, opts = {}
 
 export async function fetchTestJwt(authBase, username, password, opts = {}) {
   const portal = isPortalLogin(opts);
-  const loginPath = opts.loginPath || "/api/auth/test-token";
-  const endpoint = resolveLoginEndpoint(authBase, loginPath, portal ? "portal" : opts.loginKind || "system-login");
+  const loginPath = opts.loginPath || DEFAULT_AUTH_LOGIN_PATH;
+  const appId = resolveAuthAppId({ app: opts.appId || opts.app });
+  const endpoint = resolveLoginEndpoint(authBase, loginPath);
   const body = portal
-    ? { semail: normalizeContapymeLoginId(username), password }
-    : { username, password: wrapPassword(password) };
+    ? { semail: normalizeContapymeLoginId(username), password: wrapPassword(password), app: appId }
+    : { username, password: wrapPassword(password), app: appId };
   const itercero = String(opts.itercero ?? "").trim();
   if (itercero) body.itercero = itercero;
   let res;
   try {
     res = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json", "X-App-Id": appId },
       body: JSON.stringify(body),
     });
   } catch {
