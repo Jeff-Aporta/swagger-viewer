@@ -821,8 +821,15 @@ html[data-mui-color-scheme="light"] .isa-layout-root > header.MuiAppBar-root .is
   opacity: 0.88;
 }
 
-.isa-sw-iss-filter-config-btn.MuiIconButton-root {
+.isa-sw-iss-filter-config-btn.MuiIconButton-root,
+.isa-sw-iss-filter-json-btn.MuiIconButton-root {
   padding: 8px;
+}
+
+.isa-sw-iss-filter-json-cm .CodeMirror {
+  min-height: min(50vh, 360px);
+  max-height: min(62vh, 480px);
+  font-size: 13px;
 }
 
 .isa-sw-session-menu__exports .isa-sw-export-group {

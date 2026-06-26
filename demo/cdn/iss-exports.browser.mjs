@@ -63,6 +63,34 @@ var EXAMPLE_503 = {
   encabezado: insoftEncabezadoError(503010, "El servicio no est\xE1 disponible temporalmente.")
 };
 
+// ../../components/swagger/server/api-presets.ts
+var ISS_LOCAL_API_BASE = "http://127.0.0.1:8802/api";
+var ISS_WEB_API_BASE = "https://ayudascp-ia-staging.azurewebsites.net/api";
+var DEFAULT_API_SCOPES = [
+  { id: "web", label: "Web (staging)", base: ISS_WEB_API_BASE, icon: "mdi:web" },
+  { id: "local", label: "Local", base: ISS_LOCAL_API_BASE, icon: "mdi:laptop" }
+];
+function normApiBase(url) {
+  return String(url || "").replace(/\/$/, "");
+}
+function buildOpenApiServers(activeBase) {
+  const active = normApiBase(activeBase || ISS_WEB_API_BASE);
+  const presets = [
+    [active, "API activa (contexto actual)"],
+    [ISS_LOCAL_API_BASE, "Local (ISS Functions)"],
+    [ISS_WEB_API_BASE, "Web (staging Azure)"]
+  ];
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const [url, description] of presets) {
+    const u = normApiBase(url);
+    if (seen.has(u)) continue;
+    seen.add(u);
+    out.push({ url: u, description });
+  }
+  return out;
+}
+
 // ../../components/swagger/server/spec.ts
 var ISS_DOC_MD_EXTENSION = "x-iss-doc-md";
 var ISS_LOOKUP_EXTENSION = "x-iss-lookup";
@@ -425,6 +453,7 @@ function buildOperation(catalog, def) {
   if (def.operationId) op.operationId = def.operationId;
   if (def.subgroup) Object.assign(op, sg(def.subgroup));
   if (def.security === "bearer") op.security = bearerSecurity;
+  if (def.tryitConfirm !== void 0) op.tryitConfirm = def.tryitConfirm;
   if (def.doc) {
     const md = catalog.docs?.[def.doc];
     if (md) op[ISS_DOC_MD_EXTENSION] = md;
@@ -473,7 +502,7 @@ function buildOpenApiFromConfig(config, serverUrl) {
       description: config.info.description ?? "",
       version: config.info.version
     },
-    servers: [{ url: base, description: "API actual (mismo host que esta p\xE1gina)" }],
+    servers: buildOpenApiServers(base),
     tags,
     components: { ...bearerComponents() },
     paths
@@ -506,10 +535,10 @@ Obtenga el token desde el panel superior (**Iniciar sesi\xF3n** / **Pegar JWT**)
 
 | Ambiente | URL base |
 |----------|----------|
-| Local (Functions) | \`http://localhost:5502/api\` |
-| Azure / despliegue | URL del Function App + \`/api\` |
+| Local (ISS Functions) | \`http://127.0.0.1:8802/api\` |
+| Web (staging Azure) | \`https://ayudascp-ia-staging.azurewebsites.net/api\` |
 
-En Postman configure \`{{base_url}}\` seg\xFAn el ambiente.
+En Postman use \`{{base_url}}\` (activa), \`{{base_url_local}}\` o \`{{base_url_web}}\` seg\xFAn el ambiente.
 
 ### Convenciones globales
 
@@ -881,16 +910,43 @@ function openApiToPostmanCollection(spec, opts = {}) {
     },
     variable: [
       { key: "base_url", value: baseUrl, type: "string" },
+      { key: "base_url_local", value: "http://127.0.0.1:8802/api", type: "string" },
+      { key: "base_url_web", value: "https://ayudascp-ia-staging.azurewebsites.net/api", type: "string" },
       { key: "token", value: "", type: "string" }
     ],
     item: items
   };
 }
 
+// ../../components/swagger/server/strip-export-extensions.ts
+var STRIP_KEYS = /* @__PURE__ */ new Set([
+  ISS_DOC_MD_EXTENSION,
+  ISS_LOOKUP_EXTENSION,
+  ISS_LIST_FILTER_EXTENSION,
+  ISS_SUBGROUP_EXTENSION,
+  ISS_SUBGROUPS_EXTENSION,
+  ISS_REQUEST_BODY_EXAMPLES_EXTENSION,
+  ISS_INPUT_RECOMMENDATION_EXTENSION,
+  "subgroups"
+]);
+function stripNode(value) {
+  if (value == null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(stripNode);
+  const out = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (STRIP_KEYS.has(key)) continue;
+    out[key] = stripNode(child);
+  }
+  return out;
+}
+function stripIsaExtensionsForExport(openApi) {
+  return stripNode(openApi);
+}
+
 // ../../components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "a781455";
-var SWAGGER_FRONT_SHARED_REF = "99fb049";
+var SWAGGER_VIEWER_REF = "3433b24";
+var SWAGGER_FRONT_SHARED_REF = "0692ebf";
 
 // ../../components/swagger/server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
@@ -950,7 +1006,7 @@ function buildViewerRuntimeConfig(config, apiBase) {
     viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
     frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
     ...Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {},
-    ...Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : {}
+    ...Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : { scopes: DEFAULT_API_SCOPES }
   };
 }
 function buildEmbedOpts(config, apiBase, viewer) {
@@ -985,7 +1041,8 @@ function buildIssExportsFromConfig(raw, opts = {}) {
   const config = prepareOpenApiConfig(raw);
   const serverUrl = opts.serverUrl ?? config.protocol?.serverUrl ?? "/api";
   const apiBase = resolveApiBase(serverUrl, opts.absoluteBaseUrl);
-  const openApi = buildOpenApiFromConfig(config, serverUrl);
+  const openApiFull = buildOpenApiFromConfig(config, serverUrl);
+  const openApi = stripIsaExtensionsForExport(openApiFull);
   const frontLink = opts.frontLink ?? config.viewer?.frontLinks?.[0] ?? null;
   const postman = openApiToPostmanCollection(openApi, {
     absoluteBaseUrl: opts.absoluteBaseUrl ?? apiBase,
@@ -993,7 +1050,7 @@ function buildIssExportsFromConfig(raw, opts = {}) {
     frontLink
   });
   const viewer = buildViewerRuntimeConfig(config, apiBase);
-  const is = buildIsDocument(viewer, openApi);
+  const is = buildIsDocument(viewer, openApiFull);
   const embed = buildEmbedOpts(config, apiBase, viewer);
   return { config, openApi, postman, viewer, is, embed };
 }

@@ -141,6 +141,15 @@
       @media (prefers-reduced-motion: reduce) {
         .isa-app-boot__icon-wrap, .isa-app-boot__bar-fill { animation: none !important; }
       }
+      .isa-app-boot--error .isa-app-boot__card { max-width: min(42rem, 92vw); border-color: rgba(239, 68, 68, 0.32); }
+      .isa-app-boot__icon-wrap--error { animation: none !important; border-color: rgba(239, 68, 68, 0.42); background: rgba(239, 68, 68, 0.14); color: #f87171; }
+      .isa-app-boot__headline { margin: 0; font-size: 0.88rem; font-weight: 600; color: #fca5a5; line-height: 1.35; }
+      html[data-mui-color-scheme="light"] .isa-app-boot__headline { color: #b91c1c; }
+      .isa-app-boot__error { margin: 0.35rem 0 0; padding: 0.65rem 0.75rem; width: 100%; box-sizing: border-box; border-radius: 8px; font-size: 0.78rem; line-height: 1.45; text-align: left; word-break: break-word; color: #fecaca; background: rgba(127, 29, 29, 0.35); border: 1px solid rgba(239, 68, 68, 0.35); }
+      html[data-mui-color-scheme="light"] .isa-app-boot__error { color: #991b1b; background: rgba(254, 226, 226, 0.92); border-color: rgba(239, 68, 68, 0.28); }
+      .isa-app-boot__actions { margin-top: 0.65rem; width: 100%; }
+      .isa-app-boot__retry { cursor: pointer; padding: 0.45rem 1rem; border-radius: 8px; border: 1px solid rgba(30, 144, 255, 0.45); background: rgba(30, 144, 255, 0.08); color: #7dd3fc; font: inherit; font-size: 0.82rem; font-weight: 600; }
+      html[data-mui-color-scheme="light"] .isa-app-boot__retry { color: #0369a1; border-color: rgba(30, 144, 255, 0.35); background: rgba(224, 242, 254, 0.9); }
     </style>
     <div class="isa-app-boot">
       <div class="isa-app-boot__mesh" aria-hidden="true"></div>

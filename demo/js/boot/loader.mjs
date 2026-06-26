@@ -1,4 +1,5 @@
 import { bootHelperUrl, ensureSwaggerViewerCss, demoAppUrl } from "./cdn.mjs";
+import { showBootError } from "./boot-error.mjs";
 
 async function boot() {
   if (new URLSearchParams(location.search).has("isa_boot_hold")) return;
@@ -54,15 +55,4 @@ async function boot() {
   await import(demoAppUrl());
 }
 
-boot().catch((err) => {
-  const root = document.getElementById("root");
-  const msg = err instanceof Error ? err.message : String(err);
-  if (root) {
-    root.innerHTML = `<div style="max-width:560px;margin:48px auto;padding:24px;font-family:system-ui,sans-serif;color:#e8eef5;text-align:center">
-      <p style="font-size:1.1rem;font-weight:600;margin:0 0 12px">No se pudo iniciar IS-Swagger</p>
-      <p style="color:#ff8a80;margin:0 0 16px;font-size:0.9rem">${msg.replace(/</g, "&lt;")}</p>
-      <button type="button" onclick="location.reload()" style="cursor:pointer;padding:8px 16px;border-radius:8px;border:1px solid #1e90ff;background:transparent;color:#1e90ff">Reintentar</button>
-    </div>`;
-  }
-  console.error(err);
-});
+boot().catch((err) => showBootError(err, { ns: "ISS" }));

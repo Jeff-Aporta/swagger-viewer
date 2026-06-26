@@ -28,6 +28,15 @@ const LOGIN_HINTS = {
   503: "El servicio de autenticación no está disponible temporalmente.",
 };
 
+const SWAGGER_PUT_HINTS = {
+  400: "El body debe ser un documento JSON con kind «insoft.openapi-config» válido.",
+  401: "Su usuario no está autorizado: debe figurar en SYSTEM.swagger_editors (p. ej. JAGUDELOE). Inicie sesión con un editor o pida que lo agreguen.",
+  403: "Acceso prohibido para actualizar la config IS-Swagger con este perfil.",
+  404: "El servidor no expone PUT /api/swagger.json (ruta inexistente o ISS sin desplegar). Pruebe staging (ayudascp-ia-staging) o despliegue reciente; no confunda con GET /swagger/config.json.",
+  405: "Este host no acepta PUT en /api/swagger.json.",
+  500: "El ISS falló al guardar SYSTEM.swagger. Revise logs del Function App.",
+};
+
 export function extractApiError(data) {
   if (!data || typeof data !== "object") return "";
   if (typeof data.error === "string" && data.error.trim()) return data.error.trim();
@@ -45,7 +54,13 @@ export function formatHttpError(status, opts = {}) {
   const detail = opts.detail || extractApiError(opts.data);
   if (detail) lines.push(detail);
   if (opts.endpoint) lines.push(`URL: ${opts.endpoint}`);
-  const hint = opts.hint ?? (opts.context === "login" ? LOGIN_HINTS[code] : opts.defaultHint);
+  const hint =
+    opts.hint ??
+    (opts.context === "login"
+      ? LOGIN_HINTS[code]
+      : opts.context === "swagger-put"
+        ? SWAGGER_PUT_HINTS[code]
+        : opts.defaultHint);
   if (hint) lines.push(hint);
   return lines.join("\n");
 }

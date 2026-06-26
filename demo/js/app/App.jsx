@@ -5,17 +5,19 @@ import { fetchRemoteOpenApiConfig, inferSwaggerUrls, normalizeApiBase, putRemote
 import { fetchRemoteIsDocument } from "../../../src/lib/api/swagger-remote.js";
 import { notifyApiError } from "../../../src/lib/api/api-notify.js";
 import { parseEmbedParams, resolveConnBrand } from "../../../src/lib/api/conn-config.js";
+import { resolveConnectBases, connectWithFallback } from "../../../src/lib/api/api-base-resolve.js";
 import { getStoredJwt } from "../../../src/lib/auth/auth.js";
 import { resolveAuthConfig } from "../../../src/lib/auth/orchestrator-base.js";
 import { IsEditorDrawer } from "./IsEditorDrawer.jsx";
 import { WelcomeScreen } from "./WelcomeScreen.jsx";
+import { ConnectionScreen } from "./ConnectionScreen.jsx";
 import { DemoShell } from "./DemoShell.jsx";
 import { readStoredApiBase, storeApiBase } from "./ApiBaseSelect.jsx";
 import { buildDemoExportUrls, revokeDemoExportUrls } from "./demo-exports.js";
 import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
 
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
-const { Fab, Tooltip, Box, Alert, CircularProgress, Button, Typography } = MaterialUI;
+const { Fab, Tooltip, Box, Alert, Button } = MaterialUI;
 
 const DEMO_EXPORT_NAMES = {
   openApiDownloadName: "openapi.json",
@@ -84,16 +86,22 @@ export function App() {
   const ns = applied?.config?.ns ?? DEMO_NS;
 
   const connectApi = useCallback(
-    async (baseInput) => {
-      const base = storeApiBase(baseInput || apiBase);
-      if (!base) {
+    async (baseInput, { forceBases } = {}) => {
+      const bases = forceBases || resolveConnectBases({
+        connApiBase: connApiBase || (baseInput ? normalizeApiBase(baseInput) : ""),
+        apiParam: apiParam ? decodeURIComponent(apiParam) : "",
+        storedBase: baseInput || apiBase || readStoredApiBase(),
+      });
+      const primary = bases[0];
+      if (!primary) {
         setParseErr("Indique la base API (…/api/).");
         return;
       }
       setConnectBusy(true);
       setParseErr("");
       try {
-        const { doc, urls, built } = await fetchRemoteIsDocument(base);
+        const { doc, urls, built, base: _base, usedFallback: _fb } = await connectWithFallback(fetchRemoteIsDocument, bases);
+        storeApiBase(urls.apiBase);
         setRemoteUrls(urls);
         setRemoteBuilt(built);
         setApiBase(urls.apiBase);
@@ -102,22 +110,25 @@ export function App() {
         setParseErr("");
         setDrawerOpen(false);
       } catch (e) {
-        const msg = formatConnectError(e, base);
+        const msg = formatConnectError(e, primary);
         notifyApiError(msg);
         setParseErr(msg);
       } finally {
         setConnectBusy(false);
       }
     },
-    [apiBase, conn],
+    [apiBase, conn, connApiBase, apiParam],
   );
 
   useEffect(() => {
     if (specUrl) return;
-    const fromApi = apiParam ? normalizeApiBase(decodeURIComponent(apiParam)) : "";
-    const base = connApiBase || fromApi;
-    if (!base || (conn && conn.auto === false && !connApiBase)) return;
-    if (connApiBase || fromApi) connectApi(base);
+    const bases = resolveConnectBases({
+      connApiBase,
+      apiParam: apiParam ? decodeURIComponent(apiParam) : "",
+      storedBase: readStoredApiBase(),
+    });
+    if (!bases.length || (conn && conn.auto === false && !connApiBase)) return;
+    connectApi(bases[0], { forceBases: bases });
   }, [specUrl, apiParam, connApiBase, conn, connectApi]);
 
   const pullConfig = useCallback(async () => {
@@ -290,36 +301,31 @@ export function App() {
   }
 
   if (!viewerConfig || !applied?.spec) {
-    if (embedMode) {
-      const brand = demoBrandDefaults(conn);
-      const retryBase = connApiBase || apiBase;
+    const brand = demoBrandDefaults(conn);
+    const retryBases = resolveConnectBases({
+      connApiBase,
+      apiParam: apiParam ? decodeURIComponent(apiParam) : "",
+      storedBase: apiBase || readStoredApiBase(),
+    });
+    if (embedMode || connectBusy || parseErr) {
       return (
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 2, px: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>{brand.title}</Typography>
-          {connectBusy ? <CircularProgress /> : null}
-          {!connectBusy && parseErr ? (
-            <>
-              <Alert severity="error" sx={{ maxWidth: 560 }}>{parseErr}</Alert>
-              {retryBase ? (
-                <Button variant="outlined" size="small" onClick={() => connectApi(retryBase)} disabled={connectBusy}>
-                  Reintentar conexión
-                </Button>
-              ) : null}
-            </>
-          ) : null}
-          {!connectBusy && !parseErr ? <Typography color="text.secondary">Cargando documentación API…</Typography> : null}
+        <>
+          <ConnectionScreen
+            ns={DEMO_NS}
+            title={brand.title}
+            icon={brand.icon}
+            busy={connectBusy}
+            error={!connectBusy ? parseErr : ""}
+            subtitle={connectBusy ? `Cargando ${brand.title}…` : ""}
+            onRetry={retryBases.length ? () => connectApi(retryBases[0], { forceBases: retryBases }) : null}
+          />
           {drawerOpen ? drawer : null}
-        </Box>
+        </>
       );
     }
     return (
       <DemoShell ns={DEMO_NS}>
         <WelcomeScreen ns={DEMO_NS} onOpenEditor={() => setDrawerOpen(true)} onConnectCustom={() => setDrawerOpen(true)} />
-        {parseErr ? (
-          <Box sx={{ width: "100%", maxWidth: 680, px: { xs: 0.5, sm: 1 }, pb: 2 }}>
-            <Alert severity="error">{parseErr}</Alert>
-          </Box>
-        ) : null}
         {drawerOpen ? drawer : null}
       </DemoShell>
     );

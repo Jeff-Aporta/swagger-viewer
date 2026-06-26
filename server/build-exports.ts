@@ -5,8 +5,10 @@
 import { buildOpenApiFromConfig, type IsOpenApiConfig } from "./build-spec.js";
 import { enrichListFilterCatalog } from "./list-filter-schema.js";
 import { openApiToPostmanCollection, type PostmanExportOpts } from "./postman.js";
+import { stripIsaExtensionsForExport } from "./strip-export-extensions.js";
 import { SWAGGER_FRONT_SHARED_REF, SWAGGER_VIEWER_GH_REPO, SWAGGER_VIEWER_REF } from "./viewer-pins.js";
 import { DEFAULT_AUTH_LOGIN_PATH, resolveOrchestratorBase, resolveAuthAppId } from "./orchestrator-auth.js";
+import { DEFAULT_API_SCOPES } from "./api-presets.js";
 
 export type { IsOpenApiConfig } from "./build-spec.js";
 
@@ -106,7 +108,7 @@ function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Rec
         viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
         frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
         ...(Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {}),
-        ...(Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : {}),
+        ...(Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : { scopes: DEFAULT_API_SCOPES }),
     };
 }
 
@@ -188,7 +190,8 @@ export function buildIssExportsFromConfig(raw: IsOpenApiConfig, opts: BuildIssEx
     const config = prepareOpenApiConfig(raw);
     const serverUrl = opts.serverUrl ?? config.protocol?.serverUrl ?? "/api";
     const apiBase = resolveApiBase(serverUrl, opts.absoluteBaseUrl);
-    const openApi = buildOpenApiFromConfig(config, serverUrl) as Record<string, unknown>;
+    const openApiFull = buildOpenApiFromConfig(config, serverUrl) as Record<string, unknown>;
+    const openApi = stripIsaExtensionsForExport(openApiFull);
     const frontLink = opts.frontLink ?? (config.viewer as IssOpenApiViewerConfig)?.frontLinks?.[0] ?? null;
     const postman = openApiToPostmanCollection(openApi, {
         absoluteBaseUrl: opts.absoluteBaseUrl ?? apiBase,
@@ -196,7 +199,7 @@ export function buildIssExportsFromConfig(raw: IsOpenApiConfig, opts: BuildIssEx
         frontLink,
     });
     const viewer = buildViewerRuntimeConfig(config, apiBase);
-    const is = buildIsDocument(viewer, openApi);
+    const is = buildIsDocument(viewer, openApiFull);
     const embed = buildEmbedOpts(config, apiBase, viewer);
     return { config, openApi, postman, viewer, is, embed };
 }

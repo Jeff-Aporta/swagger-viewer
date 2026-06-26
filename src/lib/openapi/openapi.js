@@ -158,9 +158,13 @@ export function buildLookupIndex(spec) {
 }
 
 export function operationRequiresBearer(op, spec) {
+  const raw = op?.security ?? spec?.security;
+  if (raw === "bearer" || raw === "Bearer") return true;
+  if (raw === "none" || raw === false) return false;
   const schemes = spec?.components?.securitySchemes || {};
-  const sec = op.security ?? spec?.security ?? [];
+  const sec = Array.isArray(raw) ? raw : [];
   for (const req of sec) {
+    if (!req || typeof req !== "object") continue;
     for (const name of Object.keys(req)) {
       const sch = schemes[name];
       if (sch?.type === "http" && sch.scheme === "bearer") return true;

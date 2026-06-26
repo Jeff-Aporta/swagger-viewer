@@ -5,8 +5,6 @@ import {
   emptyIssFilter,
   serializeIssFilterQuery,
   validateIssFilter,
-  filterValueToJsonText,
-  jsonTextToFilterQuery,
   MAX_LIMIT,
   DEFAULT_LIMIT,
   sortColumnOptions,
@@ -15,6 +13,7 @@ import {
 } from "../lib/filter/iss-list-filter.js";
 import { IssDistinctCompoundEqField, IssDistinctEqField } from "./IssDistinctEqField.jsx";
 import { IssFusedSelectField } from "./IssFusedSelectField.jsx";
+import { IssFilterJsonDialog, applyEditableJsonToFilter, filterValueToEditableJson } from "./IssFilterJsonDialog.jsx";
 import { SwIcon } from "../lib/ui/sw-icon.jsx";
 import {
   issFilterDialogProps,
@@ -111,10 +110,13 @@ export function IssListFilterField({
   const ext = param?.[ISS_LIST_FILTER_EXT] || {};
   const listPath = ext.listPath || "/conversaciones";
   const [open, setOpen] = useState(false);
+  const [jsonOpen, setJsonOpen] = useState(false);
   const [bag, setBag] = useState(() => bagFromFilterValue(value, ext));
   const [err, setErr] = useState("");
-  const [jsonText, setJsonText] = useState(() => filterValueToJsonText(value));
+  const [jsonDraft, setJsonDraft] = useState("");
   const [jsonErr, setJsonErr] = useState("");
+
+  const hasB64Filter = !!String(value || "").trim();
 
   const eqEntries = useMemo(() => Object.entries(ext.eq || {}), [ext]);
   const eqSections = useMemo(() => buildEqSections(eqEntries), [eqEntries]);
@@ -134,13 +136,8 @@ export function IssListFilterField({
   }
 
   useEffect(() => {
-    if (!open) setBag(bagFromFilterValue(value, ext));
-  }, [value, ext, open]);
-
-  useEffect(() => {
-    setJsonText(filterValueToJsonText(value));
-    setJsonErr("");
-  }, [value]);
+    if (!open && !jsonOpen) setBag(bagFromFilterValue(value, ext));
+  }, [value, ext, open, jsonOpen]);
 
   const dialogTitle = endpointLabel
     ? `Filtro · ${endpointLabel}`
@@ -153,23 +150,27 @@ export function IssListFilterField({
     setJsonErr("");
   }
 
-  function onJsonChange(raw) {
-    const next = String(raw ?? "");
-    setJsonText(next);
-    if (!next.trim()) {
-      setJsonErr("");
-      setErr("");
-      onChange?.("");
+  function openJsonModal() {
+    if (!hasB64Filter) return;
+    const draft = filterValueToEditableJson(value);
+    if (!draft) {
+      setJsonErr("No se pudo decodificar el filtro B64.");
       return;
     }
-    const r = jsonTextToFilterQuery(next, ext);
+    setJsonDraft(draft);
+    setJsonErr("");
+    setJsonOpen(true);
+  }
+
+  function applyJsonModal() {
+    const r = applyEditableJsonToFilter(jsonDraft, ext);
     if (!r.ok) {
       setJsonErr(r.error);
       return;
     }
     setJsonErr("");
-    setErr("");
     onChange?.(r.value);
+    setJsonOpen(false);
   }
 
   function apply() {
@@ -226,6 +227,20 @@ export function IssListFilterField({
               ) : null,
             }}
           />
+          <Tooltip title={hasB64Filter ? "Ver y editar JSON del filtro" : "Sin filtro B64"}>
+            <span>
+              <IconButton
+                className="isa-sw-iss-filter-json-btn"
+                size="small"
+                disabled={disabled || !hasB64Filter}
+                onClick={openJsonModal}
+                aria-label="Ver JSON del filtro"
+                sx={{ flexShrink: 0, color: hasB64Filter ? "primary.main" : "text.disabled" }}
+              >
+                <SwIcon icon="mdi:code-json" size={18} ns={ns} />
+              </IconButton>
+            </span>
+          </Tooltip>
           <Tooltip title="Configurar filtro">
             <span>
               <IconButton
@@ -241,29 +256,21 @@ export function IssListFilterField({
             </span>
           </Tooltip>
         </Box>
-        <TextField
-          size="small"
-          fullWidth
-          multiline
-          minRows={2}
-          maxRows={8}
-          disabled={disabled}
-          label="Filtro JSON"
-          value={jsonText}
-          placeholder='{"search":"…","limit":10}'
-          onChange={(e) => onJsonChange(e.target.value)}
-          error={!!jsonErr}
-          helperText={jsonErr || "JSON compacto del filtro; al editarlo se actualiza el B64 de arriba."}
-          sx={{
-            "& .MuiInputBase-input": {
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-              fontSize: "0.8rem",
-              lineHeight: 1.45,
-            },
-          }}
-        />
+        {jsonErr && !jsonOpen ? <Alert severity="error" sx={{ py: 0.25 }}>{jsonErr}</Alert> : null}
         {err && !open ? <Alert severity="error" sx={{ py: 0.25 }}>{err}</Alert> : null}
       </Box>
+
+      <IssFilterJsonDialog
+        open={jsonOpen}
+        onClose={() => setJsonOpen(false)}
+        jsonText={jsonDraft}
+        onJsonChange={setJsonDraft}
+        onApply={applyJsonModal}
+        error={jsonErr}
+        disabled={disabled}
+        title={dialogTitle}
+        ns={ns}
+      />
 
       <Dialog {...issFilterDialogProps({ open, onClose: () => setOpen(false) })}>
         {issFilterDialogHeader(React, MaterialUI, { Icon: (props) => <SwIcon {...props} ns={ns} /> }, { title: dialogTitle })}

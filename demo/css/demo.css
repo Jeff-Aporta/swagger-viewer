@@ -4,6 +4,19 @@
   box-sizing: border-box;
 }
 
+html[data-mui-color-scheme="dark"] body {
+  background: #0b1220 !important;
+}
+
+html[data-mui-color-scheme="light"] body {
+  background: #f0f6ff !important;
+}
+
+#root {
+  min-height: 100vh;
+  background: inherit;
+}
+
 .isa-sw-demo__fab {
   position: fixed !important;
   right: 1.25rem;

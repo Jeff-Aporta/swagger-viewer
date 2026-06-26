@@ -370,6 +370,8 @@ export function openApiToPostmanCollection(
         },
         variable: [
             { key: "base_url", value: baseUrl, type: "string" },
+            { key: "base_url_local", value: "http://127.0.0.1:8802/api", type: "string" },
+            { key: "base_url_web", value: "https://ayudascp-ia-staging.azurewebsites.net/api", type: "string" },
             { key: "token", value: "", type: "string" },
         ],
         item: items,

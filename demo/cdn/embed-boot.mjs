@@ -1,47 +1,13 @@
-/**
- * Arranque IS-Swagger embebido (hosts Azure / ISS).
- * Requiere window.__SWAGGER_CONFIG__ y swagger-viewer.min.js en viewerCdnBase.
- */
-
-const JSDELIVR_CDN = "https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@0.1.18/cdn";
-
-function viewerCdnBase(cfg) {
-  const fromCfg = String(cfg?.viewerCdnBase || "").replace(/\/$/, "");
-  if (fromCfg) return fromCfg;
-  return JSDELIVR_CDN;
-}
-
-function cdnBaseUrl(cfg) {
-  return `${viewerCdnBase(cfg).replace(/\/$/, "")}/`;
-}
-
-async function boot() {
-  const cfg = { ...(globalThis.__SWAGGER_CONFIG__ || {}) };
-  const base = cdnBaseUrl(cfg);
-  const viewerUrl = `${base}swagger-viewer.min.js`;
-
-  const mod = await import(viewerUrl);
-  const bootSwaggerApp = mod.bootSwaggerApp || mod.default;
-  if (typeof bootSwaggerApp !== "function") {
-    throw new Error("swagger-viewer.min.js no exporta bootSwaggerApp");
-  }
-
-  await bootSwaggerApp({
-    ...cfg,
-    cssUrl: cfg.cssUrl || `${base}swagger-viewer.min.css`,
-    appUrl: cfg.appUrl || `${base}swagger-viewer-app.min.js`,
-  });
-}
-
-boot().catch((err) => {
-  console.error("[swagger]", err);
-  const root = document.getElementById("root");
-  const msg = err instanceof Error ? err.message : String(err);
-  if (root) {
-    root.innerHTML =
-      '<div style="padding:1.5rem;font-family:system-ui,sans-serif;max-width:36rem;margin:2rem auto">' +
-      "<p><strong>No se pudo cargar IS-Swagger.</strong></p>" +
-      `<p style="color:#64748b;font-size:0.9rem">${msg}</p>` +
-      '<p style="color:#64748b;font-size:0.85rem">Comprueba la red o recarga la página.</p></div>';
-  }
-});
+function g(){return document.getElementById("isa-boot-title")?.textContent?.trim()||document.querySelector('meta[name="application-name"]')?.content?.trim()||document.title?.split("\u2014")[0]?.trim()||"IS-Swagger"}function h(){return document.querySelector('meta[name="app-icon"]')?.content?.trim()||"mdi:file-code-outline"}function _(e,{headline:t,ns:o="ISS"}={}){let a=globalThis.React,n=globalThis.ReactDOM?.createRoot,c=globalThis.ISAFront?.Layout?.AppShell,p=globalThis.MaterialUI;if(!a?.createElement||!n||!c||!p?.Box)return!1;let{Box:d,Typography:b,Alert:u,Button:s}=p,l=g(),r=h(),i=document.getElementById("root");return i?(n(i).render(a.createElement(c,{ns:o,title:l,icon:r,showTarget:!1,bodyScroll:!0,navRows:[{id:"boot",value:"inicio",onChange:()=>{},tabs:[{id:"inicio",label:"Inicio",icon:"mdi:home-outline"}]}]},a.createElement(d,{className:"isa-sw-boot-error",sx:{minHeight:"100%",display:"flex",alignItems:"center",justifyContent:"center",p:{xs:2,sm:3},boxSizing:"border-box"}},a.createElement(d,{sx:{width:"100%",maxWidth:680,textAlign:"center"}},a.createElement(b,{variant:"h6",component:"h1",sx:{fontWeight:700,mb:1.5}},t||`No se pudo iniciar ${l}`),a.createElement(u,{severity:"error",sx:{textAlign:"left",mb:2}},e),a.createElement(s,{variant:"outlined",onClick:()=>location.reload()},"Reintentar"))))),!0):!1}function w(e,{headline:t}={}){let o=document.getElementById("root");if(!o)return;if(!o.querySelector(".isa-app-boot")){o.innerHTML="";let i=document.createElement("div");i.className="isa-app-boot isa-app-boot--error",i.innerHTML=`<div class="isa-app-boot__mesh" aria-hidden="true"></div>
+<div class="isa-app-boot__card" role="alert" aria-live="assertive">
+  <div class="isa-app-boot__icon-wrap isa-app-boot__icon-wrap--error">
+    <iconify-icon icon="mdi:alert-circle-outline" width="1.85em" height="1.85em"></iconify-icon>
+  </div>
+  <p class="isa-app-boot__title" id="isa-boot-title">${g()}</p>
+  <p class="isa-app-boot__headline" id="isa-boot-headline"></p>
+  <p class="isa-app-boot__error" id="isa-boot-error"></p>
+  <div class="isa-app-boot__actions" id="isa-boot-actions">
+    <button type="button" class="isa-app-boot__retry" onclick="location.reload()">Reintentar</button>
+  </div>
+</div>
+<img class="isa-app-boot-watermark" src="https://pub-1c290cc606c8478899f5764899278571.r2.dev/brand/logo-insoft.png" alt="" aria-hidden="true" decoding="async" />`,o.appendChild(i)}let n=o.querySelector(".isa-app-boot");n?.classList.add("isa-app-boot--error");let c=n?.querySelector(".isa-app-boot__card");c?.setAttribute("role","alert"),c?.setAttribute("aria-live","assertive"),c?.setAttribute("aria-busy","false");let p=document.getElementById("isa-boot-icon");p&&p.setAttribute("icon","mdi:alert-circle-outline"),n?.querySelector(".isa-app-boot__icon-wrap")?.classList.add("isa-app-boot__icon-wrap--error");let d=n?.querySelector(".isa-app-boot__bar");d&&(d.hidden=!0);let b=g(),u=document.getElementById("isa-boot-title");u&&(u.textContent=b);let s=document.getElementById("isa-boot-headline"),l=document.getElementById("isa-boot-label");!s&&l&&(l.id="isa-boot-headline",l.className="isa-app-boot__headline",s=l),s&&(s.textContent=t||`No se pudo iniciar ${b}`);let r=document.getElementById("isa-boot-error");if(!r&&s&&(r=document.createElement("p"),r.id="isa-boot-error",r.className="isa-app-boot__error",s.after(r)),r&&(r.textContent=e),!document.getElementById("isa-boot-actions")){let i=document.createElement("div");i.id="isa-boot-actions",i.className="isa-app-boot__actions";let m=document.createElement("button");m.type="button",m.className="isa-app-boot__retry",m.textContent="Reintentar",m.addEventListener("click",()=>location.reload()),i.appendChild(m),(r||s||c)?.after(i)}}function f(e,t={}){let o=e instanceof Error?e.message:String(e);console.error(e),!_(o,t)&&w(o,t)}var y="https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@0.1.18/cdn";function E(e){let t=String(e?.viewerCdnBase||"").replace(/\/$/,"");return t||y}function v(e){return`${E(e).replace(/\/$/,"")}/`}async function S(){let e={...globalThis.__SWAGGER_CONFIG__||{}},t=v(e),a=await import(`${t}swagger-viewer.min.js`),n=a.bootSwaggerApp||a.default;if(typeof n!="function")throw new Error("swagger-viewer.min.js no exporta bootSwaggerApp");await n({...e,cssUrl:e.cssUrl||`${t}swagger-viewer.min.css`,appUrl:e.appUrl||`${t}swagger-viewer-app.min.js`})}S().catch(e=>f(e,{headline:"No se pudo cargar IS-Swagger"}));

@@ -1,5 +1,5 @@
 /** Pin jsDelivr front-shared + rutas del paquete swagger-viewer. */
-export const PIN = "99fb049";
+export const PIN = "0692ebf";
 
 /** Demo embebido vía ISS (/api/swagger/demo). */
 function isIssSwaggerDemoHost() {
@@ -15,15 +15,25 @@ function isLocalDevHost() {
   return typeof location !== "undefined" && /localhost|127\.0\.0\.1|\[::1\]/.test(location.hostname);
 }
 
+/** Live Server / ruta monorepo (…/components/swagger/demo/). No aplica a `serve demo` en :puerto/. */
+function isMonorepoDemoUrl() {
+  const p = String(location.pathname || "").replace(/\\/g, "/");
+  return /\/components\/swagger\/demo\b/i.test(p);
+}
+
 function devMonorepoCdnBase() {
   const base = document.querySelector("base")?.href || location.href;
   return new URL("../../front-shared/cdn/", base).href.replace(/\/?$/, "/");
 }
 
+function jsdelivrFrontSharedCdn() {
+  return `https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@${PIN}/cdn`;
+}
+
 function frontSharedCdn() {
   if (isIssSwaggerDemoHost()) return `${location.origin}/api/swagger/cdn/fs/`;
-  if (isLocalDevHost() && !isGhPagesSwaggerDemo()) return devMonorepoCdnBase();
-  return `https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@${PIN}/cdn`;
+  if (isLocalDevHost() && !isGhPagesSwaggerDemo() && isMonorepoDemoUrl()) return devMonorepoCdnBase();
+  return jsdelivrFrontSharedCdn();
 }
 
 export const CDN = frontSharedCdn();
@@ -34,14 +44,11 @@ function joinCdn(path) {
   return rel ? `${base}/${rel}` : base;
 }
 
-export const bootHelperUrl =
-  isLocalDevHost() && !isIssSwaggerDemoHost() && !isGhPagesSwaggerDemo()
-    ? joinCdn("boot-helper.mjs")
-    : `${joinCdn("boot-helper.mjs")}?v=${PIN}`;
+export const bootHelperUrl = `${joinCdn("boot-helper.mjs")}?v=${PIN}`;
 
 /* @isa-swagger-boot:start */
 /** Jeff-Aporta/swagger-viewer — pin CDN git (sync-component-refs.mjs) */
-export const SWAGGER_VIEWER_REF = "073b350";
+export const SWAGGER_VIEWER_REF = "3433b24";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;

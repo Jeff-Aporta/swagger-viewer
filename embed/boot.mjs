@@ -2,6 +2,7 @@
  * Arranque IS-Swagger embebido (hosts Azure / ISS).
  * Requiere window.__SWAGGER_CONFIG__ y swagger-viewer.min.js en viewerCdnBase.
  */
+import { showBootError } from "../demo/js/boot/boot-error.mjs";
 
 const JSDELIVR_CDN = "https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@0.1.18/cdn";
 
@@ -33,15 +34,4 @@ async function boot() {
   });
 }
 
-boot().catch((err) => {
-  console.error("[swagger]", err);
-  const root = document.getElementById("root");
-  const msg = err instanceof Error ? err.message : String(err);
-  if (root) {
-    root.innerHTML =
-      '<div style="padding:1.5rem;font-family:system-ui,sans-serif;max-width:36rem;margin:2rem auto">' +
-      "<p><strong>No se pudo cargar IS-Swagger.</strong></p>" +
-      `<p style="color:#64748b;font-size:0.9rem">${msg}</p>` +
-      '<p style="color:#64748b;font-size:0.85rem">Comprueba la red o recarga la página.</p></div>';
-  }
-});
+boot().catch((err) => showBootError(err, { headline: "No se pudo cargar IS-Swagger" }));

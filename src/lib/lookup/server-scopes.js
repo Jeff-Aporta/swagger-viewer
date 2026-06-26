@@ -1,6 +1,7 @@
 /** Scopes de servidor API (viewer.scopes en documento IS / openapi-config). */
 
 import { normalizeServerBase } from "./server-base.js";
+import { DEFAULT_API_SCOPES } from "../api/api-presets.js";
 
 export const CUSTOM_SCOPE_ID = "__custom__";
 
@@ -41,7 +42,4 @@ export function resolveScopePresetId(scopes, serverBase) {
 }
 
 /** Presets demo IS-Swagger cuando el JSON aún no define scopes. */
-export const DEMO_API_SCOPES = [
-  { id: "web", label: "Web", base: "https://ayudascp-ia.azurewebsites.net/api", icon: "mdi:web" },
-  { id: "local", label: "Local", base: "http://127.0.0.1:8802/api", icon: "mdi:laptop" },
-];
+export const DEMO_API_SCOPES = DEFAULT_API_SCOPES;

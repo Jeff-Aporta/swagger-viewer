@@ -9,6 +9,7 @@ import {
     INSOFT_ERROR_SCHEMA,
     INSOFT_RESPONSE_SCHEMA,
 } from "./envelope.js";
+import { buildOpenApiServers } from "./api-presets.js";
 import {
     ISS_DOC_MD_EXTENSION,
     ISS_INPUT_RECOMMENDATION_EXTENSION,
@@ -132,6 +133,8 @@ export type IsOpenApiOperationConfig = {
     tags: string[];
     subgroup?: string;
     security?: "bearer" | "none" | string;
+    /** Modal Try it out (solo con security bearer + POST/PUT/PATCH/DELETE). String = catalog.tryitConfirm.templates[id]. */
+    tryitConfirm?: string | Record<string, unknown> | false;
     doc?: string;
     parameters?: IsOpenApiParamConfig[];
     requestBody?: IsOpenApiRequestBodyConfig;
@@ -292,6 +295,7 @@ function buildOperation(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiOpera
     if (def.operationId) op.operationId = def.operationId;
     if (def.subgroup) Object.assign(op, sg(def.subgroup));
     if (def.security === "bearer") op.security = bearerSecurity;
+    if (def.tryitConfirm !== undefined) op.tryitConfirm = def.tryitConfirm;
     if (def.doc) {
         const md = catalog.docs?.[def.doc];
         if (md) op[ISS_DOC_MD_EXTENSION] = md;
@@ -342,7 +346,7 @@ export function buildOpenApiFromConfig(config: IsOpenApiConfig, serverUrl?: stri
             description: config.info.description ?? "",
             version: config.info.version,
         },
-        servers: [{ url: base, description: "API actual (mismo host que esta página)" }],
+        servers: buildOpenApiServers(base),
         tags,
         components: { ...bearerComponents() },
         paths,

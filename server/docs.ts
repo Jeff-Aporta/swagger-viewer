@@ -34,10 +34,10 @@ Obtenga el token desde el panel superior (**Iniciar sesión** / **Pegar JWT**) o
 
 | Ambiente | URL base |
 |----------|----------|
-| Local (Functions) | \`http://localhost:5502/api\` |
-| Azure / despliegue | URL del Function App + \`/api\` |
+| Local (ISS Functions) | \`http://127.0.0.1:8802/api\` |
+| Web (staging Azure) | \`https://ayudascp-ia-staging.azurewebsites.net/api\` |
 
-En Postman configure \`{{base_url}}\` según el ambiente.
+En Postman use \`{{base_url}}\` (activa), \`{{base_url_local}}\` o \`{{base_url_web}}\` según el ambiente.
 
 ### Convenciones globales
 

@@ -104,8 +104,26 @@ function buildCdn() {
 }
 
 function copyEmbedToCdn() {
-    copyFileSync(join(root, "embed", "boot.mjs"), join(CDN_DIR, "embed-boot.mjs"));
+    esbuild.buildSync({
+        entryPoints: [join(root, "embed", "boot.mjs")],
+        outfile: join(CDN_DIR, "embed-boot.mjs"),
+        bundle: true,
+        minify: true,
+        legalComments: "none",
+        target: "es2022",
+        format: "esm",
+    });
     copyFileSync(join(root, "embed", "index.html"), join(CDN_DIR, "embed-index.html"));
+}
+
+/** Mantiene demo/cdn alineado con cdn/ (Live Server, GH Pages, CF dev). */
+function copyCdnToDemo() {
+    const demoCdn = join(root, "demo", "cdn");
+    mkdirSync(demoCdn, { recursive: true });
+    for (const name of readdirSync(CDN_DIR)) {
+        if (!/\.(min\.js|min\.css|mjs|json)$/.test(name)) continue;
+        copyFileSync(join(CDN_DIR, name), join(demoCdn, name));
+    }
 }
 
 function buildVendorBundles() {
@@ -141,6 +159,7 @@ function build() {
     syncVersionsAndPins();
     buildCdn();
     copyEmbedToCdn();
+    copyCdnToDemo();
     buildVendorBundles();
     console.log("IS-Swagger build OK");
     console.log("  CDN:", BOOT_JS);
