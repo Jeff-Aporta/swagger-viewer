@@ -27,7 +27,6 @@ export function resolveConnectBases({ connApiBase = "", apiParam = "", storedBas
   const stored = storedBase ? normalizeApiBase(storedBase) : "";
   const explicit = conn || param || stored;
   const web = normalizeApiBase(ISS_WEB_API_BASE);
-  const local = normalizeApiBase(ISS_LOCAL_API_BASE);
 
   const push = (list, base) => {
     const b = normalizeApiBase(base);
@@ -37,8 +36,7 @@ export function resolveConnectBases({ connApiBase = "", apiParam = "", storedBas
 
   if (explicit && isLocalApiBase(explicit)) return push(push([], explicit), web);
   if (explicit) return push([], explicit);
-  if (isLocalViewerHost()) return push(push([], local), web);
-  return push([], web);
+  return [];
 }
 
 export async function connectWithFallback(fetchFn, bases) {

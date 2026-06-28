@@ -69,6 +69,15 @@ export function resolveVisibleNavTabs(config, session) {
   return resolveNavTabDefs(config).filter((t) => canAccessNavTab(t, session));
 }
 
+/** Tab inicial: ?nav= si es visible; si no, primera sección accesible. */
+export function resolveInitialNavTab(config, session, urlTabId = "") {
+  const tabs = resolveVisibleNavTabs(config, session);
+  if (!tabs.length) return "";
+  const hint = String(urlTabId || "").trim();
+  if (hint && tabs.some((t) => t.id === hint)) return hint;
+  return tabs[0].id;
+}
+
 export function filterGroupsByNavTab(groups, config, activeTabId) {
   const tabs = resolveNavTabDefs(config);
   if (!tabs.length) return groups;

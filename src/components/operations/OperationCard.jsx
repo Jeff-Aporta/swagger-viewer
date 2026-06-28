@@ -58,11 +58,13 @@ export function OperationCard({
       className={`isa-sw-operation isa-sw-operation--${op.method}`}
       data-sw-expand={expandId}
       disableGutters
+      elevation={0}
       slotProps={{ transition: { unmountOnExit: true } }}
       sx={{
         ...glassAccordionSx(glassC, { accent }),
         mb: 1,
         overflow: "hidden",
+        "--Paper-shadow": "none",
         "&:before": { display: "none" },
       }}
     >

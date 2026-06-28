@@ -66,10 +66,6 @@ var EXAMPLE_503 = {
 // server/api-presets.ts
 var ISS_LOCAL_API_BASE = "http://127.0.0.1:8802/api";
 var ISS_WEB_API_BASE = "https://ayudascp-ia-staging.azurewebsites.net/api";
-var DEFAULT_API_SCOPES = [
-  { id: "web", label: "Web (staging)", base: ISS_WEB_API_BASE, icon: "mdi:web" },
-  { id: "local", label: "Local", base: ISS_LOCAL_API_BASE, icon: "mdi:laptop" }
-];
 function normApiBase(url) {
   return String(url || "").replace(/\/$/, "");
 }
@@ -945,8 +941,8 @@ function stripIsaExtensionsForExport(openApi) {
 
 // server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "ee46114";
-var SWAGGER_FRONT_SHARED_REF = "443951c";
+var SWAGGER_VIEWER_REF = "4c28f15";
+var SWAGGER_FRONT_SHARED_REF = "c97330e";
 
 // server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
@@ -1005,8 +1001,7 @@ function buildViewerRuntimeConfig(config, apiBase) {
     },
     viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
     frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
-    ...Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {},
-    ...Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : { scopes: DEFAULT_API_SCOPES }
+    ...Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {}
   };
 }
 function buildEmbedOpts(config, apiBase, viewer) {

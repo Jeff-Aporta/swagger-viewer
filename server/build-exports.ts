@@ -8,7 +8,6 @@ import { openApiToPostmanCollection, type PostmanExportOpts } from "./postman.js
 import { stripIsaExtensionsForExport } from "./strip-export-extensions.js";
 import { SWAGGER_FRONT_SHARED_REF, SWAGGER_VIEWER_GH_REPO, SWAGGER_VIEWER_REF } from "./viewer-pins.js";
 import { DEFAULT_AUTH_LOGIN_PATH, resolveOrchestratorBase, resolveAuthAppId } from "./orchestrator-auth.js";
-import { DEFAULT_API_SCOPES } from "./api-presets.js";
 
 export type { IsOpenApiConfig } from "./build-spec.js";
 
@@ -33,7 +32,6 @@ export type IssOpenApiViewerConfig = {
     };
     embed?: { title?: string; authKind?: string; localCdnBase?: string };
     nav?: Array<{ id: string; label: string; icon?: string; tags?: string[]; access?: unknown }>;
-    scopes?: Array<{ id: string; label: string; base: string; icon?: string }>;
     viewerRef?: string;
     frontSharedRef?: string;
 };
@@ -108,7 +106,6 @@ function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Rec
         viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
         frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
         ...(Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {}),
-        ...(Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : { scopes: DEFAULT_API_SCOPES }),
     };
 }
 

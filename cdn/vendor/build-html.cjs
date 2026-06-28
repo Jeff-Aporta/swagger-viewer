@@ -29,7 +29,7 @@ var import_node_url = require("node:url");
 
 // ../front-shared/cdn/isa/js/core/config/constants.js
 var MAIN_ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
-var FRONT_SHARED_REF = "36a245f";
+var FRONT_SHARED_REF = "c97330e";
 var CDN_BASE = "https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@" + FRONT_SHARED_REF + "/cdn/isa";
 var UI_CDN_BASE = "https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@" + FRONT_SHARED_REF + "/cdn/ui";
 var FEEDBACK_CSS_URL = CDN_BASE + "/css/feedback.css";
@@ -73,7 +73,7 @@ function loadViewerRef() {
   return "main";
 }
 var SWAGGER_VIEWER_REF = loadViewerRef();
-var SWAGGER_FRONT_SHARED_REF = "36a245f";
+var SWAGGER_FRONT_SHARED_REF = "c97330e";
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
 function swaggerViewerCdnJsdelivr(ref = SWAGGER_VIEWER_REF) {
   const pin = String(ref || SWAGGER_VIEWER_REF).replace(/^v/, "");

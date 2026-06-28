@@ -6,10 +6,9 @@ import { SwaggerHeaderAuth } from "./components/toolbar/SwaggerHeaderAuth.jsx";
 import { SwaggerOpenGhPagesBtn } from "./components/toolbar/SwaggerOpenGhPagesBtn.jsx";
 import { SwaggerReloadBtn } from "./components/toolbar/SwaggerReloadBtn.jsx";
 import { SwaggerToolbarThemeBtn } from "./components/toolbar/SwaggerToolbarThemeBtn.jsx";
-import { ServerUrlField } from "./components/server/ServerUrlField.jsx";
 import { ServerHealthBanner } from "./components/server/ServerHealthBanner.jsx";
 import { ExpandStackProvider } from "./context/ExpandStackContext.jsx";
-import { ServerBaseProvider } from "./context/ServerBaseContext.jsx";
+import { ServerBaseProvider, useServerBase } from "./context/ServerBaseContext.jsx";
 import {
   groupOperationsByTag,
   buildDocIndex,
@@ -18,12 +17,18 @@ import {
 import { getStoredJwt, clearJwt } from "./lib/auth/auth.js";
 import { resolveAuthConfig } from "./lib/auth/orchestrator-base.js";
 import { applyBrandToDocument, resolveViewerBrand } from "./lib/brand/viewer-brand.js";
-import { buildNavRows, filterGroupsByNavTab, activeSectionTabId } from "./lib/nav/viewer-nav.js";
+import { buildNavRows, filterGroupsByNavTab, activeSectionTabId, resolveInitialNavTab } from "./lib/nav/viewer-nav.js";
+import { readNavTabFromUrl, writeNavTabToUrl } from "./lib/nav/nav-url.js";
 
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useCallback } = React;
 const { Box, Typography, Alert } = MaterialUI;
 
-export function SwaggerViewer({ config: configProp, spec: specProp, onReload, reloadBusy = false, fixedServer = false }) {
+function SwaggerReloadBtnWithBase({ onReload, busy, ns }) {
+  const { serverBase } = useServerBase();
+  return <SwaggerReloadBtn onReload={onReload} busy={busy} ns={ns} serverBase={serverBase} />;
+}
+
+export function SwaggerViewer({ config: configProp, spec: specProp, onReload, reloadBusy = false }) {
   const config = useMemo(
     () => (configProp ? { ...configProp, auth: resolveAuthConfig(configProp.auth, configProp.apiBase, configProp) } : configProp),
     [configProp],
@@ -36,7 +41,31 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   const [spec, setSpec] = useState(specProp || null);
   const [err, setErr] = useState("");
   const [session, setSession] = useState(() => (authEnabled ? getStoredJwt() : null));
-  const [navTab, setNavTab] = useState("");
+  const [navTab, setNavTabState] = useState(() => readNavTabFromUrl());
+
+  const setNavTab = useCallback((tabId) => {
+    const id = String(tabId || "").trim();
+    setNavTabState(id);
+    writeNavTabToUrl(id);
+  }, []);
+
+  useEffect(() => {
+    function onPopState() {
+      setNavTabState(readNavTabFromUrl());
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    const urlTab = readNavTabFromUrl();
+    const next = resolveInitialNavTab(config, session, urlTab);
+    setNavTabState((prev) => {
+      if (next === prev) return prev;
+      if (next !== urlTab) writeNavTabToUrl(next);
+      return next;
+    });
+  }, [config, session]);
 
   useEffect(() => {
     if (specProp) {
@@ -137,8 +166,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   const shellToolbarEnd = (
     <Box className="isa-sw-toolbar-tools" sx={{ display: "inline-flex", alignItems: "center", gap: { xs: 1.75, sm: 2.25 }, flexShrink: 0, minWidth: 0 }}>
       <SwaggerFrontLinks frontLinks={config?.frontLinks || []} brandIcon={brandIcon} ns={ns} dense />
-      {spec ? <ServerUrlField ns={ns} compact dense fixed={fixedServer} /> : null}
-      <SwaggerReloadBtn onReload={onReload} busy={reloadBusy} ns={ns} />
+      <SwaggerReloadBtnWithBase onReload={onReload} busy={reloadBusy} ns={ns} />
       <SwaggerOpenGhPagesBtn config={config} ns={ns} />
       {authToolbarEnd}
       <SwaggerToolbarThemeBtn ns={ns} />
@@ -146,7 +174,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   );
 
   const exportToolbarBody = !useShell && spec ? (
-    <ExportToolbar frontLinks={config?.frontLinks || []} ns={ns} brandIcon={brandIcon} docked={embed} showServer toolbarEnd={authToolbarEnd} />
+    <ExportToolbar frontLinks={config?.frontLinks || []} ns={ns} brandIcon={brandIcon} docked={embed} toolbarEnd={authToolbarEnd} />
   ) : null;
 
   const viewerBody = (
@@ -206,7 +234,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   );
 
   return (
-    <ServerBaseProvider spec={spec} config={config} fixed={fixedServer}>
+    <ServerBaseProvider spec={spec} config={config}>
       <ExpandStackProvider>{framed}</ExpandStackProvider>
     </ServerBaseProvider>
   );

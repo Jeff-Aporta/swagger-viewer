@@ -209,6 +209,77 @@ html.dark-mode .isa-sw-tag-head__icon {
 .isa-sw-operation--head,
 .isa-sw-operation--options { --isa-sw-accent: 148, 163, 184; }
 
+/* Tarjeta operación — neon-glass con borde y glow por método HTTP */
+.isa-sw-viewer .isa-sw-operation.MuiAccordion-root {
+  --Paper-shadow: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.isa-sw-viewer .isa-sw-operation.MuiPaper-root {
+  --Paper-shadow: none;
+  --Paper-overlay: none;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-viewer .isa-sw-operation.MuiAccordion-root,
+html.dark-mode .isa-sw-viewer .isa-sw-operation.MuiAccordion-root {
+  background:
+    linear-gradient(135deg, rgba(var(--isa-sw-accent), 0.12), transparent 58%),
+    linear-gradient(165deg, rgba(30, 144, 255, 0.12) 0%, rgba(99, 102, 241, 0.07) 38%, rgba(15, 34, 54, 0.26) 100%) !important;
+  background-color: transparent !important;
+  border: 1px solid rgba(var(--isa-sw-accent), 0.44) !important;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(var(--isa-sw-accent), 0.24),
+    0 0 28px rgba(var(--isa-sw-accent), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-viewer .isa-sw-operation.MuiAccordion-root {
+  background:
+    linear-gradient(135deg, rgba(var(--isa-sw-accent), 0.08), transparent 55%),
+    linear-gradient(165deg, rgba(30, 144, 255, 0.04) 0%, rgba(99, 102, 241, 0.025) 38%, rgba(255, 255, 255, 0.84) 100%) !important;
+  background-color: rgba(255, 255, 255, 0.78) !important;
+  border: 1px solid rgba(var(--isa-sw-accent), 0.32) !important;
+  box-shadow:
+    0 6px 28px rgba(15, 23, 42, 0.06),
+    0 0 0 1px rgba(var(--isa-sw-accent), 0.14),
+    0 0 20px rgba(var(--isa-sw-accent), 0.08) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-viewer .isa-sw-operation.Mui-expanded,
+html.dark-mode .isa-sw-viewer .isa-sw-operation.Mui-expanded {
+  border-color: rgba(var(--isa-sw-accent), 0.52) !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(var(--isa-sw-accent), 0.32),
+    0 0 40px rgba(var(--isa-sw-accent), 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+html[data-mui-color-scheme="light"] .isa-sw-viewer .isa-sw-operation.Mui-expanded {
+  border-color: rgba(var(--isa-sw-accent), 0.4) !important;
+  box-shadow:
+    0 8px 32px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(var(--isa-sw-accent), 0.2),
+    0 0 28px rgba(var(--isa-sw-accent), 0.12) !important;
+}
+
+.isa-sw-viewer .isa-sw-operation .MuiAccordionDetails-root {
+  border-top: 1px solid rgba(var(--isa-sw-accent), 0.16);
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+html[data-mui-color-scheme="dark"] .isa-sw-viewer .isa-sw-operation .MuiAccordionDetails-root,
+html.dark-mode .isa-sw-viewer .isa-sw-operation .MuiAccordionDetails-root {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 /* Tabs internos (Probar/Ejemplos/Doc): ocultar detalle colapsado (evita indicador MUI y CodeMirror fugados) */
 .isa-sw-operation:not(.Mui-expanded) .MuiAccordionDetails,
 .isa-sw-operation:not(.Mui-expanded) .MuiCollapse-root {
@@ -237,9 +308,11 @@ html.dark-mode .isa-sw-viewer .isa-sw-operation {
 html[data-mui-color-scheme="dark"] .isa-sw-viewer .isa-sw-operation:hover,
 html.dark-mode .isa-sw-viewer .isa-sw-operation:hover {
   transform: translateY(-1px);
+  border-color: rgba(var(--isa-sw-accent), 0.58) !important;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.35),
-    0 0 24px rgba(var(--isa-sw-accent, 30, 144, 255), 0.16) !important;
+    0 0 0 1px rgba(var(--isa-sw-accent), 0.34),
+    0 0 36px rgba(var(--isa-sw-accent), 0.24) !important;
 }
 
 .isa-sw-operation .MuiAccordionSummary-root {
@@ -259,26 +332,21 @@ html[data-mui-color-scheme="dark"] .isa-sw-operation .MuiAccordionSummary-root,
 html.dark-mode .isa-sw-operation .MuiAccordionSummary-root {
   background: linear-gradient(
     90deg,
-    rgba(var(--isa-sw-accent, 30, 144, 255), 0.18),
+    rgba(var(--isa-sw-accent, 30, 144, 255), 0.14),
     transparent 72%
-  );
-  border-bottom: 1px solid rgba(30, 144, 255, 0.14);
+  ) !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid rgba(var(--isa-sw-accent, 30, 144, 255), 0.2);
 }
 
 html[data-mui-color-scheme="light"] .isa-sw-operation .MuiAccordionSummary-root {
-  background: rgba(var(--isa-sw-accent, 30, 144, 255), 0.08);
+  background: rgba(var(--isa-sw-accent, 30, 144, 255), 0.06) !important;
+  background-color: transparent !important;
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .isa-sw-operation.Mui-expanded .MuiAccordionSummary-root {
-  border-bottom: 1px solid rgba(30, 144, 255, 0.2);
-}
-
-html[data-mui-color-scheme="dark"] .isa-sw-operation.Mui-expanded,
-html.dark-mode .isa-sw-operation.Mui-expanded {
-  box-shadow:
-    0 4px 28px rgba(0, 0, 0, 0.32),
-    0 0 20px rgba(var(--isa-sw-accent, 30, 144, 255), 0.12) !important;
+  border-bottom: 1px solid rgba(var(--isa-sw-accent, 30, 144, 255), 0.26);
 }
 
 .isa-sw-params-wrap {

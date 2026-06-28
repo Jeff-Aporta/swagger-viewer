@@ -23,9 +23,8 @@ export async function mountSwaggerViewer(config, target = "#root") {
   const createRoot = globalThis.ReactDOM?.createRoot;
   if (!createRoot) throw new Error("mountSwaggerViewer: ReactDOM.createRoot no disponible");
 
-  const fixedServer = viewerConfig.fixedServer === true;
   if (!_reactRoot) _reactRoot = createRoot(el);
-  _reactRoot.render(globalThis.React.createElement(SwaggerViewer, { config: viewerConfig, spec, fixedServer }));
+  _reactRoot.render(globalThis.React.createElement(SwaggerViewer, { config: viewerConfig, spec }));
   return { unmount: () => _reactRoot?.unmount?.() };
 }
 

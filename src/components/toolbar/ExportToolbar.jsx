@@ -2,7 +2,6 @@ import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 import { GlassToolbar } from "../../lib/ui/glass.jsx";
 import { JsonCodeBlock } from "../try-it-out/JsonCodeBlock.jsx";
 import { buildIsDocument } from "../../lib/openapi/is-document.js";
-import { ServerUrlField } from "../server/ServerUrlField.jsx";
 import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../../lib/ui/glass-filter-dialog.js";
 
 const { useState, useEffect } = React;
@@ -226,15 +225,14 @@ export function SwaggerFrontLinks({ frontLinks = [], brandIcon, ns = "ISA", dens
   );
 }
 
-/** Barra embed sin shell: solo enlaces + servidor (export va en menú de sesión). */
-export function ExportToolbar({ frontLinks = [], ns = "ISA", docked = false, brandIcon, showServer = false, toolbarEnd = null }) {
-  if (!frontLinks?.length && !showServer && !toolbarEnd) return null;
+/** Barra embed sin shell: enlaces + sesión (export en menú de sesión). */
+export function ExportToolbar({ frontLinks = [], ns = "ISA", docked = false, brandIcon, toolbarEnd = null }) {
+  if (!frontLinks?.length && !toolbarEnd) return null;
 
   const inner = (
     <>
       <SwaggerFrontLinks frontLinks={frontLinks} brandIcon={brandIcon} ns={ns} />
       <Box className="isa-sw-toolbar__tools" sx={{ display: "inline-flex", flexWrap: "nowrap", gap: 1, alignItems: "center", ml: "auto", minWidth: 0, flexShrink: 0 }}>
-        {showServer ? <ServerUrlField ns={ns} compact dense /> : null}
         {toolbarEnd}
       </Box>
     </>

@@ -4,6 +4,7 @@ import { allowedFilterFieldKeys, distinctColumnsFromMeta, searchColumnOptionsFro
 
 export const ISS_LIST_FILTER_QUERY_PARAM = "f";
 export const ISS_LIST_FILTER_EXT = "x-iss-list-filter";
+export const DEFAULT_OWNER_QUERY_PARAMS = ["itercero", "icontacto"];
 export const DEFAULT_LIMIT = 9999;
 export const MAX_LIMIT = 9999;
 /** Límite en peticiones de autocomplete / lookup (x-iss-lookup). */
@@ -172,6 +173,51 @@ export function serializeIssFilter(bag, ext = {}) {
 export function serializeIssFilterQuery(bag, ext = {}) {
   const json = serializeIssFilter(bag, ext);
   return json ? encodeIssFilterB64(json) : "";
+}
+
+/** Query params de dueño (auditoría) configurados en el diálogo de filtro, no en `f.eq`. */
+export function ownerQueryParams(ext = {}) {
+  const custom = ext?.ownerQueryParams;
+  if (Array.isArray(custom) && custom.length) return custom;
+  return DEFAULT_OWNER_QUERY_PARAMS;
+}
+
+export function isIssListFilterParam(p) {
+  return p?.in === "query" && p?.name === ISS_LIST_FILTER_QUERY_PARAM && !!p?.[ISS_LIST_FILTER_EXT];
+}
+
+export function hiddenOwnerQueryParamNames(queryParams) {
+  const lf = queryParams?.find?.((p) => isIssListFilterParam(p));
+  if (!lf) return new Set();
+  const ext = lf[ISS_LIST_FILTER_EXT] || {};
+  const fromExt = ownerQueryParams(ext).filter((k) => ext.eq?.[k]);
+  if (fromExt.length) return new Set(fromExt);
+  return new Set(DEFAULT_OWNER_QUERY_PARAMS);
+}
+
+/** Separa itercero/icontacto del filtro B64 → query string aparte (como espera la API). */
+export function splitOwnerFromFilterQuery(raw, ext = {}) {
+  if (raw == null || !String(raw).trim()) return { filterQuery: "", owner: {} };
+  const ownerKeys = new Set(ownerQueryParams(ext));
+  const parsed = parseIssFilterQueryValue(raw);
+  if (!parsed.ok || !parsed.value || !Object.keys(parsed.value).length) {
+    return { filterQuery: String(raw).trim(), owner: {} };
+  }
+  const v = { ...parsed.value };
+  const owner = {};
+  if (v.eq && typeof v.eq === "object") {
+    const eq = { ...v.eq };
+    for (const k of ownerKeys) {
+      if (eq[k] != null && eq[k] !== "") {
+        owner[k] = String(eq[k]);
+        delete eq[k];
+      }
+    }
+    if (Object.keys(eq).length) v.eq = eq;
+    else delete v.eq;
+  }
+  const json = Object.keys(v).length ? JSON.stringify(v) : "";
+  return { filterQuery: json ? encodeIssFilterB64(json) : "", owner };
 }
 
 /** JSON compacto decodificado desde `f` (Base64 o JSON literal). */

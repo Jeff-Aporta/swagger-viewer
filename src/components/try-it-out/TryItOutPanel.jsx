@@ -3,13 +3,14 @@ import { RequestBodySection } from "./RequestBodySection.jsx";
 import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
 import { QueryFiltersPanel } from "./QueryFiltersPanel.jsx";
 import { IssListFilterField, isIssListFilterParam } from "../filters/IssListFilterField.jsx";
+import { ISS_LIST_FILTER_EXT, hiddenOwnerQueryParamNames, splitOwnerFromFilterQuery } from "../../lib/filter/iss-list-filter.js";
 import { jsonPretty, operationRequiresBearer, resolveServerUrl } from "../../lib/openapi/openapi.js";
 import { defaultTryItBodyText, opUsesRequestBody, resolveTryItBodyExample, shouldShowTryItBody } from "../../lib/openapi/tryit-body.js";
 import { getStoredJwt } from "../../lib/auth/auth.js";
 import { joinApiUrl } from "../../lib/lookup/server-base.js";
-import { fetchApiRaw, extractEnvelopeError } from "../../lib/http/api-fetch.js";
+import { fetchApiRaw, fetchSseStream, extractEnvelopeError } from "../../lib/http/api-fetch.js";
 import { formatHttpError, extractApiError } from "../../lib/http/http-error.js";
-import { formatUnitTestSse, isEventStreamResponse, parseSseDataLines } from "../../lib/http/sse-parse.js";
+import { createSseIncrementalParser, formatUnitTestSse, isEventStreamResponse, parseSseDataLines } from "../../lib/http/sse-parse.js";
 import { buildTryItConfirmCopy, needsTryItConfirm } from "../../lib/openapi/tryit-confirm.js";
 import { renderMarkdown } from "../../lib/ui/markdown.js";
 import { useServerBase } from "../../context/ServerBaseContext.jsx";
@@ -39,7 +40,20 @@ function buildTryItOutUrl({ op, values, serverBase, spec, packQueryQ, queryParam
     const qVal = values.q;
     if (qVal != null && String(qVal).length) qs.set("q", String(qVal));
   } else {
+    const hiddenOwner = hiddenOwnerQueryParamNames(queryParams);
     for (const p of queryParams) {
+      if (hiddenOwner.has(p.name)) continue;
+      if (isIssListFilterParam(p)) {
+        const raw = values[p.name];
+        if (raw != null && String(raw).length) {
+          const { filterQuery, owner } = splitOwnerFromFilterQuery(String(raw), p[ISS_LIST_FILTER_EXT] || {});
+          if (filterQuery) qs.set(p.name, filterQuery);
+          for (const [k, v] of Object.entries(owner)) {
+            if (v) qs.set(k, v);
+          }
+        }
+        continue;
+      }
       const v = values[p.name];
       if (v != null && String(v).length) qs.set(p.name, v);
     }
@@ -56,7 +70,9 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
   const packQueryQ = !!queryQExt;
   const pathParams = pathParamsOnly(params);
   const headerParams = params.filter((p) => p.in === "header");
-  const extraParams = packQueryQ ? headerParams : [...queryParams, ...headerParams];
+  const hiddenOwner = hiddenOwnerQueryParamNames(queryParams);
+  const visibleQueryParams = queryParams.filter((p) => !hiddenOwner.has(p.name));
+  const extraParams = packQueryQ ? headerParams : [...visibleQueryParams, ...headerParams];
 
   const needsBearer = authEnabled && operationRequiresBearer(op, spec);
   const needsConfirm = needsTryItConfirm(op, spec, authEnabled);
@@ -129,13 +145,69 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
         init.body = String(body ?? "").trim() || defaultBody;
       }
       const started = performance.now();
-      const { data, res, text, ok } = await fetchApiRaw(url, init);
-      const elapsed = Math.round(performance.now() - started);
-      if (isEventStreamResponse(res, text)) {
+      const probe = await fetchApiRaw(url, init);
+      const elapsedSoFar = Math.round(performance.now() - started);
+      const isSse = isEventStreamResponse(probe.res, probe.text);
+      if (isSse && probe.ok) {
+        // Re-ejecutar en modo streaming para mostrar el progreso en vivo.
+        const parser = createSseIncrementalParser();
+        let events = [];
+        let fullText = "";
+        let updateTimer = null;
+        const flushProgress = () => {
+          updateTimer = null;
+          const elapsed = Math.round(performance.now() - started);
+          const sse = formatUnitTestSse(events);
+          setResult({
+            status: probe.res.status,
+            statusText: probe.res.statusText,
+            elapsed,
+            body: fullText,
+            sseMarkdown: sse.markdown,
+            sseOk: sse.ok,
+            sseStreaming: true,
+          });
+        };
+        const handleChunk = (chunk) => {
+          fullText += chunk;
+          events = events.concat(parser.feed(chunk));
+          if (!updateTimer) updateTimer = setTimeout(flushProgress, 120);
+        };
+        const handleDone = () => {
+          if (updateTimer) { clearTimeout(updateTimer); updateTimer = null; }
+          events = events.concat(parser.flush());
+          const elapsed = Math.round(performance.now() - started);
+          const sse = formatUnitTestSse(events);
+          if (sse.ok === false) setApiErr("El test unitario reportó fallos. Revise los pasos marcados con ❌.");
+          setResult({
+            status: probe.res.status,
+            statusText: probe.res.statusText,
+            elapsed,
+            body: fullText,
+            sseMarkdown: sse.markdown,
+            sseOk: sse.ok,
+            sseStreaming: false,
+          });
+        };
+        try {
+          await fetchSseStream(url, init, (full, info) => {
+            const newChunks = full.slice(fullText.length);
+            if (newChunks) handleChunk(newChunks);
+            if (info.done) handleDone();
+          });
+        } catch (streamErr) {
+          setErr(streamErr.message || String(streamErr));
+        } finally {
+          setBusy(false);
+        }
+        return;
+      }
+      const { data, res, text, ok } = probe;
+      const elapsed = elapsedSoFar;
+      if (isSse && !ok) {
         const events = parseSseDataLines(text);
         const sse = formatUnitTestSse(events);
-        if (!ok) setApiErr(formatHttpError(res.status, { statusText: res.statusText, endpoint: url }));
-        else if (sse.ok === false) setApiErr("El test unitario reportó fallos. Revise los pasos marcados con ❌.");
+        setApiErr(formatHttpError(res.status, { statusText: res.statusText, endpoint: url }));
         setResult({ status: res.status, statusText: res.statusText, elapsed, body: sse.raw || text, sseMarkdown: sse.markdown, sseOk: sse.ok });
         return;
       }
@@ -217,7 +289,7 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
           {result.sseMarkdown ? (
             <Box className="isa-sw-doc isa-sw-tryit-sse" sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: "action.hover", overflow: "auto", maxHeight: "28rem" }} dangerouslySetInnerHTML={{ __html: renderMarkdown(result.sseMarkdown) }} />
           ) : (
-            <JsonCodeBlock value={result.body} />
+            <JsonCodeBlock value={result.body} onClear={() => { setResult(null); setApiErr(""); }} clearTitle="Borrar respuesta" />
           )}
         </Box>
       ) : null}

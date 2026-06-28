@@ -1,5 +1,7 @@
-const { useEffect, useRef } = React;
-const { Box } = MaterialUI;
+import { resolveCodeMirrorTheme } from "../../../../front-shared/cdn/isa/js/ui/code-mirror.js";
+
+const { useEffect, useRef, useMemo } = React;
+const { Box, IconButton, Tooltip } = MaterialUI;
 
 const JSON_BLOCK_MAX_HEIGHT = "80vh";
 
@@ -12,6 +14,8 @@ export function JsonCodeBlock({
   disabled = false,
   placeholder = "",
   className = "",
+  onClear,
+  clearTitle = "Borrar",
 }) {
   const hostRef = useRef(null);
   const cmRef = useRef(null);
@@ -20,6 +24,16 @@ export function JsonCodeBlock({
   const isReadOnly = readOnly || disabled;
   const editable = !isReadOnly && typeof onChange === "function";
   const resolvedMinHeight = minHeight ?? (isReadOnly ? "0" : "6rem");
+  const toolbarExtra = useMemo(() => {
+    if (!onClear || !Panel) return null;
+    return (
+      <Tooltip title={clearTitle}>
+        <IconButton size="small" className="isa-cm-panel__fab isa-cm-panel__clear" aria-label={clearTitle} onClick={onClear}>
+          <iconify-icon icon="mdi:delete-outline" width="14" height="14" />
+        </IconButton>
+      </Tooltip>
+    );
+  }, [onClear, clearTitle, Panel]);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -41,7 +55,20 @@ export function JsonCodeBlock({
       onChange: editable ? (text) => onChangeRef.current?.(text) : undefined,
     });
     cmRef.current = inst;
+    function applyTheme() {
+      const cm = cmRef.current;
+      if (!cm?.setOption) return;
+      const next = resolveCodeMirrorTheme();
+      if (cm.getOption("theme") !== next) {
+        cm.setOption("theme", next);
+        cm.refresh();
+      }
+    }
+    applyTheme();
+    const obs = new MutationObserver(applyTheme);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mui-color-scheme"] });
     return () => {
+      obs.disconnect();
       cmRef.current = null;
       if (inst?.getWrapperElement) {
         const w = inst.getWrapperElement();
@@ -76,6 +103,7 @@ export function JsonCodeBlock({
           minHeight={resolvedMinHeight}
           maxHeight={maxHeight}
           placeholder={placeholder}
+          toolbarExtra={toolbarExtra}
         />
       </Box>
     );

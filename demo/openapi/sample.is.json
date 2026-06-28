@@ -23,7 +23,7 @@
       }
     ],
     "viewerRef": "17e5836",
-    "frontSharedRef": "443951c"
+    "frontSharedRef": "c97330e"
   },
   "spec": {
     "openapi": "3.0.3",
@@ -255,9 +255,9 @@
               "x-iss-list-filter": {
                 "listPath": "/conversaciones",
                 "defaults": {
-                  "limit": 9999,
+                  "limit": 100,
                   "offset": 0,
-                  "sort": "-iconversacion"
+                  "sort": "iconversacion"
                 },
                 "searchHint": "Busca en iconversacion (si es numérico), titulo y prompt del hilo.",
                 "search": {
@@ -275,6 +275,10 @@
                   ],
                   "description": "Columnas para SELECT DISTINCT (autocomplete / lookup)."
                 },
+                "ownerQueryParams": [
+                  "itercero",
+                  "icontacto"
+                ],
                 "eq": {
                   "itercero": {
                     "label": "itercero",
@@ -357,12 +361,12 @@
                       "maxLength": 200,
                       "description": "Busca en iconversacion (si es numérico), titulo y prompt del hilo."
                     },
-                    "limit": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "maximum": 9999,
-                      "default": 9999
-                    },
+"limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9999,
+                  "default": 100
+                },
                     "offset": {
                       "type": "integer",
                       "minimum": 0,
@@ -449,7 +453,7 @@
                   "search": "saldo",
                   "limit": 100,
                   "offset": 0,
-                  "sort": "-fhultact"
+                  "sort": "iconversacion"
                 }
               }
             }
@@ -733,7 +737,7 @@
                 "listFilter": {
                   "limit": 10,
                   "offset": 0,
-                  "sort": "-fhultact"
+                  "sort": "iconversacion"
                 },
                 "method": "GET",
                 "hint": "Liste conversaciones del JWT con GET /conversaciones y filtro f; el autocomplete usa este endpoint."
@@ -1002,7 +1006,7 @@
                 "listFilter": {
                   "limit": 10,
                   "offset": 0,
-                  "sort": "-fhultact"
+                  "sort": "iconversacion"
                 },
                 "method": "GET",
                 "hint": "Liste conversaciones del JWT con GET /conversaciones y filtro f; el autocomplete usa este endpoint."
@@ -1271,7 +1275,7 @@
                 "listFilter": {
                   "limit": 10,
                   "offset": 0,
-                  "sort": "-fhultact"
+                  "sort": "iconversacion"
                 },
                 "method": "GET",
                 "hint": "Liste conversaciones del JWT con GET /conversaciones y filtro f; el autocomplete usa este endpoint."
@@ -1518,7 +1522,7 @@
                 "listFilter": {
                   "limit": 10,
                   "offset": 0,
-                  "sort": "-fhultact"
+                  "sort": "iconversacion"
                 },
                 "method": "GET",
                 "hint": "Liste conversaciones del JWT con GET /conversaciones y filtro f; el autocomplete usa este endpoint."
@@ -1765,7 +1769,7 @@
                         "listFilter": {
                           "limit": 10,
                           "offset": 0,
-                          "sort": "-fhultact"
+                          "sort": "iconversacion"
                         }
                       }
                     },
@@ -1972,7 +1976,7 @@
                         "listFilter": {
                           "limit": 10,
                           "offset": 0,
-                          "sort": "-fhultact"
+                          "sort": "iconversacion"
                         }
                       }
                     },
@@ -2180,7 +2184,7 @@
                         "listFilter": {
                           "limit": 10,
                           "offset": 0,
-                          "sort": "-fhultact"
+                          "sort": "iconversacion"
                         }
                       }
                     },
@@ -2308,69 +2312,6 @@
                       "fhsalida": "2026-06-19T15:30:00.012Z",
                       "imensaje": 401020,
                       "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/timer_cerrarConversaciones": {
-        "get": {
-          "summary": "Timer cerrar conversaciones (dev)",
-          "tags": [
-            "Sistema"
-          ],
-          "x-iss-doc-md": "## Timer cerrar conversaciones (dev)\r\n\r\nEjecuta manualmente el job que cierra conversaciones inactivas (equivalente al timer Azure).\r\n\r\n### Cuándo usarlo\r\n\r\n- Solo entorno **local/dev** para probar cierre por inactividad.\r\n- No requiere JWT en despliegues de desarrollo.\r\n\r\n\\`\\`\\`http\r\nGET /api/timer_cerrarConversaciones\r\n\\`\\`\\`\r\n\r\nRespuesta: cantidad de conversaciones cerradas y timestamp de ejecución.\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
-          "responses": {
-            "200": {
-              "description": "Conversaciones cerradas por timer",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "respuesta": {
-                        "type": "object"
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": true,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.042Z"
-                    },
-                    "respuesta": {
-                      "conversaciones_cerradas": 3,
-                      "ejecutado_en": "2026-06-19T15:30:00.042Z"
                     }
                   }
                 }

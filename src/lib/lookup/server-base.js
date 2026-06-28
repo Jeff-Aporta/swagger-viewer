@@ -21,39 +21,19 @@ export function normalizeServerBase(raw) {
 
 
 export function inferDefaultServerBase(spec, config = {}) {
+  const apiBase = normalizeServerBase(config?.apiBase);
+  if (apiBase) return apiBase;
 
   const raw = resolveServerUrl(spec);
-
-  const authBase = normalizeServerBase(config?.auth?.loginUrl);
-
   const origin = normalizeServerBase(typeof location !== "undefined" ? location.origin : "");
 
-
-
-  if (!raw) return authBase || origin;
-
-
+  if (!raw) return origin;
 
   if (/^https?:\/\//i.test(raw)) return normalizeServerBase(raw);
 
-
-
-  const host = authBase || origin;
-
+  const host = origin;
   const path = raw.startsWith("/") ? raw : `/${raw}`;
-
   return normalizeServerBase(`${host}${path}`);
-
-}
-
-
-
-export function serverBaseStorageKey(config = {}) {
-
-  const hint = normalizeServerBase(config?.auth?.loginUrl) || (typeof location !== "undefined" ? location.origin : "local");
-
-  return `isa-sw-server-base:${hint}`;
-
 }
 
 

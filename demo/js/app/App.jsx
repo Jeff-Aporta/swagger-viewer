@@ -38,13 +38,15 @@ const DEMO_NS = "ISS";
 
 function enrichViewerConfig(viewer = {}, { remoteApiBase, conn } = {}) {
   const defaults = demoBrandDefaults(conn);
-  const auth = resolveAuthConfig({ enabled: true, loginKind: "portal", ...viewer.auth }, remoteApiBase || viewer.apiBase);
+  const apiBase = normalizeApiBase(remoteApiBase || viewer.apiBase || "");
+  const auth = resolveAuthConfig({ enabled: true, loginKind: "portal", ...viewer.auth }, apiBase);
   return {
     shell: true,
     brandLock: true,
     ...viewer,
     ns: viewer.ns ?? DEMO_NS,
     brand: defaults,
+    ...(apiBase ? { apiBase } : {}),
     auth,
   };
 }
@@ -77,7 +79,7 @@ export function App() {
   const [sourceText, setSourceText] = useState("");
   const [parseErr, setParseErr] = useState("");
   const [applied, setApplied] = useState(null);
-  const [apiBase, setApiBase] = useState(() => connApiBase || normalizeApiBase(apiParam ? decodeURIComponent(apiParam) : "") || readStoredApiBase());
+  const [apiBase, setApiBase] = useState(() => connApiBase || normalizeApiBase(apiParam ? decodeURIComponent(apiParam) : ""));
   const [connectBusy, setConnectBusy] = useState(() => !!(connApiBase && conn?.auto !== false));
   const [remoteUrls, setRemoteUrls] = useState(null);
   const [remoteBuilt, setRemoteBuilt] = useState(null);
@@ -122,6 +124,7 @@ export function App() {
 
   useEffect(() => {
     if (specUrl) return;
+    if (!connApiBase && !apiParam) return;
     const bases = resolveConnectBases({
       connApiBase,
       apiParam: apiParam ? decodeURIComponent(apiParam) : "",
@@ -282,7 +285,6 @@ export function App() {
       onPullConfig={pullConfig}
       onPushConfig={pushConfig}
       connectBusy={connectBusy}
-      scopes={applied?.config?.scopes}
     />
   );
 

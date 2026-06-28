@@ -13,7 +13,7 @@ export function WelcomeScreen({ onOpenEditor, onConnectCustom, ns = "ISS" }) {
         </Box>
         <Typography variant="h5" component="h1" sx={{ fontWeight: 700, letterSpacing: "0.02em" }}>IS-Swagger</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25, lineHeight: 1.5, maxWidth: 420, mx: "auto" }}>
-          Documenta, prueba y exporta tu API.
+          Documenta, prueba y exporta tu API. Para conectar a un host embebido use <code>?conn=</code> (base64url). Sin parámetros, abra el constructor o elija la API manualmente.
         </Typography>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} justifyContent="center" alignItems="center" sx={{ mt: 3, width: "100%" }}>
           <Button variant="contained" color="primary" onClick={onOpenEditor} startIcon={<SwIcon icon="mdi:code-json" size={20} ns={ns} />}>

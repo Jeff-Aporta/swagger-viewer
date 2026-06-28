@@ -58,6 +58,8 @@ export function buildGhPagesSwaggerUrl(apiBase, extra = {}) {
   u.searchParams.set("conn", encodeConnParam(conn));
   const s = extra.s ?? extra.uiState;
   if (s) u.searchParams.set("s", String(s).trim());
+  const nav = extra.nav ?? (typeof location !== "undefined" ? new URLSearchParams(location.search).get("nav") : "");
+  if (nav) u.searchParams.set("nav", String(nav).trim());
   return u.href;
 }
 
