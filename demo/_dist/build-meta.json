@@ -1,18 +1,18 @@
 {
-  "builtAt": "2026-06-28T15:22:40.631Z",
+  "builtAt": "2026-06-28T15:54:25.845Z",
   "kind": "component-demo",
   "demoRoot": "..\\..\\components\\swagger\\demo",
   "files": 6,
   "bytesIn": 17084,
-  "bytesOut": 174969,
-  "ratio": 10.242,
-  "hash": "fc087134a0d6",
+  "bytesOut": 175136,
+  "ratio": 10.251,
+  "hash": "8a1616c5ff51",
   "appBundle": "_dist/app.min.js",
   "entries": [
     {
       "rel": "js\\app\\main.jsx",
       "bytesIn": 144,
-      "bytesOut": 162994
+      "bytesOut": 163161
     },
     {
       "rel": "css/demo.css",

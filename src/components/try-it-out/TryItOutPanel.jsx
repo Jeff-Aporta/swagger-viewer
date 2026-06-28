@@ -18,7 +18,7 @@ import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 import { DangerousOpConfirmDialog } from "../dialogs/DangerousOpConfirmDialog.jsx";
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
 
-const { useState, useMemo, useEffect } = React;
+const { useState, useMemo, useEffect, useRef } = React;
 const { Box, Button, Typography, CircularProgress, Chip, TextField, Tooltip } = MaterialUI;
 
 const METHOD_COLORS = { get: "info", post: "success", put: "warning", patch: "secondary", delete: "error" };
@@ -86,6 +86,16 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
   const [result, setResult] = useState(null);
   const [err, setErr] = useState("");
   const [apiErr, setApiErr] = useState("");
+  const sseScrollRef = useRef(null);
+  useEffect(() => {
+    if (!result?.sseMarkdown) return;
+    const el = sseScrollRef.current;
+    if (!el) return;
+    // seguir el stream mientras streamea, y al final bajar al resumen
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [result?.sseMarkdown]);
 
   const previewUrl = useMemo(
     () => buildTryItOutUrl({ op, values, serverBase, spec, packQueryQ, queryParams }),
@@ -286,7 +296,7 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
             {result.sseOk === true ? " · test OK" : result.sseOk === false ? " · test con fallos" : ""}
           </Typography>
           {result.sseMarkdown ? (
-            <Box className="isa-sw-doc isa-sw-tryit-sse" sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: "action.hover", overflow: "auto", maxHeight: "28rem" }} dangerouslySetInnerHTML={{ __html: renderMarkdown(result.sseMarkdown) }} />
+            <Box ref={sseScrollRef} className="isa-sw-doc isa-sw-tryit-sse" sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: "action.hover", overflow: "auto", maxHeight: "28rem" }} dangerouslySetInnerHTML={{ __html: renderMarkdown(result.sseMarkdown) }} />
           ) : (
             <JsonCodeBlock value={result.body} onClear={() => { setResult(null); setApiErr(""); }} clearTitle="Borrar respuesta" />
           )}
