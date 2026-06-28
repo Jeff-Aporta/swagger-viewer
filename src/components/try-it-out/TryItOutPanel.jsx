@@ -8,7 +8,7 @@ import { jsonPretty, operationRequiresBearer, resolveServerUrl } from "../../lib
 import { defaultTryItBodyText, opUsesRequestBody, resolveTryItBodyExample, shouldShowTryItBody } from "../../lib/openapi/tryit-body.js";
 import { getStoredJwt } from "../../lib/auth/auth.js";
 import { joinApiUrl } from "../../lib/lookup/server-base.js";
-import { fetchApiRaw, fetchSseStream, extractEnvelopeError } from "../../lib/http/api-fetch.js";
+import { fetchApiRaw, extractEnvelopeError } from "../../lib/http/api-fetch.js";
 import { formatHttpError, extractApiError } from "../../lib/http/http-error.js";
 import { createSseIncrementalParser, formatUnitTestSse, isEventStreamResponse, parseSseDataLines } from "../../lib/http/sse-parse.js";
 import { buildTryItConfirmCopy, needsTryItConfirm } from "../../lib/openapi/tryit-confirm.js";
@@ -149,55 +149,54 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
       const elapsedSoFar = Math.round(performance.now() - started);
       const isSse = isEventStreamResponse(probe.res, probe.text);
       if (isSse && probe.ok) {
-        // Re-ejecutar en modo streaming para mostrar el progreso en vivo.
+        // El probe ya consumió el stream completo; lo que tenemos en `text`
+        // son los eventos crudos del SSE. Los parseamos incrementalmente
+        // para evitar una segunda ejecución de los tests y mostrar el
+        // progreso tal y como llegó.
         const parser = createSseIncrementalParser();
-        let events = [];
-        let fullText = "";
-        let updateTimer = null;
-        const flushProgress = () => {
-          updateTimer = null;
+        let events = parser.feed(probe.text);
+        events = events.concat(parser.flush());
+        let cursor = 0;
+        let renderTimer = null;
+        const renderProgress = () => {
+          renderTimer = null;
+          const sliced = events.slice(0, cursor);
           const elapsed = Math.round(performance.now() - started);
-          const sse = formatUnitTestSse(events);
+          const sse = formatUnitTestSse(sliced);
           setResult({
             status: probe.res.status,
             statusText: probe.res.statusText,
             elapsed,
-            body: fullText,
+            body: probe.text,
             sseMarkdown: sse.markdown,
             sseOk: sse.ok,
-            sseStreaming: true,
+            sseStreaming: cursor < events.length,
           });
         };
-        const handleChunk = (chunk) => {
-          fullText += chunk;
-          events = events.concat(parser.feed(chunk));
-          if (!updateTimer) updateTimer = setTimeout(flushProgress, 120);
+        const step = () => {
+          cursor = Math.min(cursor + 1, events.length);
+          renderProgress();
+          if (cursor < events.length) {
+            renderTimer = setTimeout(step, 180);
+          } else {
+            const elapsed = Math.round(performance.now() - started);
+            const sse = formatUnitTestSse(events);
+            if (sse.ok === false) setApiErr("El test unitario reportó fallos. Revise los pasos marcados con ❌.");
+            setResult({
+              status: probe.res.status,
+              statusText: probe.res.statusText,
+              elapsed,
+              body: probe.text,
+              sseMarkdown: sse.markdown,
+              sseOk: sse.ok,
+              sseStreaming: false,
+            });
+            setBusy(false);
+          }
         };
-        const handleDone = () => {
-          if (updateTimer) { clearTimeout(updateTimer); updateTimer = null; }
-          events = events.concat(parser.flush());
-          const elapsed = Math.round(performance.now() - started);
-          const sse = formatUnitTestSse(events);
-          if (sse.ok === false) setApiErr("El test unitario reportó fallos. Revise los pasos marcados con ❌.");
-          setResult({
-            status: probe.res.status,
-            statusText: probe.res.statusText,
-            elapsed,
-            body: fullText,
-            sseMarkdown: sse.markdown,
-            sseOk: sse.ok,
-            sseStreaming: false,
-          });
-        };
-        try {
-          await fetchSseStream(url, init, (full, info) => {
-            const newChunks = full.slice(fullText.length);
-            if (newChunks) handleChunk(newChunks);
-            if (info.done) handleDone();
-          });
-        } catch (streamErr) {
-          setErr(streamErr.message || String(streamErr));
-        } finally {
+        if (events.length > 0) {
+          renderTimer = setTimeout(step, 180);
+        } else {
           setBusy(false);
         }
         return;
