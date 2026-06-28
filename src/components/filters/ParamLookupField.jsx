@@ -1,17 +1,17 @@
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
 const { Autocomplete, TextField, Box, CircularProgress, InputAdornment } = MaterialUI;
 
-import { getStoredJwt } from "../lib/auth/auth.js";
-import { canRunIssLookup } from "../lib/lookup/lookup-auth.js";
-import { fetchApiJson } from "../lib/http/api-fetch.js";
-import { resolveLookupRequestUrl } from "../lib/lookup/server-base.js";
-import { formatLookupLabel, lookupLabelParts, lookupLabelSeparator } from "../lib/lookup/lookup-label.js";
-import { extractLookupRows } from "../lib/lookup/lookup-rows.js";
-import { useServerBase } from "../context/ServerBaseContext.jsx";
-import { sanitizeParamInputValue, paramInputMode, paramSchemaType } from "../lib/openapi/param-schema.js";
-import { createDelayer, LOOKUP_SEARCH_DELAY_MS } from "../lib/ui/delayer.js";
-import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
-import { autocompleteFusedClassName, autocompleteFusedSlotProps } from "../lib/ui/autocomplete-fused.js";
+import { getStoredJwt } from "../../lib/auth/auth.js";
+import { canRunIssLookup } from "../../lib/lookup/lookup-auth.js";
+import { fetchApiJson } from "../../lib/http/api-fetch.js";
+import { resolveLookupRequestUrl } from "../../lib/lookup/server-base.js";
+import { formatLookupLabel, lookupLabelParts, lookupLabelSeparator } from "../../lib/lookup/lookup-label.js";
+import { extractLookupRows } from "../../lib/lookup/lookup-rows.js";
+import { useServerBase } from "../../context/ServerBaseContext.jsx";
+import { sanitizeParamInputValue, paramInputMode, paramSchemaType } from "../../lib/openapi/param-schema.js";
+import { createDelayer, LOOKUP_SEARCH_DELAY_MS } from "../../lib/ui/delayer.js";
+import { HttpErrorAlert } from "../try-it-out/HttpErrorAlert.jsx";
+import { autocompleteFusedClassName, autocompleteFusedSlotProps } from "../../lib/ui/autocomplete-fused.js";
 
 function mapLookupRows(rows, lookup, session) {
   return rows.map((row) => ({

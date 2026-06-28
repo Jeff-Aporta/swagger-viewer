@@ -1,5 +1,5 @@
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
-import { deriveSubgroupAccent } from "../lib/ui/tag-theme.js";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { deriveSubgroupAccent } from "../../lib/ui/tag-theme.js";
 
 const { Box, Typography } = MaterialUI;
 

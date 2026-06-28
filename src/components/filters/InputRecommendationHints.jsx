@@ -1,9 +1,9 @@
-import { ISS_INPUT_RECOMMENDATION_EXT, recommendationSampleRequest } from "../lib/lookup/input-recommendation.js";
-import { jsonPretty } from "../lib/openapi/openapi.js";
-import { useServerBase } from "../context/ServerBaseContext.jsx";
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
-import { useGlassColors, glassAccordionSx } from "../lib/ui/glass.jsx";
-import { issFilterDialogProps, issFilterDialogHeader, loginFormContentSx, loginFormActionsSx } from "../lib/ui/glass-filter-dialog.js";
+import { ISS_INPUT_RECOMMENDATION_EXT, recommendationSampleRequest } from "../../lib/lookup/input-recommendation.js";
+import { jsonPretty } from "../../lib/openapi/openapi.js";
+import { useServerBase } from "../../context/ServerBaseContext.jsx";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { useGlassColors, glassAccordionSx } from "../../lib/ui/glass.jsx";
+import { issFilterDialogProps, issFilterDialogHeader, loginFormContentSx, loginFormActionsSx } from "../../lib/ui/glass-filter-dialog.js";
 
 const { useState, useEffect, useMemo } = React;
 const { Box, Typography, Chip, Tooltip, Dialog, DialogContent, DialogActions, Button, Accordion, AccordionSummary, AccordionDetails } = MaterialUI;

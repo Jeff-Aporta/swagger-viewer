@@ -1,13 +1,13 @@
-import { InfoHeader } from "./components/InfoHeader.jsx";
-import { OperationTagGroup } from "./components/OperationTagGroup.jsx";
-import { ExportToolbar, SwaggerFrontLinks, buildExportFormats } from "./components/ExportToolbar.jsx";
-import { AuthDialogs } from "./components/AuthDialogs.jsx";
-import { SwaggerHeaderAuth } from "./components/SwaggerHeaderAuth.jsx";
-import { SwaggerOpenGhPagesBtn } from "./components/SwaggerOpenGhPagesBtn.jsx";
-import { SwaggerReloadBtn } from "./components/SwaggerReloadBtn.jsx";
-import { SwaggerToolbarThemeBtn } from "./components/SwaggerToolbarThemeBtn.jsx";
-import { ServerUrlField } from "./components/ServerUrlField.jsx";
-import { ServerHealthBanner } from "./components/ServerHealthBanner.jsx";
+import { InfoHeader } from "./components/doc/InfoHeader.jsx";
+import { OperationTagGroup } from "./components/operations/OperationTagGroup.jsx";
+import { ExportToolbar, SwaggerFrontLinks, buildExportFormats } from "./components/toolbar/ExportToolbar.jsx";
+import { AuthDialogs } from "./components/dialogs/AuthDialogs.jsx";
+import { SwaggerHeaderAuth } from "./components/toolbar/SwaggerHeaderAuth.jsx";
+import { SwaggerOpenGhPagesBtn } from "./components/toolbar/SwaggerOpenGhPagesBtn.jsx";
+import { SwaggerReloadBtn } from "./components/toolbar/SwaggerReloadBtn.jsx";
+import { SwaggerToolbarThemeBtn } from "./components/toolbar/SwaggerToolbarThemeBtn.jsx";
+import { ServerUrlField } from "./components/server/ServerUrlField.jsx";
+import { ServerHealthBanner } from "./components/server/ServerHealthBanner.jsx";
 import { ExpandStackProvider } from "./context/ExpandStackContext.jsx";
 import { ServerBaseProvider } from "./context/ServerBaseContext.jsx";
 import {

@@ -1,5 +1,5 @@
-import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../lib/ui/glass-filter-dialog.js";
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../../lib/ui/glass-filter-dialog.js";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 
 const { Dialog, DialogContent, DialogActions, Button, Typography, Alert } = MaterialUI;
 

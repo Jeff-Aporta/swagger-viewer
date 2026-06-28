@@ -1,8 +1,8 @@
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 
-import { CUSTOM_SCOPE_ID, resolveScopePresetId, normalizeScopes } from "../lib/lookup/server-scopes.js";
+import { CUSTOM_SCOPE_ID, resolveScopePresetId, normalizeScopes } from "../../lib/lookup/server-scopes.js";
 
-import { normalizeServerBase } from "../lib/lookup/server-base.js";
+import { normalizeServerBase } from "../../lib/lookup/server-base.js";
 
 
 

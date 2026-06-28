@@ -1,5 +1,5 @@
-import { formatSessionDisplayName, stripContapymeEmail, resolveSessionHeaderLabel } from "../lib/auth/auth.js";
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { formatSessionDisplayName, stripContapymeEmail, resolveSessionHeaderLabel } from "../../lib/auth/auth.js";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 import { ExportFormatControls } from "./ExportToolbar.jsx";
 
 const { Box, Stack, Button, Chip, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, Divider } = MaterialUI;

@@ -1,7 +1,7 @@
-import { joinApiUrl } from "../lib/lookup/server-base.js";
-import { useServerBase } from "../context/ServerBaseContext.jsx";
-import { fetchApiJson } from "../lib/http/api-fetch.js";
-import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
+import { joinApiUrl } from "../../lib/lookup/server-base.js";
+import { useServerBase } from "../../context/ServerBaseContext.jsx";
+import { fetchApiJson } from "../../lib/http/api-fetch.js";
+import { HttpErrorAlert } from "../try-it-out/HttpErrorAlert.jsx";
 
 const { useState, useEffect } = React;
 

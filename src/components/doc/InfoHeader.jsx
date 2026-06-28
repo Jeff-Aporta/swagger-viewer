@@ -1,4 +1,4 @@
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 
 const { Box, Typography } = MaterialUI;
 

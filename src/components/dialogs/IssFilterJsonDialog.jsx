@@ -1,7 +1,7 @@
-import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
-import { jsonTextToFilterQuery } from "../lib/filter/iss-list-filter.js";
-import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../lib/ui/glass-filter-dialog.js";
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { JsonCodeBlock } from "../try-it-out/JsonCodeBlock.jsx";
+import { jsonTextToFilterQuery } from "../../lib/filter/iss-list-filter.js";
+import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../../lib/ui/glass-filter-dialog.js";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 
 const { Dialog, DialogContent, DialogActions, Button, Alert, Typography } = MaterialUI;
 

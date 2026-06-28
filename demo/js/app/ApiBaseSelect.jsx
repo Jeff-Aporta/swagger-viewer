@@ -2,7 +2,7 @@ import { normalizeApiBase, inferSwaggerUrls } from "../../../src/lib/api/swagger
 
 import { DEMO_API_SCOPES } from "../../../src/lib/lookup/server-scopes.js";
 
-import { ServerScopeSelect } from "../../../src/components/ServerScopeSelect.jsx";
+import { ServerScopeSelect } from "../../../src/components/server/ServerScopeSelect.jsx";
 
 import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
 

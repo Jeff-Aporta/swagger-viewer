@@ -1,9 +1,9 @@
 import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
-import { extractJsonExample, jsonPretty, responseTone } from "../lib/openapi/openapi.js";
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
-import { respExpandIndex } from "../lib/nav/expand-stack.js";
-import { useExpandStack } from "../context/ExpandStackContext.jsx";
-import { useGlassColors, glassSurfaceSx } from "../lib/ui/glass.jsx";
+import { extractJsonExample, jsonPretty, responseTone } from "../../lib/openapi/openapi.js";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { respExpandIndex } from "../../lib/nav/expand-stack.js";
+import { useExpandStack } from "../../context/ExpandStackContext.jsx";
+import { useGlassColors, glassSurfaceSx } from "../../lib/ui/glass.jsx";
 
 const {
   Accordion,

@@ -1,5 +1,5 @@
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
-import { useServerBase } from "../context/ServerBaseContext.jsx";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { useServerBase } from "../../context/ServerBaseContext.jsx";
 import { ServerScopeSelect } from "./ServerScopeSelect.jsx";
 
 const { InputAdornment, Tooltip, IconButton, Box } = MaterialUI;

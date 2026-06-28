@@ -1,9 +1,9 @@
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
-import { GlassToolbar } from "../lib/ui/glass.jsx";
-import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
-import { buildIsDocument } from "../lib/openapi/is-document.js";
-import { ServerUrlField } from "./ServerUrlField.jsx";
-import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../lib/ui/glass-filter-dialog.js";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { GlassToolbar } from "../../lib/ui/glass.jsx";
+import { JsonCodeBlock } from "../try-it-out/JsonCodeBlock.jsx";
+import { buildIsDocument } from "../../lib/openapi/is-document.js";
+import { ServerUrlField } from "../server/ServerUrlField.jsx";
+import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../../lib/ui/glass-filter-dialog.js";
 
 const { useState, useEffect } = React;
 const { Typography, Link, Box, IconButton, Tooltip, Dialog, DialogContent, DialogActions, Button, CircularProgress, TextField, MenuItem } = MaterialUI;

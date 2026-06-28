@@ -1,7 +1,7 @@
-import { buildGhPagesSwaggerUrl, queryFromUrl } from "../lib/api/conn-config.js";
-import { normalizeApiBase } from "../lib/api/swagger-api.js";
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
-import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../lib/ui/glass-filter-dialog.js";
+import { buildGhPagesSwaggerUrl, queryFromUrl } from "../../lib/api/conn-config.js";
+import { normalizeApiBase } from "../../lib/api/swagger-api.js";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../../lib/ui/glass-filter-dialog.js";
 
 const { useState } = React;
 const { Box, IconButton, Tooltip, Dialog, DialogContent, DialogActions, Button, TextField, InputAdornment, Stack, Typography } = MaterialUI;

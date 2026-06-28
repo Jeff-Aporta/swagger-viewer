@@ -10,17 +10,17 @@ import {
   sortColumnOptions,
   parseSortParts,
   formatSortValue,
-} from "../lib/filter/iss-list-filter.js";
+} from "../../lib/filter/iss-list-filter.js";
 import { IssDistinctCompoundEqField, IssDistinctEqField } from "./IssDistinctEqField.jsx";
 import { IssFusedSelectField } from "./IssFusedSelectField.jsx";
-import { IssFilterJsonDialog, applyEditableJsonToFilter, filterValueToEditableJson } from "./IssFilterJsonDialog.jsx";
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
+import { IssFilterJsonDialog, applyEditableJsonToFilter, filterValueToEditableJson } from "../dialogs/IssFilterJsonDialog.jsx";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 import {
   issFilterDialogProps,
   issFilterDialogHeader,
   loginFormContentSx,
   loginFormActionsSx,
-} from "../lib/ui/glass-filter-dialog.js";
+} from "../../lib/ui/glass-filter-dialog.js";
 
 const { useState, useMemo, useEffect } = React;
 const {

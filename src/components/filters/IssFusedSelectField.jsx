@@ -1,6 +1,6 @@
 /** Select estático con el mismo Autocomplete fusionado (sin backdrop de Menu). */
 
-import { autocompleteFusedClassName, autocompleteFusedSlotProps } from "../lib/ui/autocomplete-fused.js";
+import { autocompleteFusedClassName, autocompleteFusedSlotProps } from "../../lib/ui/autocomplete-fused.js";
 
 const { useState } = React;
 const { Autocomplete, TextField } = MaterialUI;

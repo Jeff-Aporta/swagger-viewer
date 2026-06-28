@@ -1,12 +1,12 @@
-import { MethodChip, TryItOutPanel } from "./TryItOutPanel.jsx";
-import { ResponsesSection } from "./ResponsesSection.jsx";
-import { DocPanel } from "./DocPanel.jsx";
+import { MethodChip, TryItOutPanel } from "../try-it-out/TryItOutPanel.jsx";
+import { ResponsesSection } from "../try-it-out/ResponsesSection.jsx";
+import { DocPanel } from "../doc/DocPanel.jsx";
 import { ApiPathLabel } from "./ApiPathLabel.jsx";
-import { operationRequiresBearer } from "../lib/openapi/openapi.js";
-import { SwIcon, tabLabel } from "../lib/ui/sw-icon.jsx";
-import { opExpandIndex } from "../lib/nav/expand-stack.js";
-import { useExpandStack } from "../context/ExpandStackContext.jsx";
-import { useGlassColors, glassAccordionSx, methodAccent } from "../lib/ui/glass.jsx";
+import { operationRequiresBearer } from "../../lib/openapi/openapi.js";
+import { SwIcon, tabLabel } from "../../lib/ui/sw-icon.jsx";
+import { opExpandIndex } from "../../lib/nav/expand-stack.js";
+import { useExpandStack } from "../../context/ExpandStackContext.jsx";
+import { useGlassColors, glassAccordionSx, methodAccent } from "../../lib/ui/glass.jsx";
 
 const { useState } = React;
 const {

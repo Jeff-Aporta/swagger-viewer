@@ -1,14 +1,14 @@
 /** Autocomplete eq con DISTINCT sobre listado ISS (query f). */
 
-import { canRunIssLookup } from "../lib/lookup/lookup-auth.js";
-import { fetchApiJson } from "../lib/http/api-fetch.js";
-import { buildDistinctLookupUrl } from "../lib/lookup/server-base.js";
-import { extractLookupRows } from "../lib/lookup/lookup-rows.js";
-import { useServerBase } from "../context/ServerBaseContext.jsx";
-import { createDelayer, LOOKUP_SEARCH_DELAY_MS } from "../lib/ui/delayer.js";
-import { LOOKUP_SEARCH_LIMIT } from "../lib/filter/iss-list-filter.js";
-import { SwIcon } from "../lib/ui/sw-icon.jsx";
-import { autocompleteFusedClassName, autocompleteFusedSlotProps } from "../lib/ui/autocomplete-fused.js";
+import { canRunIssLookup } from "../../lib/lookup/lookup-auth.js";
+import { fetchApiJson } from "../../lib/http/api-fetch.js";
+import { buildDistinctLookupUrl } from "../../lib/lookup/server-base.js";
+import { extractLookupRows } from "../../lib/lookup/lookup-rows.js";
+import { useServerBase } from "../../context/ServerBaseContext.jsx";
+import { createDelayer, LOOKUP_SEARCH_DELAY_MS } from "../../lib/ui/delayer.js";
+import { LOOKUP_SEARCH_LIMIT } from "../../lib/filter/iss-list-filter.js";
+import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { autocompleteFusedClassName, autocompleteFusedSlotProps } from "../../lib/ui/autocomplete-fused.js";
 
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 const { Autocomplete, TextField, Box, CircularProgress } = MaterialUI;

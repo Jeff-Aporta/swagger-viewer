@@ -1,4 +1,4 @@
-import { encodeQueryQ } from "../lib/filter/query-q.js";
+import { encodeQueryQ } from "../../lib/filter/query-q.js";
 
 const { useState, useEffect, useMemo } = React;
 const {
