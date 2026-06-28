@@ -2320,7 +2320,7 @@
           }
         }
       },
-      "/run-unit-test": {
+      "/unittest/run": {
         "get": {
           "summary": "Ejecutar test unitario (SSE)",
           "tags": [
@@ -2333,7 +2333,7 @@
               "Bearer": []
             }
           ],
-          "x-iss-doc-md": "## Ejecutar test unitario (SSE)\r\n\r\nCorre la secuencia de smoke definida en el catálogo y emite progreso en **Markdown** por SSE.\r\n\r\n### Autenticación\n\nRequiere header `Authorization: Bearer <JWT>`. Obtenga el token con **Iniciar sesión** o **Pegar JWT** en la barra superior.\r\n\r\n\\`\\`\\`http\r\nGET /api/run-unit-test\r\nAuthorization: Bearer <JWT>\r\nAccept: text/event-stream\r\n\\`\\`\\`\r\n\r\n### Requisitos\r\n\r\n- Modo auth \\`is\\`: opcional \\`UNIT_TEST_CONTROLKEY\\` en \\`local.settings.json\\` para login automático en smoke.\r\n- Sin JWT: pasos autenticados se omiten con mensaje informativo.\r\n\r\n### Eventos SSE\r\n\r\nTipo \\`context\\`, \\`step\\`, \\`summary\\` ��� ver ejemplo en pestaña **Ejemplos**.\r\n\r\nUse **Try it out** para ejecutar la petición contra el servidor configurado en la barra de exportación.",
+          "x-iss-doc-md": "## Ejecutar test unitario (SSE)\r\n\r\nCorre la secuencia de smoke definida en el catálogo y emite progreso en **Markdown** por SSE.\r\n\r\n### Autenticación\n\nRequiere header `Authorization: Bearer <JWT>`. Obtenga el token con **Iniciar sesión** o **Pegar JWT** en la barra superior.\r\n\r\n\\`\\`\\`http\r\nGET /api/unittest/run\r\nAuthorization: Bearer <JWT>\r\nAccept: text/event-stream\r\n\\`\\`\\`\r\n\r\n### Requisitos\r\n\r\n- Modo auth \\`is\\`: opcional \\`UNIT_TEST_CONTROLKEY\\` en \\`local.settings.json\\` para login automático en smoke.\r\n- Sin JWT: pasos autenticados se omiten con mensaje informativo.\r\n\r\n### Eventos SSE\r\n\r\nTipo \\`context\\`, \\`step\\`, \\`summary\\` ��� ver ejemplo en pestaña **Ejemplos**.\r\n\r\nUse **Try it out** para ejecutar la petición contra el servidor configurado en la barra de exportación.",
           "responses": {
             "200": {
               "description": "Stream SSE con progreso del test (ejemplo de evento JSON)",
