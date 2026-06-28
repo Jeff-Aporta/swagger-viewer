@@ -25,31 +25,20 @@ const TOOLBAR_INPUT_SX = {
 
 
 /** Select de scope (JSON) + campo libre para URL de API. */
-
-export function ServerScopeSelect({ value, onChange, scopes: scopesProp, ns = "ISA", compact = false, dense = false, id = "isa-sw-server-scope" }) {
-
+export function ServerScopeSelect({ value, onChange, scopes: scopesProp, ns = "ISA", compact = false, dense = false, fixed = false, id = "isa-sw-server-scope" }) {
   const scopes = normalizeScopes(scopesProp);
-
   const serverBase = normalizeServerBase(value);
-
   const presetId = scopes.length ? resolveScopePresetId(scopes, serverBase) : CUSTOM_SCOPE_ID;
-
   const toolbar = compact || dense;
-
   const fieldVariant = toolbar ? "standard" : "outlined";
-
   const showUrlField = !scopes.length || !toolbar || presetId === CUSTOM_SCOPE_ID;
 
 
 
   function pickScope(scopeId) {
-
     if (scopeId === CUSTOM_SCOPE_ID) return;
-
     const hit = scopes.find((s) => s.id === scopeId);
-
     if (hit) onChange?.(hit.base);
-
   }
 
 
@@ -81,6 +70,8 @@ export function ServerScopeSelect({ value, onChange, scopes: scopesProp, ns = "I
       placeholder="https://host…/api"
 
       fullWidth={!compact}
+
+      disabled={fixed}
 
       sx={{
 
@@ -212,7 +203,7 @@ export function ServerScopeSelect({ value, onChange, scopes: scopesProp, ns = "I
 
     >
 
-      {scopeSelect}
+      {fixed ? null : scopeSelect}
 
       {urlField}
 
