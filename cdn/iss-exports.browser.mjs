@@ -941,7 +941,7 @@ function stripIsaExtensionsForExport(openApi) {
 
 // ../../components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "b70669d";
+var SWAGGER_VIEWER_REF = "03a8bac";
 var SWAGGER_FRONT_SHARED_REF = "c97330e";
 
 // ../../components/swagger/server/orchestrator-auth.ts
