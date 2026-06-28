@@ -14,16 +14,13 @@ const ServerBaseContext = createContext({
   scopes: [],
 });
 
-export function ServerBaseProvider({ spec, config, children }) {
+export function ServerBaseProvider({ spec, config, children, fixed = false }) {
   const scopes = useMemo(() => scopesFromConfig(config), [config]);
-  const defaultBase = useMemo(() => {
-    const fromScopes = scopes[0]?.base;
-    if (fromScopes) return normalizeServerBase(fromScopes);
-    return inferDefaultServerBase(spec, config);
-  }, [spec, config, scopes]);
+  const defaultBase = useMemo(() => inferDefaultServerBase(spec, config), [spec, config]);
   const storageKey = useMemo(() => serverBaseStorageKey(config), [config]);
 
   function resolveInitialBase() {
+    if (fixed) return defaultBase;
     try {
       const saved = normalizeServerBase(sessionStorage.getItem(storageKey) || "");
       if (saved) {
@@ -39,11 +36,12 @@ export function ServerBaseProvider({ spec, config, children }) {
   const [serverBase, setServerBaseState] = useState(resolveInitialBase);
 
   useEffect(() => {
-    if (!defaultBase) return;
+    if (fixed || !defaultBase) return;
     setServerBaseState(resolveInitialBase());
-  }, [defaultBase, storageKey, scopes]);
+  }, [defaultBase, storageKey, scopes, fixed]);
 
   function setServerBase(value) {
+    if (fixed) return;
     const next = normalizeServerBase(value);
     setServerBaseState(next);
     try {
@@ -55,7 +53,7 @@ export function ServerBaseProvider({ spec, config, children }) {
   }
 
   return (
-    <ServerBaseContext.Provider value={{ serverBase, setServerBase, defaultBase, scopes }}>
+    <ServerBaseContext.Provider value={{ serverBase, setServerBase, defaultBase, scopes, fixed }}>
       {children}
     </ServerBaseContext.Provider>
   );
