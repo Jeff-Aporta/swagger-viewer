@@ -1,4 +1,4 @@
-import { buildGhPagesSwaggerUrl, queryFromUrl } from "../../lib/api/conn-config.js";
+import { buildGhPagesSwaggerUrl, parseConnParam, queryFromUrl } from "../../lib/api/conn-config.js";
 import { normalizeApiBase } from "../../lib/api/swagger-api.js";
 import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 import { issFilterDialogProps, issFilterDialogHeader, loginFormActionsSx, loginFormContentSx } from "../../lib/ui/glass-filter-dialog.js";
@@ -22,13 +22,20 @@ function apiBaseFromConfig(config) {
 function resolveShareUrls(config) {
   if (typeof location === "undefined") return null;
   if (isGhPagesSwaggerHost()) {
-    return { full: location.href, query: location.search || "" };
+    const connRaw = new URLSearchParams(location.search).get("conn");
+    const conn = parseConnParam(connRaw);
+    return {
+      apiBase: conn?.apiBase || "",
+      full: location.href,
+      ghPagesUrl: location.href,
+      query: location.search || "",
+    };
   }
   const apiBase = apiBaseFromConfig(config);
   const s = new URLSearchParams(location.search).get("s");
-  const full = apiBase ? buildGhPagesSwaggerUrl(apiBase, { s: s || undefined, brand: config?.brand }) : "";
-  if (!full) return null;
-  return { full, query: queryFromUrl(full) };
+  const ghPagesUrl = apiBase ? buildGhPagesSwaggerUrl(apiBase, { s: s || undefined, brand: config?.brand }) : "";
+  if (!ghPagesUrl) return null;
+  return { apiBase, full: apiBase, ghPagesUrl, query: queryFromUrl(ghPagesUrl) };
 }
 
 async function copyText(text) {
@@ -91,8 +98,8 @@ export function SwaggerOpenGhPagesBtn({ config, ns = "ISA" }) {
   const share = resolveShareUrls(config);
   if (!share?.full) return null;
 
-  function openFullUrl() {
-    window.open(share.full, "_blank", "noopener,noreferrer");
+  function openGhPagesUrl() {
+    window.open(share.ghPagesUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -108,7 +115,8 @@ export function SwaggerOpenGhPagesBtn({ config, ns = "ISA" }) {
         {issFilterDialogHeader(React, MaterialUI, { Icon: (props) => <SwIcon {...props} ns={ns} /> }, { title: "Compartir visor", icon: "mdi:share-variant" })}
         <DialogContent sx={{ ...loginFormContentSx(), pt: 1 }}>
           <Stack spacing={2.5}>
-            <ShareUrlRow label="URL completa" hint="Enlace listo para abrir el visor con la misma conexión." value={share.full} ns={ns} onOpen={openFullUrl} />
+            <ShareUrlRow label="URL base" hint="Base de la API a la que apunta esta conexión." value={share.apiBase} ns={ns} />
+            <ShareUrlRow label="URL visor GH Pages" hint="Enlace listo para abrir el visor con esta conexión." value={share.ghPagesUrl} ns={ns} onOpen={openGhPagesUrl} />
             <ShareUrlRow label="Solo query" hint="Parámetros de la ruta desde ? (incluido), para pegar en otra base del visor." value={share.query} ns={ns} />
           </Stack>
         </DialogContent>
