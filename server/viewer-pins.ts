@@ -2,9 +2,9 @@
 
 export const SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
 
-export const SWAGGER_VIEWER_REF = "874930f";
+export const SWAGGER_VIEWER_REF = "603e529";
 
-export const SWAGGER_FRONT_SHARED_REF = "36a245f";
+export const SWAGGER_FRONT_SHARED_REF = "443951c";
 
 /** Base URL CDN del visor en jsDelivr (sin barra final). */
 export function swaggerViewerCdnJsdelivr(ref = SWAGGER_VIEWER_REF) {
