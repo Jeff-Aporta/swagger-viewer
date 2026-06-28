@@ -23,7 +23,7 @@ import { buildNavRows, filterGroupsByNavTab, activeSectionTabId } from "./lib/na
 const { useState, useEffect, useMemo } = React;
 const { Box, Typography, Alert } = MaterialUI;
 
-export function SwaggerViewer({ config: configProp, spec: specProp, onReload, reloadBusy = false }) {
+export function SwaggerViewer({ config: configProp, spec: specProp, onReload, reloadBusy = false, fixedServer = false }) {
   const config = useMemo(
     () => (configProp ? { ...configProp, auth: resolveAuthConfig(configProp.auth, configProp.apiBase, configProp) } : configProp),
     [configProp],
@@ -137,7 +137,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   const shellToolbarEnd = (
     <Box className="isa-sw-toolbar-tools" sx={{ display: "inline-flex", alignItems: "center", gap: { xs: 1.75, sm: 2.25 }, flexShrink: 0, minWidth: 0 }}>
       <SwaggerFrontLinks frontLinks={config?.frontLinks || []} brandIcon={brandIcon} ns={ns} dense />
-      {spec ? <ServerUrlField ns={ns} compact dense /> : null}
+      {spec ? <ServerUrlField ns={ns} compact dense fixed={fixedServer} /> : null}
       <SwaggerReloadBtn onReload={onReload} busy={reloadBusy} ns={ns} />
       <SwaggerOpenGhPagesBtn config={config} ns={ns} />
       {authToolbarEnd}
@@ -206,7 +206,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   );
 
   return (
-    <ServerBaseProvider spec={spec} config={config}>
+    <ServerBaseProvider spec={spec} config={config} fixed={fixedServer}>
       <ExpandStackProvider>{framed}</ExpandStackProvider>
     </ServerBaseProvider>
   );
