@@ -2,6 +2,7 @@ import { MethodChip, TryItOutPanel } from "../try-it-out/TryItOutPanel.jsx";
 import { ResponsesSection } from "../try-it-out/ResponsesSection.jsx";
 import { DocPanel } from "../doc/DocPanel.jsx";
 import { ApiPathLabel } from "./ApiPathLabel.jsx";
+import { ClientTestRunnerPanel } from "../tester/ClientTestRunnerPanel.jsx";
 import { operationRequiresBearer } from "../../lib/openapi/openapi.js";
 import { SwIcon, tabLabel } from "../../lib/ui/sw-icon.jsx";
 import { opExpandIndex } from "../../lib/nav/expand-stack.js";
@@ -55,11 +56,17 @@ export function OperationCard({
     writeOpTabToUrl(expandId, v);
   }
 
-  const tabs = [
-    { id: "try", label: "Probar", icon: "mdi:play-circle-outline" },
-    { id: "overview", label: "Ejemplos", icon: "mdi:file-document-outline" },
-    { id: "doc", label: "Doc", icon: "mdi:book-open-page-variant" },
-  ];
+  const isClientTest = !!(op?._clientTest || op?.["x-iss-client-test"] || op?._clientProtocol || op?.["x-iss-client-protocol"]);
+  const tabs = isClientTest
+    ? [
+        { id: "test", label: "Tester", icon: "mdi:test-tube" },
+        { id: "doc", label: "Doc", icon: "mdi:book-open-page-variant" },
+      ]
+    : [
+        { id: "try", label: "Probar", icon: "mdi:play-circle-outline" },
+        { id: "overview", label: "Ejemplos", icon: "mdi:file-document-outline" },
+        { id: "doc", label: "Doc", icon: "mdi:book-open-page-variant" },
+      ];
 
   return (
     <Accordion
@@ -127,7 +134,7 @@ export function OperationCard({
               ))}
             </Tabs>
 
-            {tab === "try" ? (
+            {tab === "try" && !isClientTest ? (
               <TryItOutPanel
                 op={op}
                 spec={spec}
@@ -140,7 +147,17 @@ export function OperationCard({
               />
             ) : null}
 
-            {tab === "overview" ? (
+            {tab === "test" && isClientTest ? (
+              <ClientTestRunnerPanel
+                test={op?._clientTest}
+                docMd={docMd}
+                authEnabled={authEnabled}
+                onNeedLogin={onNeedLogin}
+                ns={ns}
+              />
+            ) : null}
+
+            {tab === "overview" && !isClientTest ? (
               <Box>
                 <Typography variant="overline" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.5 }}>
                   <SwIcon icon="mdi:reply-outline" size={14} ns={ns} />

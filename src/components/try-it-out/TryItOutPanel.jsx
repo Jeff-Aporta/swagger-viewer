@@ -24,6 +24,7 @@ import { DangerousOpConfirmDialog } from "../dialogs/DangerousOpConfirmDialog.js
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
 import { processDetailSugars } from "../../lib/ui/sse-sugars.js";
 import { JsonDetailDialog } from "../dialogs/JsonDetailDialog.jsx";
+import { runStepsAsStream } from "../../lib/test/client-procedure-renderer.js";
 
 const { useState, useMemo, useEffect, useRef } = React;
 const { Box, Button, Typography, CircularProgress, Chip, TextField, Tooltip, IconButton } = MaterialUI;
@@ -335,15 +336,68 @@ export function TryItOutPanel({ op, spec, lookupIndex, catalogDocKeys = null, ex
       onNeedLogin?.("Este endpoint requiere JWT. Inicia sesión para ejecutar.");
       return;
     }
+    // Camino cliente: el test vive como `{ steps: [...] }` en `op._clientTest`.
+    // Cada test trae sus propios steps declarativos; no hay registro/protocolo hardcoded.
+    const clientTest = op?._clientTest;
+    if (clientTest && Array.isArray(clientTest.steps) && clientTest.steps.length) {
+        await runClientTest({ test: clientTest });
+        return;
+    }
     setConfirmOpen(false);
     setBusy(true);
+    await executeServerPath();
+
+    async function runClientTest({ test }) {
+        setConfirmOpen(false);
+        setBusy(true);
+        setErr("");
+        setApiErr("");
+        setResult(null);
+        const events = [];
+        const started = performance.now();
+        function feed(ev) {
+            events.push(ev);
+            const md = formatUnitTestSse(events).markdown;
+            const summary = events.find((e) => e.type === "summary");
+            const elapsed = Math.round(performance.now() - started);
+            const bytesIn = events.reduce((acc, e) => acc + (e.chunk?.length || (e.md?.length || 0)), 0);
+            setResult({
+                status: 200,
+                statusText: "CLIENT",
+                elapsed,
+                bytesIn,
+                body: md || "",
+                sseMarkdown: md,
+                sseEvents: [...events],
+                sseOk: summary?.ok ?? null,
+                sseStreaming: !summary,
+            });
+        }
+        try {
+            const r = await runStepsAsStream({
+                steps: test.steps,
+                baseUrl: `${(serverBase || "").replace(/\/+$/, "")}/api`,
+                getJwt: () => getStoredJwt()?.token,
+                emit: (ev) => feed(ev),
+                session: test.id || test.title || "client-test",
+            });
+            if (!r.ok) setApiErr("El test cliente reportó fallos. Revisa los pasos marcados con ❌.");
+            setResult((prev) => prev ? { ...prev, sseStreaming: false } : prev);
+        } catch (e) {
+            setErr(e?.message || String(e));
+        } finally {
+            setBusy(false);
+        }
+    }
     setErr("");
     setApiErr("");
     setResult(null);
+    await executeServerPath();
+
+    async function executeServerPath() {
     try {
       const url = previewUrl;
       const headers = {};
-      if (/^\/test\//.test(String(op.path || ""))) headers["X-Patyia-Auth-Mode"] = "is";
       for (const p of headerParams) {
         const v = values[p.name];
         if (v) headers[p.name] = v;
@@ -515,6 +569,7 @@ export function TryItOutPanel({ op, spec, lookupIndex, catalogDocKeys = null, ex
       setErr(e.message || String(e));
     } finally {
       setBusy(false);
+    }
     }
   }
 

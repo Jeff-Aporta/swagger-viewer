@@ -117,6 +117,8 @@ function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Rec
         viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
         frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
         ...(Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {}),
+        // Preserva protocolos cliente (e.g. tests agnósticos) definidos en viewer.client.protocols.
+        ...(v as Record<string, unknown>).client ? { client: (v as Record<string, unknown>).client } : {},
     };
 }
 

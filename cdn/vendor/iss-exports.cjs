@@ -1008,8 +1008,8 @@ function stripIsaExtensionsForExport(openApi) {
 
 // server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "detail-sugars-2026-06-29";
-var SWAGGER_FRONT_SHARED_REF = "ba55d76";
+var SWAGGER_VIEWER_REF = "client-tests-wrap-toggle-2026-06-30";
+var SWAGGER_FRONT_SHARED_REF = "33acc67";
 
 // server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
@@ -1081,7 +1081,9 @@ function buildViewerRuntimeConfig(config, apiBase) {
     },
     viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
     frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
-    ...Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {}
+    ...Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {},
+    // Preserva protocolos cliente (e.g. tests agnósticos) definidos en viewer.client.protocols.
+    ...v.client ? { client: v.client } : {}
   };
 }
 function buildEmbedOpts(config, apiBase, viewer) {

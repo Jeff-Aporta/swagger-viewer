@@ -20,6 +20,7 @@ import { applyBrandToDocument, resolveViewerBrand } from "./lib/brand/viewer-bra
 import { buildNavRows, filterGroupsByNavTab, activeSectionTabId, resolveInitialNavTab } from "./lib/nav/viewer-nav.js";
 import { catalogDocKeysFromSources } from "./lib/openapi/param-enum.js";
 import { readNavTabFromUrl, writeNavTabToUrl } from "./lib/nav/nav-url.js";
+import { ClientTestTagGroup, readClientTestsFromSpec } from "./components/tester/ClientTestTagGroup.jsx";
 
 const { useState, useEffect, useMemo, useCallback } = React;
 const { Box, Typography, Alert } = MaterialUI;
@@ -113,6 +114,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   );
   const docIndex = useMemo(() => (spec ? buildDocIndex(spec) : {}), [spec]);
   const lookupIndex = useMemo(() => (spec ? buildLookupIndex(spec) : {}), [spec]);
+  const clientTests = useMemo(() => readClientTestsFromSpec({ ...config, spec }), [config, spec]);
   const brand = useMemo(() => resolveViewerBrand(config, spec), [config, spec]);
   const brandTitle = brand.title;
   const brandIcon = brand.icon;
@@ -204,6 +206,15 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
               ns={ns}
             />
           ))}
+          {clientTests.length > 0 ? (
+            <ClientTestTagGroup
+              tests={clientTests}
+              tagIndex={visibleGroups.length}
+              authEnabled={authEnabled}
+              onNeedLogin={onNeedLogin}
+              ns={ns}
+            />
+          ) : null}
         </>
       ) : !err ? (
         <Typography color="text.secondary">Cargando especificación OpenAPI…</Typography>

@@ -1,9 +1,23 @@
 import { resolveCodeMirrorTheme } from "../../../../front-shared/cdn/isa/js/ui/code-mirror.js";
 
-const { useEffect, useRef, useMemo } = React;
+const { useEffect, useRef, useMemo, useState } = React;
 const { Box, IconButton, Tooltip } = MaterialUI;
 
 const JSON_BLOCK_MAX_HEIGHT = "80vh";
+const WRAP_STORAGE_KEY = "isa:cm:wrap";
+function readWrapDefault() {
+  try {
+    const v = window.localStorage?.getItem?.(WRAP_STORAGE_KEY);
+    return v == null ? false : v === "1" || v === "true";
+  } catch {
+    return false;
+  }
+}
+function writeWrapDefault(v) {
+  try {
+    window.localStorage?.setItem?.(WRAP_STORAGE_KEY, v ? "1" : "0");
+  } catch { /* ignore */ }
+}
 
 export function JsonCodeBlock({
   value,
@@ -20,20 +34,40 @@ export function JsonCodeBlock({
   const hostRef = useRef(null);
   const cmRef = useRef(null);
   const onChangeRef = useRef(onChange);
+  const [wrap, setWrap] = useState(() => readWrapDefault());
   const Panel = globalThis.ISAFront?.CodeMirrorPanel;
   const isReadOnly = readOnly || disabled;
   const editable = !isReadOnly && typeof onChange === "function";
   const resolvedMinHeight = minHeight ?? (isReadOnly ? "0" : "6rem");
   const toolbarExtra = useMemo(() => {
-    if (!onClear || !Panel) return null;
+    if (!Panel) return null;
     return (
-      <Tooltip title={clearTitle}>
-        <IconButton size="small" className="isa-cm-panel__fab isa-cm-panel__clear" aria-label={clearTitle} onClick={onClear}>
-          <iconify-icon icon="mdi:delete-outline" width="14" height="14" />
-        </IconButton>
-      </Tooltip>
+      <>
+        <Tooltip title={wrap ? "Quitar ajuste de línea" : "Ajustar línea (word wrap)"}>
+          <IconButton
+            size="small"
+            className="isa-cm-panel__fab isa-cm-panel__wrap"
+            aria-label={wrap ? "Quitar word wrap" : "Activar word wrap"}
+            aria-pressed={wrap}
+            onClick={() => {
+              const next = !wrap;
+              setWrap(next);
+              writeWrapDefault(next);
+            }}
+          >
+            <iconify-icon icon={wrap ? "mdi:wrap-disabled" : "mdi:wrap"} width="14" height="14" />
+          </IconButton>
+        </Tooltip>
+        {onClear ? (
+          <Tooltip title={clearTitle}>
+            <IconButton size="small" className="isa-cm-panel__fab isa-cm-panel__clear" aria-label={clearTitle} onClick={onClear}>
+              <iconify-icon icon="mdi:delete-outline" width="14" height="14" />
+            </IconButton>
+          </Tooltip>
+        ) : null}
+      </>
     );
-  }, [onClear, clearTitle, Panel]);
+  }, [onClear, clearTitle, Panel, wrap]);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -50,7 +84,7 @@ export function JsonCodeBlock({
       json: true,
       readOnly: isReadOnly ? "nocursor" : false,
       lineNumbers: true,
-      lineWrapping: false,
+      lineWrapping: wrap,
       viewportMargin: isReadOnly ? Infinity : 10,
       onChange: editable ? (text) => onChangeRef.current?.(text) : undefined,
     });
@@ -75,7 +109,7 @@ export function JsonCodeBlock({
         if (w?.parentNode) w.parentNode.removeChild(w);
       }
     };
-  }, [Panel, isReadOnly, editable]);
+  }, [Panel, isReadOnly, editable, wrap]);
 
   useEffect(() => {
     if (Panel) return;
@@ -98,7 +132,6 @@ export function JsonCodeBlock({
           readOnly={isReadOnly}
           onChange={editable ? (text) => onChangeRef.current?.(text) : undefined}
           json
-          lineWrapping={false}
           lineNumbers
           minHeight={resolvedMinHeight}
           maxHeight={maxHeight}

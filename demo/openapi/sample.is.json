@@ -2,8 +2,8 @@
   "kind": "insoft.swagger-viewer",
   "version": 1,
   "viewer": {
-    "apiBase": "http://localhost:8802",
-    "configUrl": "http://localhost:8802/system/swagger/config.json",
+    "apiBase": "http://127.0.0.1:8802/api",
+    "configUrl": "http://127.0.0.1:8802/api/system/swagger/config.json",
     "swaggerPaths": {
       "config": "/system/swagger/config.json",
       "swaggerJson": "/system/swagger.json",
@@ -33,8 +33,8 @@
         "url": "https://jeff-aporta.github.io/isa-patyia/"
       }
     ],
-    "viewerRef": "stream-final-2026-06-28",
-    "frontSharedRef": "ba55d76",
+    "viewerRef": "client-tests-wrap-toggle-2026-06-30",
+    "frontSharedRef": "33acc67",
     "nav": [
       {
         "id": "conversaciones",
@@ -63,7 +63,95 @@
         ],
         "access": "*"
       }
-    ]
+    ],
+    "client": {
+      "tests": [
+        {
+          "id": "title-change",
+          "title": "Cambio de título en conversaciones",
+          "description": "11 mensajes a /api/conversacion + juez script. Verifica que el título cambie al menos una vez cada 3 mensajes.",
+          "tags": [
+            "Testing"
+          ],
+          "subgroup": "pruebas",
+          "docs": "## Title-Change Test (procedimiento agnóstico, 100% cliente)\n\nEste test es un **array de pasos** que el visor interpreta en orden. El servidor **no** contiene lógica de testing; sólo provee la API productiva.\n\nCada step es agnóstico: `kind` puede ser `conv | http | raw | script`. Las variables `{{iconversacion}}`, `{{titulo}}`, etc. se interpolan desde outputs previos. El runner emite `context / step / delta (palabra a palabra) / tick / summary` y soporta `extract`, `assert`, `skipIf`, `onlyIf` por step. El último step (`script`) es el juez y devuelve `{ verdict }`.\n\nFlujo: 11 turnos con prompts de distintos temas (facturación → geografía → Panamá → tecnología → hora) + juez que evalúa `cambios de título >= floor(mensajes / 3)`.",
+          "steps": [
+            {
+              "kind": "conv",
+              "description": "Mensaje #0 — saludo inicial (crea conversación)",
+              "typewriterMsPerToken": 0,
+              "prompt": "Hola, soy un test automatizado. Necesito registrar varias facturas de venta de InSoft y verificar que la conversación cambie su título cada ciertos mensajes."
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #1 — facturación (espera cambio #1 de título)",
+              "typewriterMsPerToken": 22,
+              "prompt": "¿Cómo registro una factura de venta en InSoft sin errores?"
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #2 — facturación (continúa tema)",
+              "typewriterMsPerToken": 22,
+              "prompt": "¿Qué pasa si la factura ya tiene número asignado?"
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #3 — geografía (espera cambio #2 de título)",
+              "typewriterMsPerToken": 22,
+              "prompt": "Ahora cambiemos de tema: ¿cuál es la capital de Colombia?"
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #4 — geografía (continúa tema)",
+              "typewriterMsPerToken": 22,
+              "prompt": "¿Y la población actual de Bogotá?"
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #5 — Panamá/historia (espera cambio #3 de título)",
+              "typewriterMsPerToken": 22,
+              "prompt": "Cambiemos de tema. Háblame del canal de Panamá y su historia."
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #6 — Panamá (continúa tema)",
+              "typewriterMsPerToken": 22,
+              "prompt": "¿Cuándo se construyó?"
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #7 — tecnología (espera cambio #4 de título)",
+              "typewriterMsPerToken": 22,
+              "prompt": "Ahora sobre tecnología. ¿Qué es GPT-4o?"
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #8 — tecnología (continúa tema)",
+              "typewriterMsPerToken": 22,
+              "prompt": "¿Cuál es la diferencia con GPT-5?"
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #9 — hora/fechas (espera cambio #5 de título)",
+              "typewriterMsPerToken": 22,
+              "prompt": "Por último, dime qué hora es en Tokio y la diferencia horaria con Bogotá."
+            },
+            {
+              "kind": "conv",
+              "description": "Mensaje #10 — cierre / resumen",
+              "typewriterMsPerToken": 25,
+              "prompt": "Y para cerrar, dame un resumen ejecutivo de toda esta conversación."
+            },
+            {
+              "kind": "script",
+              "description": "👨‍⚖️ JUEZ — Determina si el test es PASS o FAIL",
+              "timeoutMs": 5000,
+              "run": "const trace = ctx._trace || {};\nconst tc = trace.titleChangesSoFar || [];\nconst total = trace.messages || 0;\nconst changes = tc.length;\nconst expected = Math.floor(total / 3);\nconst timeline = tc.map(function(c){ return { afterMessage: c.afterMessage, from: c.from, to: c.to }; });\nconst pass = changes >= expected;\nconst verdict = {\n    totalMessages: total,\n    titleChanges: changes,\n    expectedMinChanges: expected,\n    pass: pass,\n    changesTimeline: timeline,\n    reason: pass\n        ? ('OK: título cambió al menos una vez cada 3 mensajes.')\n        : ('FAIL: sólo ' + changes + ' cambios en ' + total + ' mensajes (esperaba >= ' + expected + '). Timeline: ' + JSON.stringify(timeline)),\n};\nctx.vars.verdict = verdict;\nreturn { verdict: verdict };"
+            }
+          ]
+        }
+      ]
+    }
   },
   "spec": {
     "openapi": "3.0.3",
@@ -132,18 +220,6 @@
             "name": "Análisis IA",
             "icon": "mdi:brain",
             "description": "Resúmenes generados por IA sobre el hilo."
-          }
-        ]
-      },
-      {
-        "name": "Testing",
-        "description": "Herramientas de prueba automatizada y metadatos del servicio (catálogo unit-test, SSE de ejecución).",
-        "x-isa-subgroups": [
-          {
-            "id": "pruebas",
-            "name": "Pruebas automatizadas",
-            "icon": "mdi:play-box-multiple-outline",
-            "description": "Catálogo y ejecución SSE de tests unitarios."
           }
         ]
       }
@@ -2808,129 +2884,6 @@
           }
         }
       },
-      "/test/smoke-catalogo": {
-        "get": {
-          "summary": "Smoke catálogo HTTP (SSE)",
-          "tags": [
-            "Testing"
-          ],
-          "description": "Ejecuta la secuencia smoke del catálogo de tests y emite progreso Markdown por SSE.",
-          "x-isa-subgroup": "pruebas",
-          "x-iss-doc-md": "## Smoke catálogo HTTP (SSE)\r\n\r\nCorre la secuencia smoke del catálogo y emite progreso Markdown por SSE.\r\n\r\n### Autenticación\r\n\r\n**Público** — no exige JWT. Si envía `Authorization: Bearer`, los pasos autenticados del smoke usan ese token; sin JWT se omiten pasos que requieren sesión.\r\n\r\n\\`\\`\\`http\r\nGET /api/test/smoke-catalogo\r\nAccept: text/event-stream\r\n\\`\\`\\`\r\n\r\nOpcional: `UNIT_TEST_CONTROLKEY` en el Function App para login automático en modo `is`.\r\n\r\n### Formato de respuesta\r\n\r\nStream `text/event-stream` (eventos `context`, `step`, `summary`).",
-          "responses": {
-            "200": {
-              "description": "Stream SSE con progreso del test (ejemplo de evento JSON)",
-              "content": {
-                "text/event-stream": {
-                  "schema": {
-                    "type": "string"
-                  },
-                  "example": "data: {\"encabezado\":{\"resultado\":true,\"tiempo\":-1,\"fhentrada\":\"2026-06-19T15:30:00.000Z\",\"fhsalida\":\"2026-06-19T15:30:00.042Z\"},\"respuesta\":{\"paso\":2,\"total\":8,\"mensaje\":\"GET /api/system/health — OK\",\"markdown\":\"## Paso 2/8\\nHealth respondió 200.\"}}\n\n"
-                },
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "respuesta": {
-                        "type": "object"
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": true,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.042Z"
-                    },
-                    "respuesta": {
-                      "paso": 2,
-                      "total": 8,
-                      "mensaje": "GET /api/system/health — OK",
-                      "markdown": "## Paso 2/8\nHealth respondió 200."
-                    }
-                  }
-                }
-              }
-            },
-            "401": {
-              "description": "No autorizado",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "required": [
-                      "encabezado"
-                    ],
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": false,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.012Z",
-                      "imensaje": 401020,
-                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
       "/swagger": {
         "get": {
           "summary": "IS-Swagger (iframe)",
@@ -2948,638 +2901,6 @@
                     "type": "string"
                   },
                   "example": "<!DOCTYPE html><html>…</html>"
-                }
-              }
-            }
-          }
-        }
-      },
-      "/test/cambio-de-titulo-en-conversaciones": {
-        "get": {
-          "summary": "Test cambio de título en conversaciones (SSE)",
-          "tags": [
-            "Testing"
-          ],
-          "description": "Secuencia de mensajes a POST /conversacion; valida título provisional → definitivo y emite trace JSON al final.",
-          "x-isa-subgroup": "pruebas",
-          "x-iss-doc-md": "## Test cambio de título en conversaciones (SSE)\r\n\r\nEjecuta una **secuencia de steps configurables** contra **POST /api/conversacion** y endpoints HTTP arbitrarios. Cada `ConversationGoalStep` puede ser:\r\n\r\n- **`conv`**: POST /conversacion con SSE, animación **typewriter** palabra-por-palabra (`typewriterMsPerToken` en ms).\r\n- **`http`**: GET/POST/PUT/DELETE arbitrario con `{{varName}}` interpolables desde `ctx.vars`.\r\n- **`script`**: JS sandbox con acceso a `ctx.vars`, `ctx.lastResponse`, `ctx.lastSseEvents`, `ctx.stepIndex`.\r\n- **`raw`**: como http pero con control total de headers y body literal.\r\n\r\n### Capacidades por step\r\n\r\n| Campo | Descripción |\r\n|-------|-------------|\r\n| `description` | Texto humano para el reporte. |\r\n| `extract` | `{ varName: jsonPath }` → guarda valores en `ctx.vars` para próximos steps. |\r\n| `assert` | `(ctx) => true \\| string \"motivo\"` para validar el paso. |\r\n| `skipIf` / `onlyIf` | `(ctx) => boolean` para flujo condicional. |\r\n| `timeoutMs` | Override del timeout por step (default 45s). |\r\n\r\n### Autenticación\r\n\r\nRequiere JWT y rol **dev_lead** o **dev_iss** con permiso explícito.\r\n\r\n\\`\\`\\`http\r\nGET /api/test/cambio-de-titulo-en-conversaciones\r\nAuthorization: Bearer <JWT>\r\nAccept: text/event-stream\r\n\\`\\`\\`\r\n\r\n**POST** con body `{ \"messages\": [ConversationGoalStep, ...] }`:\r\n\r\n\\`\\`\\`json\r\n{\r\n  \"messages\": [\r\n    { \"kind\": \"conv\", \"description\": \"Crea conversación\", \"typewriterMsPerToken\": 0, \"prompt\": \"Hola, soy un test\" },\r\n    { \"kind\": \"script\", \"description\": \"Extrae id\", \"run\": \"ctx.vars.convId = ctx.lastResponse?.iconversacion; return ctx.vars.convId != null;\" },\r\n    { \"kind\": \"http\", \"method\": \"GET\", \"description\": \"Lee conversación\", \"path\": \"/conversacion/{{convId}}\", \"extract\": { \"titulo\": \"titulo\" } },\r\n    { \"kind\": \"conv\", \"description\": \"Cambia el título\", \"typewriterMsPerToken\": 25, \"prompt\": \"¿Cuál es la capital de Colombia?\" },\r\n    { \"kind\": \"http\", \"method\": \"GET\", \"path\": \"/conversacion/{{convId}}\", \"assert\": \"ctx.vars.titulo && ctx.vars.titulo !== 'Nueva conversación'\" }\r\n  ]\r\n}\r\n\\`\\`\\`\r\n\r\nQuery opcional: `?perStepTimeoutMs=60000&typewriterMsPerToken=35`.\r\n\r\n### Formato de respuesta\r\n\r\nStream `text/event-stream`. Eventos:\r\n\r\n- `context` — header con metadatos del run.\r\n- `step` — resultado de un step (markdown con detalle + ✅/❌).\r\n- `delta` — chunk de stream SSE, con typewriter (palabra por palabra).\r\n- `tick` — heartbeat cada ~1s con bytes recibidos / elapsedMs.\r\n- `summary` — resumen final con passed/failed/skipped y vars extraídas.\r\n- `trace` — JSON de trazabilidad completo.\r\n- `error` — error fatal del test.\r\n",
-          "responses": {
-            "200": {
-              "description": "Stream SSE con steps (POST + GET) y al final un evento `trace` con JSON de trazabilidad",
-              "content": {
-                "text/event-stream": {
-                  "schema": {
-                    "type": "string"
-                  },
-                  "example": "data: {\"encabezado\":{\"resultado\":true,\"tiempo\":-1,\"fhentrada\":\"2026-06-19T15:30:00.000Z\",\"fhsalida\":\"2026-06-19T15:30:00.042Z\"},\"respuesta\":{\"paso\":2,\"total\":8,\"mensaje\":\"GET /api/system/health — OK\",\"markdown\":\"## Paso 2/8\\nHealth respondió 200.\"}}\n\n"
-                },
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "respuesta": {
-                        "type": "object"
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": true,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.042Z"
-                    },
-                    "respuesta": {
-                      "paso": 2,
-                      "total": 8,
-                      "mensaje": "GET /api/system/health — OK",
-                      "markdown": "## Paso 2/8\nHealth respondió 200."
-                    }
-                  }
-                }
-              }
-            },
-            "401": {
-              "description": "No autorizado",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "required": [
-                      "encabezado"
-                    ],
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": false,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.012Z",
-                      "imensaje": 401020,
-                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "post": {
-          "summary": "Test cambio de título (steps enriquecidos)",
-          "tags": [
-            "Testing"
-          ],
-          "description": "Igual que GET, pero acepta `messages` con **steps enriquecidos** (`ConversationGoalStep[]`). Cada step puede ser: `conv` (POST /conversacion con SSE typewriter), `http` (cualquier método/path con `{{vars}}` interpolables), `script` (JS sandbox con `ctx.vars`, `ctx.lastResponse`), o `raw`. Soporta `extract` (JSONPath → ctx.vars), `assert` (`(ctx) => true | string motivo`), `skipIf`/`onlyIf`, y `typewriterMsPerToken` para animación palabra-por-palabra. Los campos elevados del POST /conversacion subyacente (modelo, temperatura, top_p) se descartan si el caller no es dev_lead / dev_iss.",
-          "x-isa-subgroup": "pruebas",
-          "x-iss-doc-md": "## Test cambio de título en conversaciones (SSE)\r\n\r\nEjecuta una **secuencia de steps configurables** contra **POST /api/conversacion** y endpoints HTTP arbitrarios. Cada `ConversationGoalStep` puede ser:\r\n\r\n- **`conv`**: POST /conversacion con SSE, animación **typewriter** palabra-por-palabra (`typewriterMsPerToken` en ms).\r\n- **`http`**: GET/POST/PUT/DELETE arbitrario con `{{varName}}` interpolables desde `ctx.vars`.\r\n- **`script`**: JS sandbox con acceso a `ctx.vars`, `ctx.lastResponse`, `ctx.lastSseEvents`, `ctx.stepIndex`.\r\n- **`raw`**: como http pero con control total de headers y body literal.\r\n\r\n### Capacidades por step\r\n\r\n| Campo | Descripción |\r\n|-------|-------------|\r\n| `description` | Texto humano para el reporte. |\r\n| `extract` | `{ varName: jsonPath }` → guarda valores en `ctx.vars` para próximos steps. |\r\n| `assert` | `(ctx) => true \\| string \"motivo\"` para validar el paso. |\r\n| `skipIf` / `onlyIf` | `(ctx) => boolean` para flujo condicional. |\r\n| `timeoutMs` | Override del timeout por step (default 45s). |\r\n\r\n### Autenticación\r\n\r\nRequiere JWT y rol **dev_lead** o **dev_iss** con permiso explícito.\r\n\r\n\\`\\`\\`http\r\nGET /api/test/cambio-de-titulo-en-conversaciones\r\nAuthorization: Bearer <JWT>\r\nAccept: text/event-stream\r\n\\`\\`\\`\r\n\r\n**POST** con body `{ \"messages\": [ConversationGoalStep, ...] }`:\r\n\r\n\\`\\`\\`json\r\n{\r\n  \"messages\": [\r\n    { \"kind\": \"conv\", \"description\": \"Crea conversación\", \"typewriterMsPerToken\": 0, \"prompt\": \"Hola, soy un test\" },\r\n    { \"kind\": \"script\", \"description\": \"Extrae id\", \"run\": \"ctx.vars.convId = ctx.lastResponse?.iconversacion; return ctx.vars.convId != null;\" },\r\n    { \"kind\": \"http\", \"method\": \"GET\", \"description\": \"Lee conversación\", \"path\": \"/conversacion/{{convId}}\", \"extract\": { \"titulo\": \"titulo\" } },\r\n    { \"kind\": \"conv\", \"description\": \"Cambia el título\", \"typewriterMsPerToken\": 25, \"prompt\": \"¿Cuál es la capital de Colombia?\" },\r\n    { \"kind\": \"http\", \"method\": \"GET\", \"path\": \"/conversacion/{{convId}}\", \"assert\": \"ctx.vars.titulo && ctx.vars.titulo !== 'Nueva conversación'\" }\r\n  ]\r\n}\r\n\\`\\`\\`\r\n\r\nQuery opcional: `?perStepTimeoutMs=60000&typewriterMsPerToken=35`.\r\n\r\n### Formato de respuesta\r\n\r\nStream `text/event-stream`. Eventos:\r\n\r\n- `context` — header con metadatos del run.\r\n- `step` — resultado de un step (markdown con detalle + ✅/❌).\r\n- `delta` — chunk de stream SSE, con typewriter (palabra por palabra).\r\n- `tick` — heartbeat cada ~1s con bytes recibidos / elapsedMs.\r\n- `summary` — resumen final con passed/failed/skipped y vars extraídas.\r\n- `trace` — JSON de trazabilidad completo.\r\n- `error` — error fatal del test.\r\n",
-          "requestBody": {
-            "required": true,
-            "description": "Lista de `ConversationGoalStep` enriquecidos (kind: conv | http | script | raw).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "messages": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "enum": [
-                              "conv",
-                              "http",
-                              "script",
-                              "raw",
-                              "auto"
-                            ],
-                            "description": "Discriminador. Si falta, se infiere por presencia de campos (prompt → conv, method → http, run → script)."
-                          },
-                          "description": {
-                            "type": "string",
-                            "description": "Descripción humana del paso."
-                          },
-                          "prompt": {
-                            "type": "string",
-                            "description": "Texto del prompt (kind: conv). Soporta {{varName}}."
-                          },
-                          "idmaquina": {
-                            "type": "string"
-                          },
-                          "temperatura": {
-                            "type": "number"
-                          },
-                          "method": {
-                            "type": "string",
-                            "description": "Método HTTP (kind: http). Default GET."
-                          },
-                          "path": {
-                            "type": "string",
-                            "description": "Path relativo a /api. Soporta {{varName}}."
-                          },
-                          "body": {
-                            "description": "Body JSON o string. Soporta {{varName}} recursivo."
-                          },
-                          "headers": {
-                            "type": "object",
-                            "additionalProperties": {
-                              "type": "string"
-                            }
-                          },
-                          "contentType": {
-                            "type": "string"
-                          },
-                          "expectStatus": {
-                            "type": "array",
-                            "items": {
-                              "type": "number"
-                            }
-                          },
-                          "extract": {
-                            "type": "object",
-                            "description": "Mapa varName → JSONPath. Extrae valores de la respuesta.",
-                            "additionalProperties": {
-                              "type": "string"
-                            }
-                          },
-                          "assert": {
-                            "type": "string",
-                            "description": "JS evaluado con (ctx) => true | string motivo."
-                          },
-                          "skipIf": {
-                            "type": "string",
-                            "description": "JS evaluado con (ctx) => boolean. Si true, salta el step."
-                          },
-                          "onlyIf": {
-                            "type": "string",
-                            "description": "JS evaluado con (ctx) => boolean. Si false, falla el step."
-                          },
-                          "run": {
-                            "type": "string",
-                            "description": "JS ejecutado en sandbox (kind: script)."
-                          },
-                          "timeoutMs": {
-                            "type": "number"
-                          },
-                          "typewriterMsPerToken": {
-                            "type": "number",
-                            "description": "Delay ms entre tokens del stream SSE (kind: conv). 0 = sin animación."
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "example": {
-                  "messages": [
-                    {
-                      "kind": "conv",
-                      "description": "Saludo — crea la conversación",
-                      "typewriterMsPerToken": 0,
-                      "prompt": "Hola, soy un test automatizado. Necesito registrar una factura de venta de InSoft."
-                    },
-                    {
-                      "kind": "script",
-                      "description": "Extraer iconversacion a ctx.vars.convId",
-                      "run": "ctx.vars.convId = ctx.lastResponse?.iconversacion; return ctx.vars.convId != null;"
-                    },
-                    {
-                      "kind": "http",
-                      "method": "GET",
-                      "description": "GET /conversacion/{{convId}} — extrae tituloInicial y qmensajesInicial",
-                      "path": "/conversacion/{{convId}}",
-                      "extract": {
-                        "tituloInicial": "titulo",
-                        "qmensajesInicial": "qmensajes"
-                      }
-                    },
-                    {
-                      "kind": "conv",
-                      "description": "Mensaje para forzar cambio de título",
-                      "typewriterMsPerToken": 25,
-                      "prompt": "¿Cuál es la capital de Colombia?"
-                    },
-                    {
-                      "kind": "http",
-                      "method": "GET",
-                      "description": "Verifica que el título cambió tras el segundo prompt",
-                      "path": "/conversacion/{{convId}}",
-                      "extract": {
-                        "tituloFinal": "titulo"
-                      },
-                      "assert": "ctx.vars.tituloFinal && ctx.vars.tituloFinal !== 'Nueva conversación' ? true : `título sigue siendo ${ctx.vars.tituloFinal}`"
-                    },
-                    {
-                      "kind": "script",
-                      "description": "Valida que qmensajes >= 2",
-                      "run": "return (ctx.vars.qmensajesFinal ?? 0) >= 2 ? true : `qmensajes =${ctx.vars.qmensajesFinal}`"
-                    },
-                    {
-                      "kind": "conv",
-                      "description": "Último prompt con efecto typewriter rápido",
-                      "typewriterMsPerToken": 20,
-                      "prompt": "Ahora háblame del canal de Panamá."
-                    },
-                    {
-                      "kind": "http",
-                      "method": "GET",
-                      "description": "Resumen final con extracción múltiple",
-                      "path": "/conversacion/{{convId}}",
-                      "extract": {
-                        "qmensajesFinal": "qmensajes",
-                        "tituloDefinitivo": "titulo"
-                      },
-                      "assert": "ctx.vars.qmensajesFinal >= 3 ? true : `qmensajes =${ctx.vars.qmensajesFinal}, esperaba >= 3`"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Stream SSE con `context`, `step`, `delta`, `tick`, `summary` y `trace`. El field `delta` emite cada token del stream OpenAI con typewriter (palabra por palabra).",
-              "content": {
-                "text/event-stream": {
-                  "schema": {
-                    "type": "string"
-                  },
-                  "example": "data: {\"encabezado\":{\"resultado\":true,\"tiempo\":-1,\"fhentrada\":\"2026-06-19T15:30:00.000Z\",\"fhsalida\":\"2026-06-19T15:30:00.042Z\"},\"respuesta\":{\"paso\":2,\"total\":8,\"mensaje\":\"GET /api/system/health — OK\",\"markdown\":\"## Paso 2/8\\nHealth respondió 200.\"}}\n\n"
-                },
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "respuesta": {
-                        "type": "object"
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": true,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.042Z"
-                    },
-                    "respuesta": {
-                      "paso": 2,
-                      "total": 8,
-                      "mensaje": "GET /api/system/health — OK",
-                      "markdown": "## Paso 2/8\nHealth respondió 200."
-                    }
-                  }
-                }
-              }
-            },
-            "401": {
-              "description": "No autorizado",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "required": [
-                      "encabezado"
-                    ],
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": false,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.012Z",
-                      "imensaje": 401020,
-                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/test/config.json": {
-        "get": {
-          "summary": "Config test protocol (BD)",
-          "tags": [
-            "Testing"
-          ],
-          "description": "Devuelve el protocolo de tests persistido en `dbo.SYS_VALUES.test` (kind `insoft.test-config`). Es la fuente de verdad que consumen `GET /api/test/smoke-catalogo` y `GET /api/test/cambio-de-titulo-en-conversaciones`. Si la BD está vacía, el server hace auto-seed con el `ayudascpProtocol` estático.",
-          "x-isa-subgroup": "pruebas",
-          "responses": {
-            "200": {
-              "description": "insoft.test-config desde dbo.SYS_VALUES.test",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "required": [
-                      "kind",
-                      "version",
-                      "protocol"
-                    ],
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "insoft.test-config"
-                        ]
-                      },
-                      "version": {
-                        "type": "string"
-                      },
-                      "protocol": {
-                        "type": "object"
-                      },
-                      "updatedBy": {
-                        "type": "string"
-                      },
-                      "updatedAt": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/test.json": {
-        "put": {
-          "summary": "Actualizar test protocol (BD)",
-          "tags": [
-            "Testing"
-          ],
-          "description": "Persiste el `insoft.test-config` en `dbo.SYS_VALUES.test`. Body: documento completo `insoft.test-config` con `protocol: { paths, sequences, testIds, service, serviceName, version }`. La próxima lectura del protocol usará esta versión.",
-          "x-isa-subgroup": "pruebas",
-          "responses": {
-            "200": {
-              "description": "Config test actualizada en SYSTEM",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "respuesta": {
-                        "type": "object",
-                        "properties": {
-                          "ok": {
-                            "type": "boolean"
-                          },
-                          "key": {
-                            "type": "string"
-                          },
-                          "updatedBy": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": true,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.042Z"
-                    },
-                    "respuesta": {
-                      "ok": true,
-                      "key": "swagger",
-                      "updatedBy": "JAGUDELOE"
-                    }
-                  }
-                }
-              }
-            },
-            "401": {
-              "description": "No autorizado",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "required": [
-                      "encabezado"
-                    ],
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": false,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.012Z",
-                      "imensaje": 401020,
-                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
-                    }
-                  }
-                }
-              }
-            },
-            "403": {
-              "description": "Prohibido",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "required": [
-                      "encabezado"
-                    ],
-                    "properties": {
-                      "encabezado": {
-                        "type": "object",
-                        "properties": {
-                          "resultado": {
-                            "type": "boolean"
-                          },
-                          "tiempo": {
-                            "type": "number"
-                          },
-                          "fhentrada": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "fhsalida": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "imensaje": {
-                            "type": "integer"
-                          },
-                          "mensaje": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": false,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.012Z",
-                      "imensaje": 403010,
-                      "mensaje": "No tiene permisos para acceder a este recurso."
-                    }
-                  }
                 }
               }
             }
@@ -4110,15 +3431,12 @@
                   "health",
                   "mensajeCalificado",
                   "resumenConversacion",
-                  "runUnitConversation",
-                  "runUnitTest",
                   "swaggerConfig",
                   "swaggerJsonPut",
                   "swaggerUi",
                   "systemOpenai",
                   "systemOpenaiPut",
-                  "tiquete",
-                  "unitTestCatalog"
+                  "tiquete"
                 ],
                 "example": "health"
               },
@@ -4159,16 +3477,12 @@
       "health",
       "mensajeCalificado",
       "resumenConversacion",
-      "runUnitConversation",
-      "runUnitTest",
       "swaggerConfig",
       "swaggerJsonPut",
       "swaggerUi",
       "systemOpenai",
       "systemOpenaiPut",
-      "tiquete",
-      "unitTestCatalog"
+      "tiquete"
     ]
-  },
-  "builtAt": "2026-06-29T05:59:43.229Z"
+  }
 }

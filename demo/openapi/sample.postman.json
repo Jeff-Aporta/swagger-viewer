@@ -1,0 +1,1333 @@
+{
+  "info": {
+    "_postman_id": "iss-uty9rvyvmqywqd3k",
+    "name": "iss-ayudascpia API",
+    "description": "API AyudasCP-IA (conversaciones, mensajes, tiquetes).\n\n**Panel:** [ISA PatyIA](https://jeff-aporta.github.io/isa-patyia/)\n\n## Estándar de documentación (DI-QA-001)\n\nDocumentación alineada con la guía InSoft de APIs REST (adaptada de Postman a OpenAPI/Swagger).\n\n### Autenticación global\n\nTodas las rutas protegidas requieren **Bearer JWT** en el header `Authorization`.\n\n```http\nAuthorization: Bearer <JWT>\n```\n\nObtenga el token desde el panel superior (**Iniciar sesión** / **Pegar JWT**) o exporte la colección Postman y use la variable `{{token}}`.\n\n### Ambientes\n\n| Ambiente | URL base |\n|----------|----------|\n| Local (ISS Functions) | `http://127.0.0.1:8802/api` |\n| Web (staging Azure) | `https://ayudascp-ia-staging.azurewebsites.net/api` |\n\nEn Postman use `{{base_url}}` (activa), `{{base_url_local}}` o `{{base_url_web}}` según el ambiente.\n\n### Convenciones globales\n\n- **Fechas:** ISO 8601 (`2026-06-19T15:30:00.000Z`)\n- **Respuestas JSON:** envelope InSoft — `encabezado` (metadatos) + `respuesta` (payload)\n- **Errores:** `encabezado.resultado = false`, campos `imensaje` y `mensaje`\n- **Variables Postman:** `base_url`, `token` (no hardcodear secretos en ejemplos)\n\n### Exportar a Postman\n\nUse el botón **Exportar Postman** en la barra superior para descargar una colección v2.1 generada desde este OpenAPI (carpetas por tag, ejemplos de respuesta, auth Bearer).\n\n### Exportar IS (InSoft)\n\nUse el botón **IS** en la barra superior para descargar o copiar el documento `insoft.swagger-viewer`: incluye la configuración del visor y la especificación embebida. Es el formato para inyectar la vista completa en el componente SwaggerViewer (no es OpenAPI ni Postman).\n\n**URL base al exportar:** `http://127.0.0.1:8802/api`\n## Colección Postman\nImporte este archivo en Postman. Configure `base_url` y `token` en las variables de la colección o en un entorno.\n**Referencia:** DI-QA-001 — Guía de buenas prácticas para documentación de APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8802/api",
+      "type": "string"
+    },
+    {
+      "key": "base_url_local",
+      "value": "http://127.0.0.1:8802/api",
+      "type": "string"
+    },
+    {
+      "key": "base_url_web",
+      "value": "https://ayudascp-ia-staging.azurewebsites.net/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Conversaciones",
+      "description": "# Conversaciones\n\n## Alcance\n\nChat con IA PatyIA: conversaciones, mensajes calificados, logs, resúmenes y tiquetes CRM.\n\n## Operaciones\n\n| Método | Ruta | Descripción |\n|--------|------|-------------|\n| POST | `/conversacion` | Crear / continuar conversación (SSE) |\n| DELETE | `/conversacion/{iconversacion}` | Eliminar conversación |\n| GET | `/conversacion/{iconversacion}` | Detalle conversación |\n| GET | `/conversacion/logs/{iconversacion}` | Logs y mensajes con meta (solo QA Testing / ISA PatyIA) |\n| GET | `/conversaciones` | Listar conversaciones |\n| POST | `/mensaje` | Mensaje calificado |\n| GET | `/resumen_conversacion/{iconversacion}` | Resumen IA de conversación |\n| POST | `/tiquete` | Asociar tiquete CRM |\n\n## Autenticación\n\nLas operaciones marcadas con seguridad en OpenAPI heredan **Bearer {{token}}** de la colección.",
+      "item": [
+        {
+          "name": "Crear / continuar conversación (SSE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Tipo de contenido del body"
+              }
+            ],
+            "url": "{{base_url}}/conversacion",
+            "description": "## Crear / continuar conversación (SSE)\n\n### Método y ruta\n`POST {{base_url}}/conversacion`\n\n### Autorización\nRequiere **Bearer JWT** en `Authorization` (`Bearer {{token}}`).\n\n### Body (application/json)\n```json\n{\n  \"prompt\": \"¿Cómo creo una factura en ContaPyme?\",\n  \"imodulo\": \"CP-IA\",\n  \"iconversacion\": 4821\n}\n```\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Stream text/event-stream (ejemplo de chunk JSON) |\n| 401 | Unauthorized | No autorizado |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"¿Cómo creo una factura en ContaPyme?\",\n  \"imodulo\": \"CP-IA\",\n  \"iconversacion\": 4821\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 - Stream text/event-stream (ejemplo de chunk JSON)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prompt\": \"¿Cómo creo una factura en ContaPyme?\",\n  \"imodulo\": \"CP-IA\",\n  \"iconversacion\": 4821\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"tipo\": \"delta\",\n    \"contenido\": \"El saldo disponible es $1.240.500 COP.\",\n    \"iconversacion\": 4821\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prompt\": \"¿Cómo creo una factura en ContaPyme?\",\n  \"imodulo\": \"CP-IA\",\n  \"iconversacion\": 4821\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Eliminar conversación",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/conversacion/:iconversacion",
+            "description": "## Eliminar conversación\n\nSoft-delete: actualiza `itdestado` a **2**. Requiere JWT del mismo `itercero`/`icontacto` de la conversación.\n\n### Método y ruta\n`DELETE {{base_url}}/conversacion/{iconversacion}`\n\n### Autorización\nRequiere **Bearer JWT** en `Authorization` (`Bearer {{token}}`).\n\n### Parámetros\n| Nombre | Ubicación | Requerido | Tipo | Descripción |\n|--------|-----------|-----------|------|-------------|\n| `iconversacion` | path | Sí | integer | ID de conversación a eliminar. |\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Conversación eliminada (soft-delete) |\n| 401 | Unauthorized | No autorizado |\n| 404 | Not Found | Conversación no encontrada |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          },
+          "response": [
+            {
+              "name": "200 - Conversación eliminada (soft-delete)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion/:iconversacion",
+                "description": ""
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"iconversacion\": 4821,\n    \"itercero\": \"900123456\",\n    \"icontacto\": \"CONT-001\",\n    \"imodulo\": \"CP-IA\",\n    \"titulo\": \"Consulta saldos cuenta 41\",\n    \"nick_propietario\": \"JUAN GARCIA\",\n    \"hilo\": \"thread_abc123xyz\",\n    \"modelo_ia\": \"gpt-4o-mini\",\n    \"version_ayuda\": \"1\",\n    \"qtokens\": 1840,\n    \"qmensajes\": 6,\n    \"itdestado\": 2,\n    \"bautoriza_visualizacion\": false,\n    \"fhcre\": \"2026-06-18T14:22:10.000Z\",\n    \"fhultact\": \"2026-06-19T15:30:00.042Z\"\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion/:iconversacion",
+                "description": ""
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            },
+            {
+              "name": "404 - Conversación no encontrada",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion/:iconversacion",
+                "description": ""
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 404010,\n    \"mensaje\": \"No se ha encontrado el recurso solicitado. \"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Detalle conversación",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/conversacion/:iconversacion",
+            "description": "## Detalle conversación\n\n### Método y ruta\n`GET {{base_url}}/conversacion/{iconversacion}`\n\n### Autorización\nRequiere **Bearer JWT** en `Authorization` (`Bearer {{token}}`).\n\n### Parámetros\n| Nombre | Ubicación | Requerido | Tipo | Descripción |\n|--------|-----------|-----------|------|-------------|\n| `iconversacion` | path | Sí | integer | ID de conversación. |\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Detalle de la conversación |\n| 401 | Unauthorized | No autorizado |\n| 404 | Not Found | No encontrado |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          },
+          "response": [
+            {
+              "name": "200 - Detalle de la conversación",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion/:iconversacion",
+                "description": ""
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"iconversacion\": 4821,\n    \"itercero\": \"900123456\",\n    \"icontacto\": \"CONT-001\",\n    \"imodulo\": \"CP-IA\",\n    \"titulo\": \"Consulta saldos cuenta 41\",\n    \"nick_propietario\": \"JUAN GARCIA\",\n    \"hilo\": \"thread_abc123xyz\",\n    \"modelo_ia\": \"gpt-4o-mini\",\n    \"version_ayuda\": \"1\",\n    \"qtokens\": 1840,\n    \"qmensajes\": 6,\n    \"itdestado\": 0,\n    \"bautoriza_visualizacion\": false,\n    \"fhcre\": \"2026-06-18T14:22:10.000Z\",\n    \"fhultact\": \"2026-06-19T15:30:00.042Z\"\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion/:iconversacion",
+                "description": ""
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            },
+            {
+              "name": "404 - No encontrado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion/:iconversacion",
+                "description": ""
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 404010,\n    \"mensaje\": \"No se ha encontrado el recurso solicitado. \"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logs y mensajes con meta (solo QA Testing / ISA PatyIA)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/conversacion/logs/:iconversacion",
+            "description": "## Logs y mensajes con meta (solo QA Testing / ISA PatyIA)\n\n### Método y ruta\n`GET {{base_url}}/conversacion/logs/{iconversacion}`\n\n### Autorización\nNo requiere autenticación.\n\n### Parámetros\n| Nombre | Ubicación | Requerido | Tipo | Descripción |\n|--------|-----------|-----------|------|-------------|\n| `iconversacion` | path | Sí | integer | ID de conversación (público: no requiere JWT ni coincidencia con el contacto del token). |\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Mensajes con metadatos y convLog persistido |\n| 401 | Unauthorized | No autorizado |\n| 404 | Not Found | No encontrado |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          },
+          "response": [
+            {
+              "name": "200 - Mensajes con metadatos y convLog persistido",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion/logs/:iconversacion",
+                "description": ""
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"iconversacion\": 4821,\n    \"convLog\": {\n      \"iconversacion\": 4821,\n      \"createdAt\": \"2026-06-18T14:22:10.000Z\",\n      \"updatedAt\": \"2026-06-19T15:30:00.042Z\",\n      \"mensajes\": [\n        {\n          \"ts\": \"2026-06-18T14:22:11.000Z\",\n          \"role\": \"user\",\n          \"turno\": 1,\n          \"seq\": 1,\n          \"tokens\": {\n            \"input\": 18,\n            \"output\": 0,\n            \"total\": 18\n          }\n        },\n        {\n          \"ts\": \"2026-06-18T14:22:14.000Z\",\n          \"role\": \"assistant\",\n          \"turno\": 1,\n          \"seq\": 2,\n          \"tokens\": {\n            \"input\": 0,\n            \"output\": 42,\n            \"total\": 42\n          },\n          \"others\": {\n            \"response_text\": \"El saldo disponible es $1.240.500 COP.\"\n          }\n        }\n      ]\n    },\n    \"mensajesOpenAI\": [\n      {\n        \"imensaje\": 1001,\n        \"autor\": \"Usuario\",\n        \"mensaje\": \"¿Cuál es el saldo de la cuenta 41?\"\n      },\n      {\n        \"imensaje\": 1002,\n        \"autor\": \"Asistente\",\n        \"mensaje\": \"El saldo disponible es $1.240.500 COP.\",\n        \"meta\": {\n          \"qtokens\": 42,\n          \"modelo_ia\": \"gpt-4o-mini\"\n        }\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion/logs/:iconversacion",
+                "description": ""
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            },
+            {
+              "name": "404 - No encontrado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversacion/logs/:iconversacion",
+                "description": ""
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 404010,\n    \"mensaje\": \"No se ha encontrado el recurso solicitado. \"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Listar conversaciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/conversaciones?f=eyJzZWFyY2giOiJzYWxkbyIsImxpbWl0IjoxMDAsIm9mZnNldCI6MCwic29ydCI6Imljb252ZXJzYWNpb24ifQ%3D%3D",
+            "description": "## Listar conversaciones\n\n### Método y ruta\n`GET {{base_url}}/conversaciones`\n\n### Autorización\nRequiere **Bearer JWT** en `Authorization` (`Bearer {{token}}`).\n\n### Parámetros\n| Nombre | Ubicación | Requerido | Tipo | Descripción |\n|--------|-----------|-----------|------|-------------|\n| `f` | query | No | string | Filtro ISS (JSON en Base64). Campos: `search`, `limit`, `offset`, `eq`, `sort`. En conversaciones, `search` busca en iconversacion, titulo y prompt; `eq` admite itercero, icontacto, itdestado, imodulo; `sort` admite fhcre, fhultact, iconversacion, titulo. Tercero/contacto (auditoría) se configuran en el diálogo **Configurar filtro**. |\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Listado de conversaciones del tercero/contacto |\n| 401 | Unauthorized | No autorizado |\n| 403 | Forbidden | Prohibido |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          },
+          "response": [
+            {
+              "name": "200 - Listado de conversaciones del tercero/contacto",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversaciones?f=eyJzZWFyY2giOiJzYWxkbyIsImxpbWl0IjoxMDAsIm9mZnNldCI6MCwic29ydCI6Imljb252ZXJzYWNpb24ifQ%3D%3D",
+                "description": ""
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"conversaciones\": [\n      {\n        \"iconversacion\": 4821,\n        \"itercero\": \"900123456\",\n        \"icontacto\": \"CONT-001\",\n        \"imodulo\": \"CP-IA\",\n        \"titulo\": \"Consulta saldos cuenta 41\",\n        \"nick_propietario\": \"JUAN GARCIA\",\n        \"hilo\": \"thread_abc123xyz\",\n        \"modelo_ia\": \"gpt-4o-mini\",\n        \"version_ayuda\": \"1\",\n        \"qtokens\": 1840,\n        \"qmensajes\": 6,\n        \"itdestado\": 0,\n        \"bautoriza_visualizacion\": false,\n        \"fhcre\": \"2026-06-18T14:22:10.000Z\",\n        \"fhultact\": \"2026-06-19T15:30:00.042Z\"\n      }\n    ],\n    \"total\": 1,\n    \"limit\": 100,\n    \"offset\": 0,\n    \"page\": 1,\n    \"pages\": 1\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversaciones?f=eyJzZWFyY2giOiJzYWxkbyIsImxpbWl0IjoxMDAsIm9mZnNldCI6MCwic29ydCI6Imljb252ZXJzYWNpb24ifQ%3D%3D",
+                "description": ""
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            },
+            {
+              "name": "403 - Prohibido",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/conversaciones?f=eyJzZWFyY2giOiJzYWxkbyIsImxpbWl0IjoxMDAsIm9mZnNldCI6MCwic29ydCI6Imljb252ZXJzYWNpb24ifQ%3D%3D",
+                "description": ""
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 403010,\n    \"mensaje\": \"No tiene permisos para acceder a este recurso.\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Mensaje calificado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Tipo de contenido del body"
+              }
+            ],
+            "url": "{{base_url}}/mensaje",
+            "description": "## Mensaje calificado\n\n### Método y ruta\n`POST {{base_url}}/mensaje`\n\n### Autorización\nRequiere **Bearer JWT** en `Authorization` (`Bearer {{token}}`).\n\n### Body (application/json)\n```json\n{\n  \"iconversacion\": 4821,\n  \"imensaje\": 2,\n  \"butil\": true,\n  \"contenido\": \"La respuesta fue clara y útil.\"\n}\n```\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Mensaje calificado registrado |\n| 401 | Unauthorized | No autorizado |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"iconversacion\": 4821,\n  \"imensaje\": 2,\n  \"butil\": true,\n  \"contenido\": \"La respuesta fue clara y útil.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 - Mensaje calificado registrado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/mensaje",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"iconversacion\": 4821,\n  \"imensaje\": 2,\n  \"butil\": true,\n  \"contenido\": \"La respuesta fue clara y útil.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"imensaje\": 9001,\n    \"iconversacion\": 4821,\n    \"itercero\": \"900123456\",\n    \"icontacto\": \"CONT-001\",\n    \"contenido\": \"La respuesta fue clara y útil.\",\n    \"butil\": true\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/mensaje",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"iconversacion\": 4821,\n  \"imensaje\": 2,\n  \"butil\": true,\n  \"contenido\": \"La respuesta fue clara y útil.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Resumen IA de conversación",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/resumen_conversacion/:iconversacion",
+            "description": "## Resumen IA de conversación\n\n### Método y ruta\n`GET {{base_url}}/resumen_conversacion/{iconversacion}`\n\n### Autorización\nNo requiere autenticación.\n\n### Parámetros\n| Nombre | Ubicación | Requerido | Tipo | Descripción |\n|--------|-----------|-----------|------|-------------|\n| `iconversacion` | path | Sí | integer | ID de conversación. |\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Resumen generado por IA |\n| 401 | Unauthorized | No autorizado |\n| 404 | Not Found | No encontrado |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          },
+          "response": [
+            {
+              "name": "200 - Resumen generado por IA",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/resumen_conversacion/:iconversacion",
+                "description": ""
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"iconversacion\": 4821,\n    \"resumen\": \"El usuario consultó el saldo de la cuenta 41. La IA respondió con el monto disponible.\"\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/resumen_conversacion/:iconversacion",
+                "description": ""
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            },
+            {
+              "name": "404 - No encontrado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/resumen_conversacion/:iconversacion",
+                "description": ""
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 404010,\n    \"mensaje\": \"No se ha encontrado el recurso solicitado. \"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Asociar tiquete CRM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Tipo de contenido del body"
+              }
+            ],
+            "url": "{{base_url}}/tiquete",
+            "description": "## Asociar tiquete CRM\n\n### Método y ruta\n`POST {{base_url}}/tiquete`\n\n### Autorización\nRequiere **Bearer JWT** en `Authorization` (`Bearer {{token}}`).\n\n### Body (application/json)\n```json\n{\n  \"iconversacion\": 4821,\n  \"codigotk\": \"TK-1436238\",\n  \"tema\": \"Consulta saldo cartera\",\n  \"bcerrar_conversacion\": false,\n  \"bautoriza_visualizacion\": true\n}\n```\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Tiquete asociado a la conversación |\n| 401 | Unauthorized | No autorizado |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"iconversacion\": 4821,\n  \"codigotk\": \"TK-1436238\",\n  \"tema\": \"Consulta saldo cartera\",\n  \"bcerrar_conversacion\": false,\n  \"bautoriza_visualizacion\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 - Tiquete asociado a la conversación",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/tiquete",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"iconversacion\": 4821,\n  \"codigotk\": \"TK-1436238\",\n  \"tema\": \"Consulta saldo cartera\",\n  \"bcerrar_conversacion\": false,\n  \"bautoriza_visualizacion\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"iconversacion\": 4821,\n    \"itiquete\": \"TK-1436238\",\n    \"itercero\": \"900123456\"\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/tiquete",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"iconversacion\": 4821,\n  \"codigotk\": \"TK-1436238\",\n  \"tema\": \"Consulta saldo cartera\",\n  \"bcerrar_conversacion\": false,\n  \"bautoriza_visualizacion\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sistema",
+      "description": "# Sistema\n\n## Alcance\n\nSalud del servicio y tareas de mantenimiento (sin lógica de chat ni conversaciones).\n\n## Operaciones\n\n| Método | Ruta | Descripción |\n|--------|------|-------------|\n| GET | `/system/health` | Health + ping MSSQL |\n| GET | `/system/openai` | Config OpenAI (SYSTEM.openai) |\n| PUT | `/system/openai` | Actualizar SYSTEM.openai |\n| GET | `/system/prompts-operativos` | Config prompts operativos |\n| PUT | `/system/prompts-operativos` | Actualizar prompts operativos |\n| GET | `/system/swagger/docs/{key}` | Doc markdown por clave |\n| GET | `/system/swagger/meta.json` | Meta IS-Swagger (BD) |\n| GET | `/system/swagger/paths.json` | Paths IS-Swagger (BD) |\n\n## Autenticación\n\nLas operaciones marcadas con seguridad en OpenAPI heredan **Bearer {{token}}** de la colección.",
+      "item": [
+        {
+          "name": "Health + ping MSSQL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/system/health",
+            "description": "## Health + ping MSSQL\n\n### Método y ruta\n`GET {{base_url}}/system/health`\n\n### Autorización\nNo requiere autenticación.\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Servicio operativo |\n| 503 | Service Unavailable | Servicio no disponible |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          },
+          "response": [
+            {
+              "name": "200 - Servicio operativo",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/system/health",
+                "description": ""
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"ok\": true,\n    \"service\": \"iss-ayudascpia\",\n    \"authMode\": \"worker\",\n    \"datos\": {\n      \"name\": \"3_iss_agenteia\",\n      \"version\": \"1.0.0\",\n      \"timezone\": \"SA Pacific Standard Time\",\n      \"nodeversion\": \"v22.x\",\n      \"slot\": \"PRODUCTION\",\n      \"database\": {\n        \"database\": \"AyudasCP\",\n        \"bconnected\": true,\n        \"timeconnect\": 12\n      }\n    }\n  }\n}"
+            },
+            {
+              "name": "503 - Servicio no disponible",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/system/health",
+                "description": ""
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 503010,\n    \"mensaje\": \"El servicio no está disponible temporalmente.\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Config OpenAI (SYSTEM.openai)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/system/openai",
+            "description": "## Config OpenAI (SYSTEM.openai)\n\n### Método y ruta\n`GET {{base_url}}/system/openai`\n\n### Autorización\nNo requiere autenticación.\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Config SYS_VALUES.openai |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          },
+          "response": [
+            {
+              "name": "200 - Config SYS_VALUES.openai",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/system/openai",
+                "description": ""
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"key\": \"openai\",\n    \"config\": {\n      \"max_num_results\": 8\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Actualizar SYSTEM.openai",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Tipo de contenido del body"
+              }
+            ],
+            "url": "{{base_url}}/system/openai",
+            "description": "## Actualizar SYSTEM.openai\n\n### Método y ruta\n`PUT {{base_url}}/system/openai`\n\n### Autorización\nRequiere **Bearer JWT** en `Authorization` (`Bearer {{token}}`).\n\n### Body (application/json)\n```json\n{\n  \"max_num_results\": 8\n}\n```\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | SYSTEM.openai actualizado |\n| 401 | Unauthorized | No autorizado |\n| 403 | Forbidden | Prohibido |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"max_num_results\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 - SYSTEM.openai actualizado",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/system/openai",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"max_num_results\": 8\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"ok\": true,\n    \"key\": \"swagger\",\n    \"updatedBy\": \"JAGUDELOE\"\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/system/openai",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"max_num_results\": 8\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            },
+            {
+              "name": "403 - Prohibido",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/system/openai",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"max_num_results\": 8\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 403010,\n    \"mensaje\": \"No tiene permisos para acceder a este recurso.\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Config prompts operativos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/system/prompts-operativos",
+            "description": "## Config prompts operativos\n\n### Método y ruta\n`GET {{base_url}}/system/prompts-operativos`\n\n### Autorización\nNo requiere autenticación.\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | SYS_VALUES.prompts_operativos |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          },
+          "response": [
+            {
+              "name": "200 - SYS_VALUES.prompts_operativos",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  }
+                ],
+                "url": "{{base_url}}/system/prompts-operativos",
+                "description": ""
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"key\": \"openai\",\n    \"config\": {\n      \"max_num_results\": 8\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Actualizar prompts operativos",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Tipo de contenido del body"
+              }
+            ],
+            "url": "{{base_url}}/system/prompts-operativos",
+            "description": "## Actualizar prompts operativos\n\n### Método y ruta\n`PUT {{base_url}}/system/prompts-operativos`\n\n### Autorización\nRequiere **Bearer JWT** en `Authorization` (`Bearer {{token}}`).\n\n### Body (application/json)\n```json\n{}\n```\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Prompts operativos actualizados |\n| 401 | Unauthorized | No autorizado |\n| 403 | Forbidden | Prohibido |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 - Prompts operativos actualizados",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/system/prompts-operativos",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": true,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.042Z\"\n  },\n  \"respuesta\": {\n    \"ok\": true,\n    \"key\": \"swagger\",\n    \"updatedBy\": \"JAGUDELOE\"\n  }\n}"
+            },
+            {
+              "name": "401 - No autorizado",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/system/prompts-operativos",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 401020,\n    \"mensaje\": \"No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \\\"authorization\\\"\"\n  }\n}"
+            },
+            {
+              "name": "403 - Prohibido",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "description": "Formato de respuesta"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "description": "Tipo de contenido del body"
+                  }
+                ],
+                "url": "{{base_url}}/system/prompts-operativos",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"encabezado\": {\n    \"resultado\": false,\n    \"tiempo\": -1,\n    \"fhentrada\": \"2026-06-19T15:30:00.000Z\",\n    \"fhsalida\": \"2026-06-19T15:30:00.012Z\",\n    \"imensaje\": 403010,\n    \"mensaje\": \"No tiene permisos para acceder a este recurso.\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Doc markdown por clave",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/system/swagger/docs/:key",
+            "description": "## Doc markdown por clave\n\n### Método y ruta\n`GET {{base_url}}/system/swagger/docs/{key}`\n\n### Autorización\nNo requiere autenticación.\n\n### Parámetros\n| Nombre | Ubicación | Requerido | Tipo | Descripción |\n|--------|-----------|-----------|------|-------------|\n| `key` | path | Sí | string | Clave en catalog.docs |\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Markdown text/plain |\n| 404 | Not Found | Clave no encontrada |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          }
+        },
+        {
+          "name": "Meta IS-Swagger (BD)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/system/swagger/meta.json",
+            "description": "## Meta IS-Swagger (BD)\n\n### Método y ruta\n`GET {{base_url}}/system/swagger/meta.json`\n\n### Autorización\nNo requiere autenticación.\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | insoft.openapi-meta desde SYS_VALUES.swagger |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          }
+        },
+        {
+          "name": "Paths IS-Swagger (BD)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Formato de respuesta"
+              }
+            ],
+            "url": "{{base_url}}/system/swagger/paths.json",
+            "description": "## Paths IS-Swagger (BD)\n\n### Método y ruta\n`GET {{base_url}}/system/swagger/paths.json`\n\n### Autorización\nNo requiere autenticación.\n\n### Respuestas\n| Código | Estado | Descripción |\n|--------|--------|-------------|\n| 200 | OK | Paths + catalog desde SYS_VALUES.swagger/config |\n\n\n---\n*Generado desde OpenAPI · estándar DI-QA-001*"
+          }
+        }
+      ]
+    }
+  ]
+}
