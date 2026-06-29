@@ -976,7 +976,7 @@ function stripIsaExtensionsForExport(openApi) {
 
 // server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "stream-final-2026-06-28";
+var SWAGGER_VIEWER_REF = "detail-sugars-2026-06-29";
 var SWAGGER_FRONT_SHARED_REF = "ba55d76";
 
 // server/orchestrator-auth.ts
