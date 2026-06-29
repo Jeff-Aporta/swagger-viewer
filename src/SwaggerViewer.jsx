@@ -192,10 +192,19 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
           {exportToolbarBody}
           <ServerHealthBanner ns={ns} />
           {!shellLayout ? <InfoHeader spec={spec} showTitle ns={ns} /> : null}
+          {clientTests.length > 0 ? (
+            <ClientTestTagGroup
+              tests={clientTests}
+              tagIndex={0}
+              authEnabled={authEnabled}
+              onNeedLogin={onNeedLogin}
+              ns={ns}
+            />
+          ) : null}
           {visibleGroups.map((group, tagIndex) => (
             <OperationTagGroup
               key={group.name}
-              tagIndex={tagIndex}
+              tagIndex={tagIndex + (clientTests.length > 0 ? 1 : 0)}
               group={group}
               spec={spec}
               docIndex={docIndex}
@@ -206,15 +215,6 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
               ns={ns}
             />
           ))}
-          {clientTests.length > 0 ? (
-            <ClientTestTagGroup
-              tests={clientTests}
-              tagIndex={visibleGroups.length}
-              authEnabled={authEnabled}
-              onNeedLogin={onNeedLogin}
-              ns={ns}
-            />
-          ) : null}
         </>
       ) : !err ? (
         <Typography color="text.secondary">Cargando especificación OpenAPI…</Typography>

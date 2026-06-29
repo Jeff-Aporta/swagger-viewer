@@ -1,20 +1,20 @@
 {
-  "builtAt": "2026-06-29T13:45:50.431Z",
+  "builtAt": "2026-06-29T14:42:09.399Z",
   "kind": "component-demo",
-  "demoRoot": "..\\..\\..\\components\\swagger\\demo",
+  "demoRoot": "..\\..\\components\\swagger\\demo",
   "files": 6,
-  "bytesIn": 17594,
-  "bytesOut": 223350,
-  "ratio": 12.695,
-  "hash": "a5bd488b16ca",
+  "bytesIn": 17552,
+  "bytesOut": 223360,
+  "ratio": 12.726,
+  "hash": "6643afb9644e",
   "appBundle": "_dist/app.min.js",
-  "appBundleHashed": "_dist/app.a5bd488b16ca.min.js",
+  "appBundleHashed": "_dist/app.6643afb9644e.min.js",
   "entries": [
     {
       "rel": "js\\app\\main.jsx",
       "bytesIn": 144,
-      "bytesOut": 211240,
-      "hash": "a5bd488b16ca"
+      "bytesOut": 211250,
+      "hash": "6643afb9644e"
     },
     {
       "rel": "css/demo.css",
@@ -33,7 +33,7 @@
     },
     {
       "rel": "js/boot/cdn.mjs",
-      "bytesIn": 4150,
+      "bytesIn": 4108,
       "bytesOut": 2323
     },
     {

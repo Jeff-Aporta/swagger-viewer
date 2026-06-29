@@ -1,4 +1,4 @@
-// server/envelope.ts
+// ../../components/swagger/server/envelope.ts
 var TS = "2026-06-19T15:30:00.000Z";
 var TS_OUT = "2026-06-19T15:30:00.042Z";
 var INSOFT_ENCABEZADO_OK = {
@@ -63,7 +63,7 @@ var EXAMPLE_503 = {
   encabezado: insoftEncabezadoError(503010, "El servicio no est\xE1 disponible temporalmente.")
 };
 
-// server/api-presets.ts
+// ../../components/swagger/server/api-presets.ts
 var ISS_LOCAL_API_BASE = "http://127.0.0.1:8802/api";
 var ISS_WEB_API_BASE = "https://ayudascp-ia-staging.azurewebsites.net/api";
 function normApiBase(url) {
@@ -87,7 +87,7 @@ function buildOpenApiServers(activeBase) {
   return out;
 }
 
-// server/spec.ts
+// ../../components/swagger/server/spec.ts
 var ISS_DOC_MD_EXTENSION = "x-iss-doc-md";
 var ISS_LOOKUP_EXTENSION = "x-iss-lookup";
 var ISS_LIST_FILTER_EXTENSION = "x-iss-list-filter";
@@ -198,7 +198,7 @@ function issRspSseDoc(okDesc, example) {
   };
 }
 
-// server/list-filter-schema.ts
+// ../../components/swagger/server/list-filter-schema.ts
 var ISS_LIST_FILTER_DEFAULT_LIMIT = 9999;
 var ISS_LIST_FILTER_MAX_LIMIT = 9999;
 function sortKeysFromMeta(meta) {
@@ -277,7 +277,7 @@ function enrichListFilterCatalog(catalog) {
   return { ...catalog, listFilters: enriched };
 }
 
-// server/build-spec.ts
+// ../../components/swagger/server/build-spec.ts
 function encodeIssFilterB64(obj) {
   const json = JSON.stringify(obj);
   const bytes = new TextEncoder().encode(json);
@@ -535,7 +535,7 @@ function buildOpenApiFromConfig(config, serverUrl) {
   };
 }
 
-// server/docs.ts
+// ../../components/swagger/server/docs.ts
 var ISS_DOC_STANDARD = "DI-QA-001";
 function buildApiInfoDescription(baseDesc, frontLink) {
   const panel = frontLink?.url ? `
@@ -602,7 +602,7 @@ Las operaciones marcadas con seguridad en OpenAPI heredan **Bearer {{token}}** d
 `.trim();
 }
 
-// server/postman.ts
+// ../../components/swagger/server/postman.ts
 var POSTMAN_SCHEMA = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
 var HTTP_METHODS = ["get", "post", "put", "patch", "delete", "options", "head"];
 var SKIP_PATHS = /* @__PURE__ */ new Set(["/swagger", "/system/swagger.json", "/system/swagger/config.json", "/swagger/postman.json", "/swagger/is.json"]);
@@ -944,7 +944,7 @@ function openApiToPostmanCollection(spec, opts = {}) {
   };
 }
 
-// server/strip-export-extensions.ts
+// ../../components/swagger/server/strip-export-extensions.ts
 var STRIP_KEYS = /* @__PURE__ */ new Set([
   ISS_DOC_MD_EXTENSION,
   ISS_LOOKUP_EXTENSION,
@@ -974,12 +974,12 @@ function stripIsaExtensionsForExport(openApi) {
   return stripNode(openApi);
 }
 
-// server/viewer-pins.ts
+// ../../components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
 var SWAGGER_VIEWER_REF = "client-tests-wrap-toggle-2026-06-30";
 var SWAGGER_FRONT_SHARED_REF = "33acc67";
 
-// server/orchestrator-auth.ts
+// ../../components/swagger/server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
 var DEFAULT_AUTH_LOGIN_PATH = "/api/auth/token";
 function resolveOrchestratorBase(_apiBase) {
@@ -991,7 +991,7 @@ function resolveAuthAppId(app) {
   return AUTH_APP_ALIASES[raw] || raw || "isa-patyia";
 }
 
-// server/build-exports.ts
+// ../../components/swagger/server/build-exports.ts
 var IS_DOCUMENT_KIND = "insoft.swagger-viewer";
 var IS_DOCUMENT_VERSION = 1;
 var RUNTIME_VIEWER_KEYS = /* @__PURE__ */ new Set(["cssUrl", "stackUrl", "isaUrl", "appUrl", "specUrl", "url", "spec", "root", "exports", "loadMarked"]);
