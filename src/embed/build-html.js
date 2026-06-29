@@ -52,7 +52,7 @@ function loadViewerRef() {
 }
 
 const SWAGGER_VIEWER_REF = loadViewerRef();
-const SWAGGER_FRONT_SHARED_REF = "c97330e";
+const SWAGGER_FRONT_SHARED_REF = "ba55d76";
 const SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
 
 function swaggerViewerCdnJsdelivr(ref = SWAGGER_VIEWER_REF) {

@@ -1,10 +1,13 @@
 import { defaultTryItBodyText, formatBodyExample, resolveTryItBodyExample, resolveTryItBodyExamples, shouldShowTryItBody } from "../../lib/openapi/tryit-body.js";
 import { InputRecommendationHints } from "../filters/InputRecommendationHints.jsx";
 import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
+import { TryItAttachmentsBar } from "./TryItAttachmentsBar.jsx";
+import { resolveTryItAttachments, hasTryItAttachments } from "../../lib/openapi/tryit-attachments.js";
 import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { collectElevatedOnlyFields } from "../../lib/openapi/elevated-only.js";
 
-const { useState, useEffect, useRef } = React;
-const { Box, Typography, Chip } = MaterialUI;
+const { useState, useEffect, useRef, useMemo } = React;
+const { Box, Typography, Chip, Alert } = MaterialUI;
 
 const BODY_EDITOR_MIN = "11rem";
 const BODY_EDITOR_MAX = "40vh";
@@ -19,14 +22,20 @@ export function RequestBodySection({
   onBodyChange,
   disabled,
   ns = "ISA",
+  spec,
+  attachments,
+  onAttachmentsChange,
 }) {
   const bodyOp = op || { requestBody, method, path };
-  if (!shouldShowTryItBody(bodyOp)) return null;
+  const show = shouldShowTryItBody(bodyOp);
+  const attachConfig = useMemo(() => (show ? resolveTryItAttachments(bodyOp, spec) : null), [show, bodyOp, spec]);
+  if (!show) return null;
 
   const example = specExample ?? resolveTryItBodyExample(bodyOp);
   const examplePretty = example !== undefined ? defaultTryItBodyText(bodyOp) : "{\n  \n}";
   const presets = resolveTryItBodyExamples(bodyOp);
   const bodySchema = bodyOp?.requestBody?.content?.["application/json"]?.schema;
+  const elevatedOnlyFields = useMemo(() => collectElevatedOnlyFields(bodySchema), [bodySchema]);
   const [raw, setRaw] = useState(bodyText ?? examplePretty);
   const seededRef = useRef(false);
 
@@ -82,6 +91,14 @@ export function RequestBodySection({
         )}
         <InputRecommendationHints schema={bodySchema} ns={ns} />
       </Box>
+      {hasTryItAttachments(attachConfig) ? (
+        <TryItAttachmentsBar config={attachConfig} attachments={attachments} onChange={onAttachmentsChange} disabled={disabled} ns={ns} />
+      ) : null}
+      {elevatedOnlyFields.length ? (
+        <Alert severity="info" icon={<SwIcon icon="mdi:shield-key-outline" size={16} ns={ns} />} className="isa-sw-request-body__elevated-only" sx={{ mb: 0.75, py: 0.5 }}>
+          Campos reservados para ISS-devs / dev_lead: <strong>{elevatedOnlyFields.join(", ")}</strong>. Para otros perfiles el backend los descarta y aplica los valores operacionales.
+        </Alert>
+      ) : null}
       <JsonCodeBlock
         className="isa-sw-request-body__editor"
         value={raw}

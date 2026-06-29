@@ -70,7 +70,19 @@ export function createSseIncrementalParser() {
 
 export function formatUnitTestSse(events) {
   if (!events.length) return { markdown: "", ok: null, raw: "" };
-  const parts = events.map((ev) => ev?.md).filter(Boolean);
+  const parts = [];
+  for (const ev of events) {
+    if (!ev) continue;
+    if (ev.type === "delta" && ev.chunk) {
+      parts.push(ev.chunk);
+    } else if (ev.type === "tick") {
+      // Tick silencioso: solo contrib bytes/heartbeat en el bloque de metadatos.
+      // Incluimos un span invisible para que el markdown concatene sin vacío.
+      parts.push(`<span data-tick="${ev.elapsedMs}ms" data-bytes="${ev.bytesReceived}"></span>`);
+    } else if (ev.md) {
+      parts.push(ev.md);
+    }
+  }
   const summary = events.find((ev) => ev?.type === "summary");
   return {
     markdown: parts.join("\n\n---\n\n"),

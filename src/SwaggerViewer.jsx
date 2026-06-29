@@ -18,6 +18,7 @@ import { getStoredJwt, clearJwt } from "./lib/auth/auth.js";
 import { resolveAuthConfig } from "./lib/auth/orchestrator-base.js";
 import { applyBrandToDocument, resolveViewerBrand } from "./lib/brand/viewer-brand.js";
 import { buildNavRows, filterGroupsByNavTab, activeSectionTabId, resolveInitialNavTab } from "./lib/nav/viewer-nav.js";
+import { catalogDocKeysFromSources } from "./lib/openapi/param-enum.js";
 import { readNavTabFromUrl, writeNavTabToUrl } from "./lib/nav/nav-url.js";
 
 const { useState, useEffect, useMemo, useCallback } = React;
@@ -106,6 +107,10 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
     if (!active) return groups;
     return filterGroupsByNavTab(groups, config, active);
   }, [groups, config, navRows]);
+  const catalogDocKeys = useMemo(
+    () => catalogDocKeysFromSources(spec, config?.catalogDocKeys),
+    [spec, config?.catalogDocKeys],
+  );
   const docIndex = useMemo(() => (spec ? buildDocIndex(spec) : {}), [spec]);
   const lookupIndex = useMemo(() => (spec ? buildLookupIndex(spec) : {}), [spec]);
   const brand = useMemo(() => resolveViewerBrand(config, spec), [config, spec]);
@@ -193,6 +198,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
               spec={spec}
               docIndex={docIndex}
               lookupIndex={lookupIndex}
+              catalogDocKeys={catalogDocKeys}
               authEnabled={authEnabled}
               onNeedLogin={onNeedLogin}
               ns={ns}

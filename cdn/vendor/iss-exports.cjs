@@ -16,7 +16,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// ../../components/swagger/server/build-exports.ts
+// server/build-exports.ts
 var build_exports_exports = {};
 __export(build_exports_exports, {
   IS_DOCUMENT_KIND: () => IS_DOCUMENT_KIND,
@@ -30,7 +30,7 @@ __export(build_exports_exports, {
 });
 module.exports = __toCommonJS(build_exports_exports);
 
-// ../../components/swagger/server/envelope.ts
+// server/envelope.ts
 var TS = "2026-06-19T15:30:00.000Z";
 var TS_OUT = "2026-06-19T15:30:00.042Z";
 var INSOFT_ENCABEZADO_OK = {
@@ -95,7 +95,7 @@ var EXAMPLE_503 = {
   encabezado: insoftEncabezadoError(503010, "El servicio no est\xE1 disponible temporalmente.")
 };
 
-// ../../components/swagger/server/api-presets.ts
+// server/api-presets.ts
 var ISS_LOCAL_API_BASE = "http://127.0.0.1:8802/api";
 var ISS_WEB_API_BASE = "https://ayudascp-ia-staging.azurewebsites.net/api";
 function normApiBase(url) {
@@ -119,7 +119,7 @@ function buildOpenApiServers(activeBase) {
   return out;
 }
 
-// ../../components/swagger/server/spec.ts
+// server/spec.ts
 var ISS_DOC_MD_EXTENSION = "x-iss-doc-md";
 var ISS_LOOKUP_EXTENSION = "x-iss-lookup";
 var ISS_LIST_FILTER_EXTENSION = "x-iss-list-filter";
@@ -127,6 +127,10 @@ var ISS_SUBGROUP_EXTENSION = "x-isa-subgroup";
 var ISS_SUBGROUPS_EXTENSION = "x-isa-subgroups";
 var ISS_REQUEST_BODY_EXAMPLES_EXTENSION = "x-iss-request-body-examples";
 var ISS_INPUT_RECOMMENDATION_EXTENSION = "x-iss-input-recommendation";
+var ISS_TRYIT_ATTACHMENTS_EXTENSION = "x-iss-tryit-attachments";
+var ISS_CATALOG_DOC_KEYS_EXTENSION = "x-iss-catalog-doc-keys";
+var ISS_ENUM_FROM_EXTENSION = "x-iss-enum-from";
+var ISS_ELEVATED_ONLY_EXTENSION = "x-iss-elevated-only";
 var jsonResponse = (description, schema = { type: "object" }, example) => {
   const media = { schema };
   if (example !== void 0) media.example = example;
@@ -226,7 +230,7 @@ function issRspSseDoc(okDesc, example) {
   };
 }
 
-// ../../components/swagger/server/list-filter-schema.ts
+// server/list-filter-schema.ts
 var ISS_LIST_FILTER_DEFAULT_LIMIT = 9999;
 var ISS_LIST_FILTER_MAX_LIMIT = 9999;
 function sortKeysFromMeta(meta) {
@@ -305,7 +309,7 @@ function enrichListFilterCatalog(catalog) {
   return { ...catalog, listFilters: enriched };
 }
 
-// ../../components/swagger/server/build-spec.ts
+// server/build-spec.ts
 function encodeIssFilterB64(obj) {
   const json = JSON.stringify(obj);
   const bytes = new TextEncoder().encode(json);
@@ -470,7 +474,29 @@ function resolveParam(catalog, p) {
       raw.schema = { type: "string", example: encodeIssFilterB64(rec.listFilter) };
     }
   }
+  const enumFrom = raw.enumFrom;
+  if (typeof enumFrom === "string") {
+    delete raw.enumFrom;
+    let keys = [];
+    if (enumFrom === "catalog.docs") keys = Object.keys(catalog.docs || {}).sort();
+    else throw new Error(`openapi-config: enumFrom \xAB${enumFrom}\xBB no soportado`);
+    const schema = { ...typeof raw.schema === "object" && raw.schema ? raw.schema : {}, type: "string", enum: keys };
+    if (schema.example == null && keys.length) schema.example = keys.includes("health") ? "health" : keys[0];
+    raw.schema = schema;
+    raw[ISS_ENUM_FROM_EXTENSION] = enumFrom;
+  }
   return raw;
+}
+function resolveTryItAttachmentsDef(catalog, def) {
+  const raw = def.tryitAttachments;
+  if (raw === false) return false;
+  if (typeof raw === "string") {
+    const t = catalog.tryitAttachments?.templates?.[raw];
+    if (t) return t;
+    return void 0;
+  }
+  if (raw && typeof raw === "object") return raw;
+  return void 0;
 }
 function buildOperation(catalog, def) {
   const op = {
@@ -482,6 +508,9 @@ function buildOperation(catalog, def) {
   if (def.subgroup) Object.assign(op, sg(def.subgroup));
   if (def.security === "bearer") op.security = bearerSecurity;
   if (def.tryitConfirm !== void 0) op.tryitConfirm = def.tryitConfirm;
+  const attachDef = resolveTryItAttachmentsDef(catalog, def);
+  if (attachDef === false) op[ISS_TRYIT_ATTACHMENTS_EXTENSION] = false;
+  else if (attachDef) op[ISS_TRYIT_ATTACHMENTS_EXTENSION] = attachDef;
   if (def.doc) {
     const md = catalog.docs?.[def.doc];
     if (md) op[ISS_DOC_MD_EXTENSION] = md;
@@ -533,11 +562,12 @@ function buildOpenApiFromConfig(config, serverUrl) {
     servers: buildOpenApiServers(base),
     tags,
     components: { ...bearerComponents() },
-    paths
+    paths,
+    [ISS_CATALOG_DOC_KEYS_EXTENSION]: Object.keys(catalog.docs || {}).sort()
   };
 }
 
-// ../../components/swagger/server/docs.ts
+// server/docs.ts
 var ISS_DOC_STANDARD = "DI-QA-001";
 function buildApiInfoDescription(baseDesc, frontLink) {
   const panel = frontLink?.url ? `
@@ -604,10 +634,10 @@ Las operaciones marcadas con seguridad en OpenAPI heredan **Bearer {{token}}** d
 `.trim();
 }
 
-// ../../components/swagger/server/postman.ts
+// server/postman.ts
 var POSTMAN_SCHEMA = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
 var HTTP_METHODS = ["get", "post", "put", "patch", "delete", "options", "head"];
-var SKIP_PATHS = /* @__PURE__ */ new Set(["/swagger", "/swagger.json", "/swagger/postman.json", "/swagger/is.json"]);
+var SKIP_PATHS = /* @__PURE__ */ new Set(["/swagger", "/system/swagger.json", "/system/swagger/config.json", "/swagger/postman.json", "/swagger/is.json"]);
 var STATUS_PHRASE = {
   "200": "OK",
   "201": "Created",
@@ -946,7 +976,7 @@ function openApiToPostmanCollection(spec, opts = {}) {
   };
 }
 
-// ../../components/swagger/server/strip-export-extensions.ts
+// server/strip-export-extensions.ts
 var STRIP_KEYS = /* @__PURE__ */ new Set([
   ISS_DOC_MD_EXTENSION,
   ISS_LOOKUP_EXTENSION,
@@ -955,6 +985,11 @@ var STRIP_KEYS = /* @__PURE__ */ new Set([
   ISS_SUBGROUPS_EXTENSION,
   ISS_REQUEST_BODY_EXAMPLES_EXTENSION,
   ISS_INPUT_RECOMMENDATION_EXTENSION,
+  ISS_TRYIT_ATTACHMENTS_EXTENSION,
+  ISS_CATALOG_DOC_KEYS_EXTENSION,
+  ISS_ENUM_FROM_EXTENSION,
+  ISS_ELEVATED_ONLY_EXTENSION,
+  "tryitAttachments",
   "subgroups"
 ]);
 function stripNode(value) {
@@ -971,12 +1006,12 @@ function stripIsaExtensionsForExport(openApi) {
   return stripNode(openApi);
 }
 
-// ../../components/swagger/server/viewer-pins.ts
+// server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "28aaf8b";
+var SWAGGER_VIEWER_REF = "stream-final-2026-06-28";
 var SWAGGER_FRONT_SHARED_REF = "c97330e";
 
-// ../../components/swagger/server/orchestrator-auth.ts
+// server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
 var DEFAULT_AUTH_LOGIN_PATH = "/api/auth/token";
 function resolveOrchestratorBase(_apiBase) {
@@ -988,7 +1023,7 @@ function resolveAuthAppId(app) {
   return AUTH_APP_ALIASES[raw] || raw || "isa-patyia";
 }
 
-// ../../components/swagger/server/build-exports.ts
+// server/build-exports.ts
 var OPENAPI_CONFIG_KIND = "insoft.openapi-config";
 var OPENAPI_CONFIG_VERSION = 1;
 var IS_DOCUMENT_KIND = "insoft.swagger-viewer";
@@ -1013,9 +1048,20 @@ function resolveApiBase(serverUrl, absoluteBaseUrl) {
 function buildViewerRuntimeConfig(config, apiBase) {
   const v = config.viewer ?? {};
   const base = apiBase.replace(/\/$/, "");
+  const sp = v.swaggerPaths ?? {};
+  const configPath = sp.config ?? "/system/swagger/config.json";
+  const configUrl = v.configUrl ?? (configPath.startsWith("http") ? configPath : configPath.startsWith("/api/") ? `${new URL(base).origin}${configPath}` : `${base}${configPath.startsWith("/") ? configPath : `/${configPath}`}`);
   return {
     apiBase: base,
-    configUrl: `${base}/swagger/config.json`,
+    configUrl,
+    swaggerPaths: {
+      config: sp.config ?? "/system/swagger/config.json",
+      swaggerJson: sp.swaggerJson ?? "/system/swagger.json",
+      meta: sp.meta ?? "/system/swagger/meta.json",
+      paths: sp.paths ?? "/system/swagger/paths.json",
+      health: sp.health ?? "/system/health",
+      ...sp.doc ? { doc: sp.doc } : { doc: "/system/swagger/docs/{key}" }
+    },
     ns: v.ns ?? "ISA",
     app: v.app ?? "swagger-viewer",
     shell: v.shell ?? true,

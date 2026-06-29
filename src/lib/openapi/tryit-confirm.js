@@ -89,4 +89,4 @@ export function buildTryItConfirmCopy(op, spec, ctx = {}) {
 
 /** @deprecated */
 export const isSwaggerConfigPut = (op) =>
-  isMutatingMethod(op?.method) && String(op?.path || "").replace(/\/+$/, "") === "/swagger.json";
+  isMutatingMethod(op?.method) && String(op?.path || "").replace(/\/+$/, "") === "/system/swagger.json";

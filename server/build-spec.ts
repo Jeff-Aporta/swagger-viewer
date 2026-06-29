@@ -18,6 +18,9 @@ import {
     ISS_REQUEST_BODY_EXAMPLES_EXTENSION,
     ISS_SUBGROUP_EXTENSION,
     ISS_SUBGROUPS_EXTENSION,
+    ISS_TRYIT_ATTACHMENTS_EXTENSION,
+    ISS_CATALOG_DOC_KEYS_EXTENSION,
+    ISS_ENUM_FROM_EXTENSION,
     bearerComponents,
     bearerSecurity,
     issRspAuth,
@@ -135,6 +138,8 @@ export type IsOpenApiOperationConfig = {
     security?: "bearer" | "none" | string;
     /** Modal Try it out (solo con security bearer + POST/PUT/PATCH/DELETE). String = catalog.tryitConfirm.templates[id]. */
     tryitConfirm?: string | Record<string, unknown> | false;
+    /** Adjuntos Try it out (imagen/audio/archivo). String = catalog.tryitAttachments.templates[id]. */
+    tryitAttachments?: string | Record<string, unknown> | false;
     doc?: string;
     parameters?: IsOpenApiParamConfig[];
     requestBody?: IsOpenApiRequestBodyConfig;
@@ -157,6 +162,7 @@ export type IsOpenApiConfig = {
         inputRecommendations?: Record<string, unknown>;
         requestBodies?: Record<string, Record<string, unknown>>;
         requestBodyExamples?: Record<string, unknown[]>;
+        tryitAttachments?: { templates?: Record<string, Record<string, unknown>>; byPath?: Record<string, Record<string, unknown>> };
         docs?: Record<string, string>;
     };
     /** Config del visor IS-Swagger (auth, brand, exports). URLs se resuelven en build-exports. */
@@ -283,7 +289,30 @@ function resolveParam(catalog: IsOpenApiConfig["catalog"], p: IsOpenApiParamConf
             raw.schema = { type: "string", example: encodeIssFilterB64(rec.listFilter as Record<string, unknown>) };
         }
     }
+    const enumFrom = raw.enumFrom;
+    if (typeof enumFrom === "string") {
+        delete raw.enumFrom;
+        let keys: string[] = [];
+        if (enumFrom === "catalog.docs") keys = Object.keys(catalog.docs || {}).sort();
+        else throw new Error(`openapi-config: enumFrom «${enumFrom}» no soportado`);
+        const schema = { ...(typeof raw.schema === "object" && raw.schema ? (raw.schema as Record<string, unknown>) : {}), type: "string", enum: keys };
+        if (schema.example == null && keys.length) schema.example = keys.includes("health") ? "health" : keys[0];
+        raw.schema = schema;
+        raw[ISS_ENUM_FROM_EXTENSION] = enumFrom;
+    }
     return raw;
+}
+
+function resolveTryItAttachmentsDef(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiOperationConfig): Record<string, unknown> | false | undefined {
+    const raw = def.tryitAttachments;
+    if (raw === false) return false;
+    if (typeof raw === "string") {
+        const t = catalog.tryitAttachments?.templates?.[raw];
+        if (t) return t;
+        return undefined;
+    }
+    if (raw && typeof raw === "object") return raw;
+    return undefined;
 }
 
 function buildOperation(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiOperationConfig): Record<string, unknown> {
@@ -296,6 +325,9 @@ function buildOperation(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiOpera
     if (def.subgroup) Object.assign(op, sg(def.subgroup));
     if (def.security === "bearer") op.security = bearerSecurity;
     if (def.tryitConfirm !== undefined) op.tryitConfirm = def.tryitConfirm;
+    const attachDef = resolveTryItAttachmentsDef(catalog, def);
+    if (attachDef === false) op[ISS_TRYIT_ATTACHMENTS_EXTENSION] = false;
+    else if (attachDef) op[ISS_TRYIT_ATTACHMENTS_EXTENSION] = attachDef;
     if (def.doc) {
         const md = catalog.docs?.[def.doc];
         if (md) op[ISS_DOC_MD_EXTENSION] = md;
@@ -350,5 +382,6 @@ export function buildOpenApiFromConfig(config: IsOpenApiConfig, serverUrl?: stri
         tags,
         components: { ...bearerComponents() },
         paths,
+        [ISS_CATALOG_DOC_KEYS_EXTENSION]: Object.keys(catalog.docs || {}).sort(),
     };
 }

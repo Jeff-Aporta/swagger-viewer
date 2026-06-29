@@ -5,10 +5,11 @@ import { ApiPathLabel } from "./ApiPathLabel.jsx";
 import { operationRequiresBearer } from "../../lib/openapi/openapi.js";
 import { SwIcon, tabLabel } from "../../lib/ui/sw-icon.jsx";
 import { opExpandIndex } from "../../lib/nav/expand-stack.js";
+import { readOpTabFromUrl, subscribeOpTabUrl, writeOpTabToUrl } from "../../lib/nav/operation-tab-url.js";
 import { useExpandStack } from "../../context/ExpandStackContext.jsx";
 import { useGlassColors, glassAccordionSx, methodAccent } from "../../lib/ui/glass.jsx";
 
-const { useState } = React;
+const { useState, useEffect } = React;
 const {
   Accordion,
   AccordionSummary,
@@ -30,17 +31,29 @@ export function OperationCard({
   spec,
   docMd,
   lookupIndex,
+  catalogDocKeys,
   authEnabled,
   onNeedLogin,
   ns = "ISA",
 }) {
-  const [tab, setTab] = useState("try");
   const { isOpen, toggle } = useExpandStack();
   const expandId = opExpandIndex(tagIndex, opIndex);
   const expanded = isOpen(expandId);
+  const [tab, setTab] = useState(() => readOpTabFromUrl(expandId));
   const glassC = useGlassColors();
   const accent = methodAccent(op.method);
   const needsAuth = authEnabled && operationRequiresBearer(op, spec);
+
+  useEffect(() => {
+    return subscribeOpTabUrl(() => {
+      setTab(readOpTabFromUrl(expandId));
+    });
+  }, [expandId]);
+
+  function onTabChange(_e, v) {
+    setTab(v);
+    writeOpTabToUrl(expandId, v);
+  }
 
   const tabs = [
     { id: "try", label: "Probar", icon: "mdi:play-circle-outline" },
@@ -104,7 +117,7 @@ export function OperationCard({
             ) : null}
             <Tabs
               value={tab}
-              onChange={(_e, v) => setTab(v)}
+              onChange={onTabChange}
               variant="scrollable"
               scrollButtons="auto"
               sx={{ mb: 1.5, minHeight: 36, "& .MuiTab-root": { minHeight: 36, textTransform: "none" } }}
@@ -119,6 +132,8 @@ export function OperationCard({
                 op={op}
                 spec={spec}
                 lookupIndex={lookupIndex}
+                catalogDocKeys={catalogDocKeys}
+                expandId={expandId}
                 authEnabled={authEnabled}
                 onNeedLogin={onNeedLogin}
                 ns={ns}

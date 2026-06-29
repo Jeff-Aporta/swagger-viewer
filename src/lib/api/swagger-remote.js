@@ -4,8 +4,8 @@ import { buildIssExportsFromConfig } from "../../../cdn/iss-exports.browser.mjs"
 import { fetchRemoteOpenApiConfig } from "./swagger-api.js";
 import { parseIsDocument } from "../openapi/is-document.js";
 
-export async function fetchRemoteIsDocument(apiBase) {
-  const { doc: rawConfig, urls } = await fetchRemoteOpenApiConfig(apiBase);
+export async function fetchRemoteIsDocument(apiBase, pathOverrides = null) {
+  const { doc: rawConfig, urls } = await fetchRemoteOpenApiConfig(apiBase, pathOverrides);
   let built;
   try {
     built = buildIssExportsFromConfig(rawConfig, { absoluteBaseUrl: urls.apiBase });

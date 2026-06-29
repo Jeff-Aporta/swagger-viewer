@@ -1016,6 +1016,19 @@ html[data-mui-color-scheme="light"] .isa-sw-toolbar--docked {
   border-radius: var(--isa-sw-radius, 0.5rem);
 }
 
+/* Try it out — respuesta: el botón "Borrar respuesta" vive en su propia fila
+   alineada a la derecha, fuera del CodeMirrorPanel, para no mezclarse con los
+   FABs del editor (copiar / fullscreen / expandir). */
+.isa-sw-tryit-clear {
+  color: var(--is-mui-palette-action-active, rgba(255, 255, 255, 0.7));
+  border: 1px solid var(--is-mui-palette-divider, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.04);
+}
+.isa-sw-tryit-clear:hover {
+  color: var(--is-mui-palette-error-main, #f44336);
+  background: rgba(244, 67, 54, 0.08);
+}
+
 .isa-sw-request-body__editor .CodeMirror {
   min-height: 11rem;
   max-height: 40vh;
@@ -1039,4 +1052,45 @@ html[data-mui-color-scheme="light"] .isa-sw-toolbar--docked {
   line-height: 1.4;
   opacity: 0.88;
   cursor: default;
+}
+
+/* Botón `{{detail:...}}` embebido en markdown del SSE test — abre modal con JSON completo. */
+.isa-sw-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 2px 8px;
+  margin: 0 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 999px;
+  border: 1px solid rgba(30, 144, 255, 0.4);
+  background: linear-gradient(145deg, rgba(30, 144, 255, 0.12), rgba(80, 180, 255, 0.08));
+  color: #1e90ff;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+.isa-sw-detail-btn::before {
+  content: "🔍";
+  font-size: 0.7em;
+}
+.isa-sw-detail-btn:hover {
+  background: linear-gradient(145deg, rgba(30, 144, 255, 0.22), rgba(80, 180, 255, 0.18));
+  transform: translateY(-1px);
+}
+.isa-sw-detail-btn:focus-visible {
+  outline: 2px solid #1e90ff;
+  outline-offset: 2px;
+}
+html[data-mui-color-scheme="dark"] .isa-sw-detail-btn,
+html.dark-mode .isa-sw-detail-btn {
+  color: #9ecbff;
+  border-color: rgba(120, 180, 255, 0.45);
+}
+.isa-sw-detail-missing {
+  font-style: italic;
+  color: #d97706;
 }

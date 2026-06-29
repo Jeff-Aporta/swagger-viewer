@@ -79,11 +79,22 @@ function resolveApiBase(serverUrl: string | undefined, absoluteBaseUrl?: string)
 }
 
 function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Record<string, unknown> {
-    const v = (config.viewer ?? {}) as IssOpenApiViewerConfig;
+    const v = (config.viewer ?? {}) as IssOpenApiViewerConfig & { swaggerPaths?: Record<string, string>; configUrl?: string };
     const base = apiBase.replace(/\/$/, "");
+    const sp = v.swaggerPaths ?? {};
+    const configPath = sp.config ?? "/system/swagger/config.json";
+    const configUrl = v.configUrl ?? (configPath.startsWith("http") ? configPath : configPath.startsWith("/api/") ? `${new URL(base).origin}${configPath}` : `${base}${configPath.startsWith("/") ? configPath : `/${configPath}`}`);
     return {
         apiBase: base,
-        configUrl: `${base}/swagger/config.json`,
+        configUrl,
+        swaggerPaths: {
+            config: sp.config ?? "/system/swagger/config.json",
+            swaggerJson: sp.swaggerJson ?? "/system/swagger.json",
+            meta: sp.meta ?? "/system/swagger/meta.json",
+            paths: sp.paths ?? "/system/swagger/paths.json",
+            health: sp.health ?? "/system/health",
+            ...(sp.doc ? { doc: sp.doc } : { doc: "/system/swagger/docs/{key}" }),
+        },
         ns: v.ns ?? "ISA",
         app: v.app ?? "swagger-viewer",
         shell: v.shell ?? true,

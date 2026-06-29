@@ -6,7 +6,7 @@ import { useGlassColors, glassSurfaceSx, glassHeaderSx, GlassToolbar } from "../
 const { Box, Button, Alert, Typography, Drawer, IconButton, Tooltip } = MaterialUI;
 
 /** Drawer inferior — editor JSON IS (tema ISA / neon-glass). */
-export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, onFormat, getTextRef, parseErr, ns = "ISA", apiBase, onApiBaseChange, onConnectApi, onPullConfig, onPushConfig, connectBusy }) {
+export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, onFormat, getTextRef, parseErr, ns = "ISA", apiBase, onApiBaseChange, onConnectApi, onPullConfig, onPushConfig, connectBusy, pathOverrides = null }) {
   const c = useGlassColors();
 
   return (
@@ -70,7 +70,7 @@ export function IsEditorDrawer({ open, onClose, sourceText, onChange, onApply, o
             </Tooltip>
           </Box>
         </GlassToolbar>
-        <ApiBaseSelect value={apiBase || ""} onChange={onApiBaseChange} onConnect={onConnectApi} busy={connectBusy} ns={ns} />
+        <ApiBaseSelect value={apiBase || ""} onChange={onApiBaseChange} onConnect={onConnectApi} busy={connectBusy} ns={ns} pathOverrides={pathOverrides} />
         <IsJsonEditor value={sourceText} onChange={onChange} onApply={onApply} getTextRef={getTextRef} active={open} ns={ns} />
         {parseErr ? (
           <Alert severity="error" sx={{ mx: 1.5, mb: 1.5, py: 0 }} className="isa-sw-demo__parse-err">

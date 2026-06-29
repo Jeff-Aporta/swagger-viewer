@@ -32,8 +32,8 @@ const SWAGGER_PUT_HINTS = {
   400: "El body debe ser un documento JSON con kind «insoft.openapi-config» válido.",
   401: "Su usuario no está autorizado: requiere rol documentador (SYS_USR_PERMISSIONS) junto con dev_lead. Inicie sesión con un usuario autorizado.",
   403: "Acceso prohibido para actualizar la config IS-Swagger con este perfil.",
-  404: "El servidor no expone PUT /api/swagger.json (ruta inexistente o ISS sin desplegar). Pruebe staging (ayudascp-ia-staging) o despliegue reciente; no confunda con GET /swagger/config.json.",
-  405: "Este host no acepta PUT en /api/swagger.json.",
+  404: "El servidor no expone PUT /api/system/swagger.json (ruta inexistente o ISS sin desplegar). Pruebe staging (ayudascp-ia-staging) o despliegue reciente; no confunda con GET /system/swagger/config.json.",
+  405: "Este host no acepta PUT en /api/system/swagger.json.",
   500: "El ISS falló al guardar SYS_VALUES.swagger. Revise logs del Function App.",
 };
 

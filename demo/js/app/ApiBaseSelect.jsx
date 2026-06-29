@@ -32,9 +32,9 @@ export function storeApiBase(base) {
   }
 }
 
-/** Campo base API + conectar; infiere GET/PUT swagger. */
-export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISA" }) {
-  const urls = inferSwaggerUrls(value);
+/** Campo base API + conectar; infiere GET/PUT swagger (override vía pathOverrides). */
+export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISA", pathOverrides = null }) {
+  const urls = inferSwaggerUrls(value, pathOverrides);
 
   return (
     <Box className="isa-sw-demo__api-base" sx={{ px: 1.5, py: 1, flexShrink: 0, borderBottom: 1, borderColor: "divider" }}>
@@ -64,7 +64,7 @@ export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISA" }) 
             },
           }}
         />
-        <Tooltip title="GET público /swagger/config.json" arrow>
+        <Tooltip title={`GET ${urls.pathRel?.config || "/system/swagger/config.json"}`} arrow>
           <Button size="small" variant="contained" disabled={!value?.trim() || busy} onClick={() => onConnect?.()} startIcon={<SwIcon icon="mdi:lan-connect" size={18} ns={ns} />}>
             Conectar
           </Button>

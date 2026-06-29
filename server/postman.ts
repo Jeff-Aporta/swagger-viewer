@@ -13,7 +13,7 @@ import { ISS_DOC_MD_EXTENSION } from "./spec.js";
 
 const POSTMAN_SCHEMA = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
 const HTTP_METHODS = ["get", "post", "put", "patch", "delete", "options", "head"] as const;
-const SKIP_PATHS = new Set(["/swagger", "/swagger.json", "/swagger/postman.json", "/swagger/is.json"]);
+const SKIP_PATHS = new Set(["/swagger", "/system/swagger.json", "/system/swagger/config.json", "/swagger/postman.json", "/swagger/is.json"]);
 const STATUS_PHRASE: Record<string, string> = {
     "200": "OK",
     "201": "Created",

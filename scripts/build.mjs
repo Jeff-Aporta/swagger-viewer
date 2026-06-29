@@ -1,7 +1,7 @@
 /**
  * Build IS-Swagger — bundles CDN frontend + vendor Node (cdn/vendor) para hosts.
  */
-import { readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync, copyFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -22,7 +22,12 @@ const CSS_DEMO = join(root, "demo", "css", "demo.css");
 
 function gitShortRef() {
     try {
-        return execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+        const ref = execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+        // Si el viewer-pins.ts tiene un pin custom (no hash), respetarlo para forzar refresh
+        const pinsRaw = readFileSync(join(root, "server", "viewer-pins.ts"), "utf8");
+        const m = /SWAGGER_VIEWER_REF\s*=\s*"([^"]+)"/.exec(pinsRaw);
+        if (m && !/^[0-9a-f]{6,}$/i.test(m[1])) return m[1];
+        return ref;
     } catch {
         const versions = JSON.parse(readFileSync(join(CDN_DIR, "versions.json"), "utf8"));
         return String(versions.componentRef || "main");
@@ -30,12 +35,16 @@ function gitShortRef() {
 }
 
 function syncVersionsAndPins() {
+    // gitShortRef() respeta el pin custom si existe (no es hex).
     const ref = gitShortRef();
 
     const pinsPath = join(root, "server", "viewer-pins.ts");
     let pins = readFileSync(pinsPath, "utf8");
-    pins = pins.replace(/SWAGGER_VIEWER_REF = "[^"]+"/, `SWAGGER_VIEWER_REF = "${ref}"`);
-    writeFileSync(pinsPath, pins, "utf8");
+    const isHex = /^[0-9a-f]{6,}$/i.test(ref);
+    if (isHex) {
+        pins = pins.replace(/SWAGGER_VIEWER_REF = "[^"]+"/, `SWAGGER_VIEWER_REF = "${ref}"`);
+        writeFileSync(pinsPath, pins, "utf8");
+    }
 
     const versionsPath = join(CDN_DIR, "versions.json");
     const versions = JSON.parse(readFileSync(versionsPath, "utf8"));
@@ -155,12 +164,27 @@ function buildVendorBundles() {
     });
 }
 
+/** Inyecta `?v=<timestamp>` al `<script src="_dist/js/boot/loader.mjs?...">` del demo HTML
+ *  para forzar invalidación de cache del browser en cada build. */
+function injectCachebustInDemoHtml(ref) {
+    const htmlPath = join(root, "demo", "index.html");
+    if (!existsSync(htmlPath)) return;
+    let html = readFileSync(htmlPath, "utf8");
+    const stamp = String(ref || Date.now().toString(36));
+    const next = html.replace(/loader\.mjs\?v=[^"']+/g, `loader.mjs?v=${stamp}`);
+    if (next !== html) {
+        writeFileSync(htmlPath, next, "utf8");
+        console.log(`  cachebust: demo/index.html → ?v=${stamp}`);
+    }
+}
+
 function build() {
     syncVersionsAndPins();
     buildCdn();
     copyEmbedToCdn();
     copyCdnToDemo();
     buildVendorBundles();
+    injectCachebustInDemoHtml(gitShortRef());
     console.log("IS-Swagger build OK");
     console.log("  CDN:", BOOT_JS);
     console.log("  vendor:", join(CDN_DIR, "vendor", "iss-exports.cjs"));

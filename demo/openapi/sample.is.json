@@ -2,14 +2,25 @@
   "kind": "insoft.swagger-viewer",
   "version": 1,
   "viewer": {
+    "apiBase": "http://localhost:8802",
+    "configUrl": "http://localhost:8802/system/swagger/config.json",
+    "swaggerPaths": {
+      "config": "/system/swagger/config.json",
+      "swaggerJson": "/system/swagger.json",
+      "meta": "/system/swagger/meta.json",
+      "paths": "/system/swagger/paths.json",
+      "health": "/system/health",
+      "doc": "/system/swagger/docs/{key}"
+    },
     "ns": "ISS",
     "app": "swagger-viewer",
     "shell": true,
     "auth": {
       "enabled": true,
-      "loginUrl": "http://localhost:8802",
+      "loginUrl": "https://main-orchestrator.jeffaporta.workers.dev",
       "loginKind": "portal",
-      "loginPath": "/api/auth/portal-login"
+      "loginPath": "/api/auth/token",
+      "app": "isa-patyia"
     },
     "brand": {
       "title": "ISS PatyIA",
@@ -22,8 +33,37 @@
         "url": "https://jeff-aporta.github.io/isa-patyia/"
       }
     ],
-    "viewerRef": "17e5836",
-    "frontSharedRef": "c97330e"
+    "viewerRef": "stream-final-2026-06-28",
+    "frontSharedRef": "ba55d76",
+    "nav": [
+      {
+        "id": "conversaciones",
+        "label": "Conversaciones",
+        "icon": "mdi:forum-outline",
+        "tags": [
+          "Conversaciones"
+        ],
+        "access": "*"
+      },
+      {
+        "id": "sistema",
+        "label": "Sistema",
+        "icon": "mdi:heart-pulse",
+        "tags": [
+          "Sistema"
+        ],
+        "access": "*"
+      },
+      {
+        "id": "testing",
+        "label": "Testing",
+        "icon": "mdi:flask-outline",
+        "tags": [
+          "Testing"
+        ],
+        "access": "*"
+      }
+    ]
   },
   "spec": {
     "openapi": "3.0.3",
@@ -35,13 +75,35 @@
     "servers": [
       {
         "url": "/api",
-        "description": "API actual (mismo host que esta página)"
+        "description": "API activa (contexto actual)"
+      },
+      {
+        "url": "http://127.0.0.1:8802/api",
+        "description": "Local (ISS Functions)"
+      },
+      {
+        "url": "https://ayudascp-ia-staging.azurewebsites.net/api",
+        "description": "Web (staging Azure)"
       }
     ],
     "tags": [
       {
         "name": "Sistema",
-        "description": "Salud del servicio y tareas de mantenimiento (sin lógica de chat ni conversaciones)."
+        "description": "Salud del servicio y tareas de mantenimiento (sin lógica de chat ni conversaciones).",
+        "x-isa-subgroups": [
+          {
+            "id": "documentacion",
+            "name": "IS-Swagger (BD)",
+            "icon": "mdi:file-code-outline",
+            "description": "Config insoft.openapi-config en dbo.SYS_VALUES (swagger + swagger/config); el visor carga GET /system/swagger/config.json."
+          },
+          {
+            "id": "configuracion",
+            "name": "Configuración runtime",
+            "icon": "mdi:cog-outline",
+            "description": "Parámetros dbo.SYSTEM (OpenAI, file_search)."
+          }
+        ]
       },
       {
         "name": "Conversaciones",
@@ -82,12 +144,6 @@
             "name": "Pruebas automatizadas",
             "icon": "mdi:play-box-multiple-outline",
             "description": "Catálogo y ejecución SSE de tests unitarios."
-          },
-          {
-            "id": "documentacion",
-            "name": "Documentación API",
-            "icon": "mdi:file-code-outline",
-            "description": "OpenAPI JSON y esta interfaz Swagger."
           }
         ]
       }
@@ -103,16 +159,366 @@
       }
     },
     "paths": {
-      "/health": {
+      "/system/openai": {
         "get": {
-          "summary": "Health + ping MSSQL",
+          "summary": "Config OpenAI (SYSTEM.openai)",
           "tags": [
             "Sistema"
           ],
-          "x-iss-doc-md": "## Health + ping MSSQL\r\n\r\nComprueba que el servicio responde y que la conexión a SQL Server está activa.\r\n\r\n### Cuándo usarlo\r\n\r\n- Smoke test tras desplegar o reiniciar la API local (\\`npm start\\`, puerto 5502).\r\n- Diagnóstico cuando fallan endpoints que leen BD (banner amarillo en el visor).\r\n\r\n### Cómo llamarlo\r\n\r\n\\`\\`\\`http\r\nGET /api/health\r\nAccept: application/json\r\n\\`\\`\\`\r\n\r\nNo requiere JWT.\r\n\r\n### Campos Útiles en \\`respuesta.datos\\`\r\n\r\n| Campo | Descripción |\r\n|-------|-------------|\r\n| \\`database.bconnected\\` | \\`true\\` si MSSQL respondió al ping |\r\n| \\`database.database\\` | Nombre de la base (ej. \\`AYUDASCP_IA\\`) |\r\n| \\`database.timeconnect\\` | Latencia del ping en ms |\r\n| \\`slot\\` | Slot Azure (\\`STAGING\\` en local con \\`WEBSITE_SLOT_NAME\\`) |\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
+          "x-isa-subgroup": "configuracion",
+          "x-iss-doc-md": "## Config OpenAI (SYSTEM.openai)\r\n\r\nLee el JSON persistido en `dbo.SYSTEM` con clave `openai`. Hoy expone `max_num_results` para la herramienta `file_search` en conversaciones PatyIA.\r\n\r\n\\`\\`\\`http\r\nGET /api/system/openai\r\nAccept: application/json\r\n\\`\\`\\`\r\n\r\nNo requiere JWT.\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` + `respuesta` con `key` y `config`.",
           "responses": {
             "200": {
-              "description": "Servicio operativo",
+              "description": "Config SYS_VALUES.openai",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "respuesta": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": true,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.042Z"
+                    },
+                    "respuesta": {
+                      "key": "openai",
+                      "config": {
+                        "max_num_results": 8
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "summary": "Actualizar SYSTEM.openai",
+          "tags": [
+            "Sistema"
+          ],
+          "x-isa-subgroup": "configuracion",
+          "security": [
+            {
+              "Bearer": []
+            }
+          ],
+          "tryitConfirm": "systemOpenaiPut",
+          "x-iss-doc-md": "## Actualizar SYSTEM.openai\r\n\r\nPersiste `max_num_results` (entero 1–50) en `dbo.SYSTEM` (clave `openai`). Solo usuarios en `SYSTEM.swagger_editors`.\r\n\r\n\\`\\`\\`http\r\nPUT /api/system/openai\r\nAuthorization: Bearer <JWT>\r\nContent-Type: application/json\r\n\r\n{ \"max_num_results\": 8 }\r\n\\`\\`\\`\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` + `respuesta` con `ok`, `config` y `updatedBy`.",
+          "requestBody": {
+            "required": true,
+            "description": "max_num_results para file_search (1–50).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "max_num_results"
+                  ],
+                  "properties": {
+                    "max_num_results": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 50,
+                      "example": 8
+                    }
+                  }
+                },
+                "example": {
+                  "max_num_results": 8
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "SYSTEM.openai actualizado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "respuesta": {
+                        "type": "object",
+                        "properties": {
+                          "ok": {
+                            "type": "boolean"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": true,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.042Z"
+                    },
+                    "respuesta": {
+                      "ok": true,
+                      "key": "swagger",
+                      "updatedBy": "JAGUDELOE"
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "No autorizado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 401020,
+                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
+                    }
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Prohibido",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 403010,
+                      "mensaje": "No tiene permisos para acceder a este recurso."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/system/prompts-operativos": {
+        "get": {
+          "summary": "Config prompts operativos",
+          "tags": [
+            "Sistema"
+          ],
+          "x-isa-subgroup": "configuracion",
+          "responses": {
+            "200": {
+              "description": "SYS_VALUES.prompts_operativos",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "respuesta": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": true,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.042Z"
+                    },
+                    "respuesta": {
+                      "key": "openai",
+                      "config": {
+                        "max_num_results": 8
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "summary": "Actualizar prompts operativos",
+          "tags": [
+            "Sistema"
+          ],
+          "x-isa-subgroup": "configuracion",
+          "security": [
+            {
+              "Bearer": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "example": {}
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Prompts operativos actualizados",
               "content": {
                 "application/json": {
                   "schema": {
@@ -157,27 +563,15 @@
                     },
                     "respuesta": {
                       "ok": true,
-                      "service": "iss-ayudascpia",
-                      "authMode": "worker",
-                      "datos": {
-                        "name": "3_iss_agenteia",
-                        "version": "1.0.0",
-                        "timezone": "SA Pacific Standard Time",
-                        "nodeversion": "v22.x",
-                        "slot": "PRODUCTION",
-                        "database": {
-                          "database": "AyudasCP",
-                          "bconnected": true,
-                          "timeconnect": 12
-                        }
-                      }
+                      "key": "swagger",
+                      "updatedBy": "JAGUDELOE"
                     }
                   }
                 }
               }
             },
-            "503": {
-              "description": "Servicio no disponible",
+            "401": {
+              "description": "No autorizado",
               "content": {
                 "application/json": {
                   "schema": {
@@ -219,8 +613,58 @@
                       "tiempo": -1,
                       "fhentrada": "2026-06-19T15:30:00.000Z",
                       "fhsalida": "2026-06-19T15:30:00.012Z",
-                      "imensaje": 503010,
-                      "mensaje": "El servicio no está disponible temporalmente."
+                      "imensaje": 401020,
+                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
+                    }
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Prohibido",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 403010,
+                      "mensaje": "No tiene permisos para acceder a este recurso."
                     }
                   }
                 }
@@ -247,10 +691,10 @@
               "name": "f",
               "in": "query",
               "required": false,
-              "description": "Filtro ISS (JSON en Base64). Campos: `search`, `limit`, `offset`, `eq`, `sort`. En conversaciones, `search` busca en iconversacion, titulo y prompt; `eq` admite itercero, icontacto, itdestado, imodulo; `sort` admite fhcre, fhultact, iconversacion, titulo.",
+              "description": "Filtro ISS (JSON en Base64). Campos: `search`, `limit`, `offset`, `eq`, `sort`. En conversaciones, `search` busca en iconversacion, titulo y prompt; `eq` admite itercero, icontacto, itdestado, imodulo; `sort` admite fhcre, fhultact, iconversacion, titulo. Tercero/contacto (auditoría) se configuran en el diálogo **Configurar filtro**.",
               "schema": {
                 "type": "string",
-                "example": "eyJzZWFyY2giOiJzYWxkbyIsImxpbWl0IjoxMDAsIm9mZnNldCI6MCwic29ydCI6Ii1maHVsdGFjdCJ9"
+                "example": "eyJzZWFyY2giOiJzYWxkbyIsImxpbWl0IjoxMDAsIm9mZnNldCI6MCwic29ydCI6Imljb252ZXJzYWNpb24ifQ=="
               },
               "x-iss-list-filter": {
                 "listPath": "/conversaciones",
@@ -361,12 +805,12 @@
                       "maxLength": 200,
                       "description": "Busca en iconversacion (si es numérico), titulo y prompt del hilo."
                     },
-"limit": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 9999,
-                  "default": 100
-                },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9999,
+                      "default": 100
+                    },
                     "offset": {
                       "type": "integer",
                       "minimum": 0,
@@ -981,6 +1425,7 @@
               "Bearer": []
             }
           ],
+          "tryitConfirm": "deleteConversacion",
           "x-iss-doc-md": "## Eliminar conversación\r\nMarca una conversación como **eliminada** sin borrarla de la base de datos. Es un *soft-delete*: el campo \\`itdestado\\` pasa a \\`2\\` y deja de listarse en consultas normales.\r\n### Cuándo usarlo\r\n- El usuario quiere quitar un hilo de su historial.\r\n- Solo puede eliminar conversaciones del mismo \\`itercero\\` y \\`icontacto\\` que trae el JWT.\r\n### Cómo llamarlo\r\n\\`\\`\\`http\r\nDELETE /api/conversacion/4821\r\nAuthorization: Bearer <JWT>\r\nAccept: application/json\r\n\\`\\`\\`\r\nAutentícate con el panel superior (**Iniciar sesión** o **Pegar JWT**) antes de probar en **Try it out**.\r\n### Parámetro de ruta\r\n| Campo | Tipo | Descripción |\r\n|-------|------|-------------|\r\n| \\`iconversacion\\` | entero | ID de la conversación (ej. \\`4821\\`). |\r\n### Respuestas posibles\r\n#### 200 — Eliminada correctamente\r\nEl cuerpo sigue el envelope InSoft (\\`encabezado\\` + \\`respuesta\\`). En \\`respuesta\\` viene la conversación actualizada con \\`itdestado: 2\\`.\r\n#### 401 — No autorizado\r\nFalta el header \\`Authorization\\` o el JWT no es válido. Revisa el panel superior.\r\n#### 404 — No encontrada\r\nEl \\`iconversacion\\` no existe o no pertenece al contacto del token.\r\n### Notas\r\n- No elimina mensajes en OpenAI ni el registro en \\`CONVERSACION_LOG\\`.\r\n- Para ver el JSON de ejemplo de cada código, usa la sección **Responses** más abajo.",
           "parameters": [
             {
@@ -1245,12 +1690,7 @@
             "Conversaciones"
           ],
           "x-isa-subgroup": "logs",
-          "security": [
-            {
-              "Bearer": []
-            }
-          ],
-          "x-iss-doc-md": "## Mensajes con meta (solo QA Testing)\r\n\r\n**Exclusivo para la app QA Testing** ([ISA PatyIA](https://jeff-aporta.github.io/isa-patyia/)): historial con mensajes enriquecidos (`mensajesOpenAI`) y persistencia técnica (`convLog`, tabla CONVERSACION_LOG). No está pensado como contrato estable para integraciones productivas de terceros.\r\n\r\n### Autenticación\n\nRequiere header `Authorization: Bearer <JWT>`. Obtenga el token con **Iniciar sesión** o **Pegar JWT** en la barra superior.\r\n\r\n| Campo | Tipo | Descripción |\r\n|-------|------|-------------|\r\n| \\`iconversacion\\` | entero | ID de conversación (lookup: solo con log en CONVERSACION_LOG) |\r\n\r\n\\`\\`\\`http\r\nGET /api/conversacion/logs/4821\r\nAuthorization: Bearer <JWT>\r\n\\`\\`\\`\r\n\r\n- \\`mensajesOpenAI[]\\`: texto + \\`meta\\` para UI de capacitación/soporte.\r\n- \\`convLog\\`: JSON persistido en CONVERSACION_LOG (operativas, tokens, payloads técnicos).\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
+          "x-iss-doc-md": "## Mensajes con meta (QA Testing / ISA PatyIA)\r\n\r\nHistorial con `mensajesOpenAI` enriquecidos y `convLog` (CONVERSACION_LOG). Uso interno QA — no contrato de integración productiva.\r\n\r\n### Autenticación\r\n\r\n**No requiere JWT.** Cualquier cliente con el ID puede consultar si la conversación existe en BD.\r\n\r\n\\`\\`\\`http\r\nGET /api/conversacion/logs/4821\r\nAccept: application/json\r\n\\`\\`\\`\r\n\r\nIncluye meta técnica de mensajes y el JSON persistido en CONVERSACION_LOG.\r\n\r\n### Formato de respuesta\r\n\r\nEnvelope InSoft: `encabezado` + `respuesta`.",
           "parameters": [
             {
               "name": "iconversacion",
@@ -1261,7 +1701,7 @@
                 "minimum": 1,
                 "example": 4821
               },
-              "description": "ID de conversación.",
+              "description": "ID de conversación (público: no requiere JWT ni coincidencia con el contacto del token).",
               "x-iss-lookup": {
                 "resource": "conversaciones",
                 "listPath": "/conversaciones",
@@ -1492,12 +1932,7 @@
             "Conversaciones"
           ],
           "x-isa-subgroup": "analisis",
-          "security": [
-            {
-              "Bearer": []
-            }
-          ],
-          "x-iss-doc-md": "## Resumen IA de conversación\r\n\r\nGenera un resumen ejecutivo del hilo usando el motor operativo configurado (OpenAI).\r\n\r\n### Autenticación\n\nRequiere header `Authorization: Bearer <JWT>`. Obtenga el token con **Iniciar sesión** o **Pegar JWT** en la barra superior.\r\n\r\n\\`\\`\\`http\r\nGET /api/resumen_conversacion/4821\r\nAuthorization: Bearer <JWT>\r\n\\`\\`\\`\r\n\r\n| Código | Significado |\r\n|--------|-------------|\r\n| 200 | \\`resumen\\` en \\`respuesta\\` |\r\n| 404 | Conversación no encontrada |\r\n| 5xx | Error de IA o configuración (\\`OPENAI_API_KEY\\`) |\r\n\r\nLa operación puede tardar varios segundos (tokens + latencia del modelo).\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
+          "x-iss-doc-md": "## Resumen IA de conversación\r\n\r\nGenera resumen ejecutivo del hilo vía modelo operativo (OpenAI).\r\n\r\n### Autenticación\r\n\r\n**No requiere JWT** en el handler actual: basta el `iconversacion` existente en BD.\r\n\r\n\\`\\`\\`http\r\nGET /api/resumen_conversacion/4821\r\nAccept: application/json\r\n\\`\\`\\`\r\n\r\nPuede tardar varios segundos. Errores 5xx suelen indicar `OPENAI_API_KEY` o fallo del modelo.\r\n\r\n### Formato de respuesta\r\n\r\nEnvelope InSoft con `resumen` en `respuesta`.",
           "parameters": [
             {
               "name": "iconversacion",
@@ -1697,6 +2132,24 @@
               "Bearer": []
             }
           ],
+          "tryitConfirm": "conversacionPost",
+          "x-iss-tryit-attachments": {
+            "mode": "json",
+            "images": {
+              "field": "imagenes",
+              "max": 10,
+              "filePicker": true,
+              "clipboard": true,
+              "encoding": "dataUrl"
+            },
+            "audios": {
+              "field": "audios",
+              "max": 5,
+              "filePicker": true,
+              "encoding": "dataUrl"
+            },
+            "bodyRawRule": "merge"
+          },
           "x-iss-doc-md": "## Crear / continuar conversación (SSE)\r\n\r\nEnvía un mensaje del usuario y recibe la respuesta de PatyIA como **stream** \\`text/event-stream\\`.\r\n\r\n### Autenticación\n\nRequiere header `Authorization: Bearer <JWT>`. Obtenga el token con **Iniciar sesión** o **Pegar JWT** en la barra superior.\r\n\r\n\\`\\`\\`http\r\nPOST /api/conversacion\r\nAuthorization: Bearer <JWT>\r\nContent-Type: application/json\r\nAccept: text/event-stream\r\n\r\n{ \"prompt\": \"¿Cómo creo una factura?\", \"iconversacion\": 4821 }\r\n\\`\\`\\`\r\n\r\n### Cuerpo (JSON)\r\n\r\n| Campo | Requerido | Descripción |\r\n|-------|-----------|-------------|\r\n| \\`prompt\\` | Sí* | Texto del usuario (*en turno nuevo) |\r\n| \\`iconversacion\\` | No | Omitir para nueva conversación; incluir para continuar |\r\n| \\`modelo\\` | No | Override del modelo operativo |\r\n| \\`imagenes\\` / \\`audios\\` | No | Multimodal (según despliegue) |\r\n\r\n### Stream SSE\r\n\r\nCada evento puede traer chunks JSON con \\`tipo: \"delta\"\\` y \\`contenido\\`. El visor **Try it out** muestra la respuesta completa al cerrar el stream; para prueba real use el front PatyIA o \\`curl -N\\`.\r\n\r\n### Notas\r\n\r\n- Crea conversación nueva si no envía \\`iconversacion\\`.\r\n- Actualiza \\`fhultact\\`, \\`qmensajes\\`, título provisional/definitivo en BD.\r\n\r\nUse **Try it out** para ejecutar la petición contra el servidor configurado en la barra de exportación.",
           "x-iss-request-body-examples": [
             {
@@ -1739,6 +2192,21 @@
                 "prompt": "Usando la documentación de nómina, ¿cómo registro un pago de nómina para un empleado?",
                 "imodulo": "CP-IA",
                 "iconversacion": 4821
+              }
+            },
+            {
+              "id": "completo",
+              "label": "Completo (multimodal)",
+              "icon": "mdi:clipboard-text-multiple-outline",
+              "example": {
+                "prompt": "Analiza la factura adjunta y resume totales e IVA; complementa con lo que indique la nota de voz.",
+                "imodulo": "CP-IA",
+                "iconversacion": 4821,
+                "modelo": "gpt-4o-mini",
+                "imagenes": [
+                  "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Simple_invoice_example.png/320px-Simple_invoice_example.png"
+                ],
+                "audios": []
               }
             }
           ],
@@ -1927,6 +2395,16 @@
               "Bearer": []
             }
           ],
+          "tryitConfirm": {
+            "title": "Registrar calificación {{method}}",
+            "alert": "Persiste feedback del usuario sobre un mensaje del asistente.",
+            "buttonColor": "success",
+            "lines": [
+              "**POST** `{{url}}` asocia calificación al mensaje `{{imensaje}}` de la conversación `{{iconversacion}}`.",
+              "Sesión: **{{sessionUser}}**."
+            ],
+            "acceptLabel": "Registrar calificación"
+          },
           "x-iss-doc-md": "## Mensaje calificado\r\n\r\nRegistra feedback ����/���� (o escala numérica) sobre un mensaje del asistente.\r\n\r\n### Autenticación\n\nRequiere header `Authorization: Bearer <JWT>`. Obtenga el token con **Iniciar sesión** o **Pegar JWT** en la barra superior.\r\n\r\n\\`\\`\\`http\r\nPOST /api/mensaje\r\nAuthorization: Bearer <JWT>\r\nContent-Type: application/json\r\n\\`\\`\\`\r\n\r\n| Campo | Descripción |\r\n|-------|-------------|\r\n| \\`iconversacion\\` | Conversación activa |\r\n| \\`imensaje\\` | ID del mensaje en CONVERSACION_LOG |\r\n| \\`butil\\` | \\`true\\` = útil, \\`false\\` = no útil |\r\n| \\`contenido\\` | Comentario opcional del usuario |\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
           "x-iss-request-body-examples": [
             {
@@ -2135,6 +2613,16 @@
               "Bearer": []
             }
           ],
+          "tryitConfirm": {
+            "title": "Asociar tiquete CRM",
+            "alert": "Vincula ticket de soporte y puede cerrar la conversación.",
+            "buttonColor": "success",
+            "lines": [
+              "**POST** `{{url}}` escala la conversación `{{iconversacion}}` a soporte humano.",
+              "Sesión: **{{sessionUser}}**."
+            ],
+            "acceptLabel": "Asociar tiquete"
+          },
           "x-iss-doc-md": "## Asociar tiquete CRM\r\n\r\nVincula un tiquete de soporte ContaPyme con la conversación (escalamiento a humano).\r\n\r\n### Autenticación\n\nRequiere header `Authorization: Bearer <JWT>`. Obtenga el token con **Iniciar sesión** o **Pegar JWT** en la barra superior.\r\n\r\n\\`\\`\\`http\r\nPOST /api/tiquete\r\nAuthorization: Bearer <JWT>\r\nContent-Type: application/json\r\n\\`\\`\\`\r\n\r\n| Campo | Descripción |\r\n|-------|-------------|\r\n| \\`iconversacion\\` | ID conversación |\r\n| \\`codigotk\\` | Código del tiquete CRM (ej. \\`TK-1436238\\`) |\r\n| \\`tema\\` | Asunto opcional |\r\n| \\`bcerrar_conversacion\\` | Cerrar conversación al crear tiquete |\r\n| \\`bautoriza_visualizacion\\` | Autorizar visualización por soporte |\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
           "x-iss-request-body-examples": [
             {
@@ -2320,20 +2808,15 @@
           }
         }
       },
-      "/unittest/run": {
+      "/test/smoke-catalogo": {
         "get": {
-          "summary": "Ejecutar test unitario (SSE)",
+          "summary": "Smoke catálogo HTTP (SSE)",
           "tags": [
             "Testing"
           ],
-          "description": "Stream Markdown. Inicia sesión arriba (JWT system-login) para pasos autenticados.",
+          "description": "Ejecuta la secuencia smoke del catálogo de tests y emite progreso Markdown por SSE.",
           "x-isa-subgroup": "pruebas",
-          "security": [
-            {
-              "Bearer": []
-            }
-          ],
-          "x-iss-doc-md": "## Ejecutar test unitario (SSE)\r\n\r\nCorre la secuencia de smoke definida en el catálogo y emite progreso en **Markdown** por SSE.\r\n\r\n### Autenticación\n\nRequiere header `Authorization: Bearer <JWT>`. Obtenga el token con **Iniciar sesión** o **Pegar JWT** en la barra superior.\r\n\r\n\\`\\`\\`http\r\nGET /api/unittest/run\r\nAuthorization: Bearer <JWT>\r\nAccept: text/event-stream\r\n\\`\\`\\`\r\n\r\n### Requisitos\r\n\r\n- Modo auth \\`is\\`: opcional \\`UNIT_TEST_CONTROLKEY\\` en \\`local.settings.json\\` para login automático en smoke.\r\n- Sin JWT: pasos autenticados se omiten con mensaje informativo.\r\n\r\n### Eventos SSE\r\n\r\nTipo \\`context\\`, \\`step\\`, \\`summary\\` ��� ver ejemplo en pestaña **Ejemplos**.\r\n\r\nUse **Try it out** para ejecutar la petición contra el servidor configurado en la barra de exportación.",
+          "x-iss-doc-md": "## Smoke catálogo HTTP (SSE)\r\n\r\nCorre la secuencia smoke del catálogo y emite progreso Markdown por SSE.\r\n\r\n### Autenticación\r\n\r\n**Público** — no exige JWT. Si envía `Authorization: Bearer`, los pasos autenticados del smoke usan ese token; sin JWT se omiten pasos que requieren sesión.\r\n\r\n\\`\\`\\`http\r\nGET /api/test/smoke-catalogo\r\nAccept: text/event-stream\r\n\\`\\`\\`\r\n\r\nOpcional: `UNIT_TEST_CONTROLKEY` en el Function App para login automático en modo `is`.\r\n\r\n### Formato de respuesta\r\n\r\nStream `text/event-stream` (eventos `context`, `step`, `summary`).",
           "responses": {
             "200": {
               "description": "Stream SSE con progreso del test (ejemplo de evento JSON)",
@@ -2342,7 +2825,7 @@
                   "schema": {
                     "type": "string"
                   },
-                  "example": "data: {\"encabezado\":{\"resultado\":true,\"tiempo\":-1,\"fhentrada\":\"2026-06-19T15:30:00.000Z\",\"fhsalida\":\"2026-06-19T15:30:00.042Z\"},\"respuesta\":{\"paso\":2,\"total\":8,\"mensaje\":\"GET /api/health — OK\",\"markdown\":\"## Paso 2/8\\nHealth respondió 200.\"}}\n\n"
+                  "example": "data: {\"encabezado\":{\"resultado\":true,\"tiempo\":-1,\"fhentrada\":\"2026-06-19T15:30:00.000Z\",\"fhsalida\":\"2026-06-19T15:30:00.042Z\"},\"respuesta\":{\"paso\":2,\"total\":8,\"mensaje\":\"GET /api/system/health — OK\",\"markdown\":\"## Paso 2/8\\nHealth respondió 200.\"}}\n\n"
                 },
                 "application/json": {
                   "schema": {
@@ -2388,7 +2871,7 @@
                     "respuesta": {
                       "paso": 2,
                       "total": 8,
-                      "mensaje": "GET /api/health — OK",
+                      "mensaje": "GET /api/system/health — OK",
                       "markdown": "## Paso 2/8\nHealth respondió 200."
                     }
                   }
@@ -2448,58 +2931,14 @@
           }
         }
       },
-      "/swagger.json": {
-        "get": {
-          "summary": "OpenAPI JSON",
-          "tags": [
-            "Testing"
-          ],
-          "x-isa-subgroup": "documentacion",
-          "x-iss-doc-md": "## OpenAPI JSON\r\n\r\nDevuelve la especificación OpenAPI 3.0 generada en runtime (misma que alimenta este visor).\r\n\r\n\\`\\`\\`http\r\nGET /api/swagger.json\r\n\\`\\`\\`\r\n\r\nUse **Exportar OpenAPI** en la barra superior para descargar sin autenticación adicional.\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
-          "responses": {
-            "200": {
-              "description": "Especificación OpenAPI",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object"
-                  },
-                  "example": {
-                    "encabezado": {
-                      "resultado": true,
-                      "tiempo": -1,
-                      "fhentrada": "2026-06-19T15:30:00.000Z",
-                      "fhsalida": "2026-06-19T15:30:00.042Z"
-                    },
-                    "respuesta": {
-                      "openapi": "3.0.3",
-                      "info": {
-                        "title": "iss-ayudascpia API",
-                        "version": "1.0.0"
-                      },
-                      "paths": {
-                        "/health": {
-                          "get": {
-                            "summary": "Health + ping MSSQL"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
       "/swagger": {
         "get": {
-          "summary": "Swagger UI",
+          "summary": "IS-Swagger (iframe)",
           "tags": [
-            "Testing"
+            "Sistema"
           ],
           "x-isa-subgroup": "documentacion",
-          "x-iss-doc-md": "## Swagger UI (legacy)\r\n\r\nHTML del visor Swagger clásico embebido en la Function App.\r\n\r\n\\`\\`\\`http\r\nGET /api/swagger\r\n\\`\\`\\`\r\n\r\nPara documentación interactiva preferida use el componente **IS-Swagger** (este visor) o exporte el documento **IS**.\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
+          "x-iss-doc-md": "## IS-Swagger (iframe)\r\n\r\nHTML que embebe el visor IS-Swagger (GH Pages / CF dev) con `conn` apuntando a esta API.\r\n\r\n\\`\\`\\`http\r\nGET /api/swagger\r\nGET /api/swagger?mode=dev\r\n\\`\\`\\`\r\n\r\n**No requiere JWT** para cargar la página ni **GET** `/api/system/swagger/config.json`. Solo **PUT** `/api/system/swagger.json` exige editor (`swagger_editors`).\r\n\r\n### Formato de respuesta\r\n\r\nHTML del iframe.",
           "responses": {
             "200": {
               "description": "HTML de documentación Swagger",
@@ -2514,7 +2953,1222 @@
             }
           }
         }
+      },
+      "/test/cambio-de-titulo-en-conversaciones": {
+        "get": {
+          "summary": "Test cambio de título en conversaciones (SSE)",
+          "tags": [
+            "Testing"
+          ],
+          "description": "Secuencia de mensajes a POST /conversacion; valida título provisional → definitivo y emite trace JSON al final.",
+          "x-isa-subgroup": "pruebas",
+          "x-iss-doc-md": "## Test cambio de título en conversaciones (SSE)\r\n\r\nEjecuta una **secuencia de steps configurables** contra **POST /api/conversacion** y endpoints HTTP arbitrarios. Cada `ConversationGoalStep` puede ser:\r\n\r\n- **`conv`**: POST /conversacion con SSE, animación **typewriter** palabra-por-palabra (`typewriterMsPerToken` en ms).\r\n- **`http`**: GET/POST/PUT/DELETE arbitrario con `{{varName}}` interpolables desde `ctx.vars`.\r\n- **`script`**: JS sandbox con acceso a `ctx.vars`, `ctx.lastResponse`, `ctx.lastSseEvents`, `ctx.stepIndex`.\r\n- **`raw`**: como http pero con control total de headers y body literal.\r\n\r\n### Capacidades por step\r\n\r\n| Campo | Descripción |\r\n|-------|-------------|\r\n| `description` | Texto humano para el reporte. |\r\n| `extract` | `{ varName: jsonPath }` → guarda valores en `ctx.vars` para próximos steps. |\r\n| `assert` | `(ctx) => true \\| string \"motivo\"` para validar el paso. |\r\n| `skipIf` / `onlyIf` | `(ctx) => boolean` para flujo condicional. |\r\n| `timeoutMs` | Override del timeout por step (default 45s). |\r\n\r\n### Autenticación\r\n\r\nRequiere JWT y rol **dev_lead** o **dev_iss** con permiso explícito.\r\n\r\n\\`\\`\\`http\r\nGET /api/test/cambio-de-titulo-en-conversaciones\r\nAuthorization: Bearer <JWT>\r\nAccept: text/event-stream\r\n\\`\\`\\`\r\n\r\n**POST** con body `{ \"messages\": [ConversationGoalStep, ...] }`:\r\n\r\n\\`\\`\\`json\r\n{\r\n  \"messages\": [\r\n    { \"kind\": \"conv\", \"description\": \"Crea conversación\", \"typewriterMsPerToken\": 0, \"prompt\": \"Hola, soy un test\" },\r\n    { \"kind\": \"script\", \"description\": \"Extrae id\", \"run\": \"ctx.vars.convId = ctx.lastResponse?.iconversacion; return ctx.vars.convId != null;\" },\r\n    { \"kind\": \"http\", \"method\": \"GET\", \"description\": \"Lee conversación\", \"path\": \"/conversacion/{{convId}}\", \"extract\": { \"titulo\": \"titulo\" } },\r\n    { \"kind\": \"conv\", \"description\": \"Cambia el título\", \"typewriterMsPerToken\": 25, \"prompt\": \"¿Cuál es la capital de Colombia?\" },\r\n    { \"kind\": \"http\", \"method\": \"GET\", \"path\": \"/conversacion/{{convId}}\", \"assert\": \"ctx.vars.titulo && ctx.vars.titulo !== 'Nueva conversación'\" }\r\n  ]\r\n}\r\n\\`\\`\\`\r\n\r\nQuery opcional: `?perStepTimeoutMs=60000&typewriterMsPerToken=35`.\r\n\r\n### Formato de respuesta\r\n\r\nStream `text/event-stream`. Eventos:\r\n\r\n- `context` — header con metadatos del run.\r\n- `step` — resultado de un step (markdown con detalle + ✅/❌).\r\n- `delta` — chunk de stream SSE, con typewriter (palabra por palabra).\r\n- `tick` — heartbeat cada ~1s con bytes recibidos / elapsedMs.\r\n- `summary` — resumen final con passed/failed/skipped y vars extraídas.\r\n- `trace` — JSON de trazabilidad completo.\r\n- `error` — error fatal del test.\r\n",
+          "responses": {
+            "200": {
+              "description": "Stream SSE con steps (POST + GET) y al final un evento `trace` con JSON de trazabilidad",
+              "content": {
+                "text/event-stream": {
+                  "schema": {
+                    "type": "string"
+                  },
+                  "example": "data: {\"encabezado\":{\"resultado\":true,\"tiempo\":-1,\"fhentrada\":\"2026-06-19T15:30:00.000Z\",\"fhsalida\":\"2026-06-19T15:30:00.042Z\"},\"respuesta\":{\"paso\":2,\"total\":8,\"mensaje\":\"GET /api/system/health — OK\",\"markdown\":\"## Paso 2/8\\nHealth respondió 200.\"}}\n\n"
+                },
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "respuesta": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": true,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.042Z"
+                    },
+                    "respuesta": {
+                      "paso": 2,
+                      "total": 8,
+                      "mensaje": "GET /api/system/health — OK",
+                      "markdown": "## Paso 2/8\nHealth respondió 200."
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "No autorizado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 401020,
+                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Test cambio de título (steps enriquecidos)",
+          "tags": [
+            "Testing"
+          ],
+          "description": "Igual que GET, pero acepta `messages` con **steps enriquecidos** (`ConversationGoalStep[]`). Cada step puede ser: `conv` (POST /conversacion con SSE typewriter), `http` (cualquier método/path con `{{vars}}` interpolables), `script` (JS sandbox con `ctx.vars`, `ctx.lastResponse`), o `raw`. Soporta `extract` (JSONPath → ctx.vars), `assert` (`(ctx) => true | string motivo`), `skipIf`/`onlyIf`, y `typewriterMsPerToken` para animación palabra-por-palabra. Los campos elevados del POST /conversacion subyacente (modelo, temperatura, top_p) se descartan si el caller no es dev_lead / dev_iss.",
+          "x-isa-subgroup": "pruebas",
+          "x-iss-doc-md": "## Test cambio de título en conversaciones (SSE)\r\n\r\nEjecuta una **secuencia de steps configurables** contra **POST /api/conversacion** y endpoints HTTP arbitrarios. Cada `ConversationGoalStep` puede ser:\r\n\r\n- **`conv`**: POST /conversacion con SSE, animación **typewriter** palabra-por-palabra (`typewriterMsPerToken` en ms).\r\n- **`http`**: GET/POST/PUT/DELETE arbitrario con `{{varName}}` interpolables desde `ctx.vars`.\r\n- **`script`**: JS sandbox con acceso a `ctx.vars`, `ctx.lastResponse`, `ctx.lastSseEvents`, `ctx.stepIndex`.\r\n- **`raw`**: como http pero con control total de headers y body literal.\r\n\r\n### Capacidades por step\r\n\r\n| Campo | Descripción |\r\n|-------|-------------|\r\n| `description` | Texto humano para el reporte. |\r\n| `extract` | `{ varName: jsonPath }` → guarda valores en `ctx.vars` para próximos steps. |\r\n| `assert` | `(ctx) => true \\| string \"motivo\"` para validar el paso. |\r\n| `skipIf` / `onlyIf` | `(ctx) => boolean` para flujo condicional. |\r\n| `timeoutMs` | Override del timeout por step (default 45s). |\r\n\r\n### Autenticación\r\n\r\nRequiere JWT y rol **dev_lead** o **dev_iss** con permiso explícito.\r\n\r\n\\`\\`\\`http\r\nGET /api/test/cambio-de-titulo-en-conversaciones\r\nAuthorization: Bearer <JWT>\r\nAccept: text/event-stream\r\n\\`\\`\\`\r\n\r\n**POST** con body `{ \"messages\": [ConversationGoalStep, ...] }`:\r\n\r\n\\`\\`\\`json\r\n{\r\n  \"messages\": [\r\n    { \"kind\": \"conv\", \"description\": \"Crea conversación\", \"typewriterMsPerToken\": 0, \"prompt\": \"Hola, soy un test\" },\r\n    { \"kind\": \"script\", \"description\": \"Extrae id\", \"run\": \"ctx.vars.convId = ctx.lastResponse?.iconversacion; return ctx.vars.convId != null;\" },\r\n    { \"kind\": \"http\", \"method\": \"GET\", \"description\": \"Lee conversación\", \"path\": \"/conversacion/{{convId}}\", \"extract\": { \"titulo\": \"titulo\" } },\r\n    { \"kind\": \"conv\", \"description\": \"Cambia el título\", \"typewriterMsPerToken\": 25, \"prompt\": \"¿Cuál es la capital de Colombia?\" },\r\n    { \"kind\": \"http\", \"method\": \"GET\", \"path\": \"/conversacion/{{convId}}\", \"assert\": \"ctx.vars.titulo && ctx.vars.titulo !== 'Nueva conversación'\" }\r\n  ]\r\n}\r\n\\`\\`\\`\r\n\r\nQuery opcional: `?perStepTimeoutMs=60000&typewriterMsPerToken=35`.\r\n\r\n### Formato de respuesta\r\n\r\nStream `text/event-stream`. Eventos:\r\n\r\n- `context` — header con metadatos del run.\r\n- `step` — resultado de un step (markdown con detalle + ✅/❌).\r\n- `delta` — chunk de stream SSE, con typewriter (palabra por palabra).\r\n- `tick` — heartbeat cada ~1s con bytes recibidos / elapsedMs.\r\n- `summary` — resumen final con passed/failed/skipped y vars extraídas.\r\n- `trace` — JSON de trazabilidad completo.\r\n- `error` — error fatal del test.\r\n",
+          "requestBody": {
+            "required": true,
+            "description": "Lista de `ConversationGoalStep` enriquecidos (kind: conv | http | script | raw).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "conv",
+                              "http",
+                              "script",
+                              "raw",
+                              "auto"
+                            ],
+                            "description": "Discriminador. Si falta, se infiere por presencia de campos (prompt → conv, method → http, run → script)."
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Descripción humana del paso."
+                          },
+                          "prompt": {
+                            "type": "string",
+                            "description": "Texto del prompt (kind: conv). Soporta {{varName}}."
+                          },
+                          "idmaquina": {
+                            "type": "string"
+                          },
+                          "temperatura": {
+                            "type": "number"
+                          },
+                          "method": {
+                            "type": "string",
+                            "description": "Método HTTP (kind: http). Default GET."
+                          },
+                          "path": {
+                            "type": "string",
+                            "description": "Path relativo a /api. Soporta {{varName}}."
+                          },
+                          "body": {
+                            "description": "Body JSON o string. Soporta {{varName}} recursivo."
+                          },
+                          "headers": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "contentType": {
+                            "type": "string"
+                          },
+                          "expectStatus": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          },
+                          "extract": {
+                            "type": "object",
+                            "description": "Mapa varName → JSONPath. Extrae valores de la respuesta.",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "assert": {
+                            "type": "string",
+                            "description": "JS evaluado con (ctx) => true | string motivo."
+                          },
+                          "skipIf": {
+                            "type": "string",
+                            "description": "JS evaluado con (ctx) => boolean. Si true, salta el step."
+                          },
+                          "onlyIf": {
+                            "type": "string",
+                            "description": "JS evaluado con (ctx) => boolean. Si false, falla el step."
+                          },
+                          "run": {
+                            "type": "string",
+                            "description": "JS ejecutado en sandbox (kind: script)."
+                          },
+                          "timeoutMs": {
+                            "type": "number"
+                          },
+                          "typewriterMsPerToken": {
+                            "type": "number",
+                            "description": "Delay ms entre tokens del stream SSE (kind: conv). 0 = sin animación."
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "messages": [
+                    {
+                      "kind": "conv",
+                      "description": "Saludo — crea la conversación",
+                      "typewriterMsPerToken": 0,
+                      "prompt": "Hola, soy un test automatizado. Necesito registrar una factura de venta de InSoft."
+                    },
+                    {
+                      "kind": "script",
+                      "description": "Extraer iconversacion a ctx.vars.convId",
+                      "run": "ctx.vars.convId = ctx.lastResponse?.iconversacion; return ctx.vars.convId != null;"
+                    },
+                    {
+                      "kind": "http",
+                      "method": "GET",
+                      "description": "GET /conversacion/{{convId}} — extrae tituloInicial y qmensajesInicial",
+                      "path": "/conversacion/{{convId}}",
+                      "extract": {
+                        "tituloInicial": "titulo",
+                        "qmensajesInicial": "qmensajes"
+                      }
+                    },
+                    {
+                      "kind": "conv",
+                      "description": "Mensaje para forzar cambio de título",
+                      "typewriterMsPerToken": 25,
+                      "prompt": "¿Cuál es la capital de Colombia?"
+                    },
+                    {
+                      "kind": "http",
+                      "method": "GET",
+                      "description": "Verifica que el título cambió tras el segundo prompt",
+                      "path": "/conversacion/{{convId}}",
+                      "extract": {
+                        "tituloFinal": "titulo"
+                      },
+                      "assert": "ctx.vars.tituloFinal && ctx.vars.tituloFinal !== 'Nueva conversación' ? true : `título sigue siendo ${ctx.vars.tituloFinal}`"
+                    },
+                    {
+                      "kind": "script",
+                      "description": "Valida que qmensajes >= 2",
+                      "run": "return (ctx.vars.qmensajesFinal ?? 0) >= 2 ? true : `qmensajes =${ctx.vars.qmensajesFinal}`"
+                    },
+                    {
+                      "kind": "conv",
+                      "description": "Último prompt con efecto typewriter rápido",
+                      "typewriterMsPerToken": 20,
+                      "prompt": "Ahora háblame del canal de Panamá."
+                    },
+                    {
+                      "kind": "http",
+                      "method": "GET",
+                      "description": "Resumen final con extracción múltiple",
+                      "path": "/conversacion/{{convId}}",
+                      "extract": {
+                        "qmensajesFinal": "qmensajes",
+                        "tituloDefinitivo": "titulo"
+                      },
+                      "assert": "ctx.vars.qmensajesFinal >= 3 ? true : `qmensajes =${ctx.vars.qmensajesFinal}, esperaba >= 3`"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Stream SSE con `context`, `step`, `delta`, `tick`, `summary` y `trace`. El field `delta` emite cada token del stream OpenAI con typewriter (palabra por palabra).",
+              "content": {
+                "text/event-stream": {
+                  "schema": {
+                    "type": "string"
+                  },
+                  "example": "data: {\"encabezado\":{\"resultado\":true,\"tiempo\":-1,\"fhentrada\":\"2026-06-19T15:30:00.000Z\",\"fhsalida\":\"2026-06-19T15:30:00.042Z\"},\"respuesta\":{\"paso\":2,\"total\":8,\"mensaje\":\"GET /api/system/health — OK\",\"markdown\":\"## Paso 2/8\\nHealth respondió 200.\"}}\n\n"
+                },
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "respuesta": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": true,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.042Z"
+                    },
+                    "respuesta": {
+                      "paso": 2,
+                      "total": 8,
+                      "mensaje": "GET /api/system/health — OK",
+                      "markdown": "## Paso 2/8\nHealth respondió 200."
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "No autorizado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 401020,
+                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/test/config.json": {
+        "get": {
+          "summary": "Config test protocol (BD)",
+          "tags": [
+            "Testing"
+          ],
+          "description": "Devuelve el protocolo de tests persistido en `dbo.SYS_VALUES.test` (kind `insoft.test-config`). Es la fuente de verdad que consumen `GET /api/test/smoke-catalogo` y `GET /api/test/cambio-de-titulo-en-conversaciones`. Si la BD está vacía, el server hace auto-seed con el `ayudascpProtocol` estático.",
+          "x-isa-subgroup": "pruebas",
+          "responses": {
+            "200": {
+              "description": "insoft.test-config desde dbo.SYS_VALUES.test",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "version",
+                      "protocol"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "insoft.test-config"
+                        ]
+                      },
+                      "version": {
+                        "type": "string"
+                      },
+                      "protocol": {
+                        "type": "object"
+                      },
+                      "updatedBy": {
+                        "type": "string"
+                      },
+                      "updatedAt": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/test.json": {
+        "put": {
+          "summary": "Actualizar test protocol (BD)",
+          "tags": [
+            "Testing"
+          ],
+          "description": "Persiste el `insoft.test-config` en `dbo.SYS_VALUES.test`. Body: documento completo `insoft.test-config` con `protocol: { paths, sequences, testIds, service, serviceName, version }`. La próxima lectura del protocol usará esta versión.",
+          "x-isa-subgroup": "pruebas",
+          "responses": {
+            "200": {
+              "description": "Config test actualizada en SYSTEM",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "respuesta": {
+                        "type": "object",
+                        "properties": {
+                          "ok": {
+                            "type": "boolean"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": true,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.042Z"
+                    },
+                    "respuesta": {
+                      "ok": true,
+                      "key": "swagger",
+                      "updatedBy": "JAGUDELOE"
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "No autorizado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 401020,
+                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
+                    }
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Prohibido",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 403010,
+                      "mensaje": "No tiene permisos para acceder a este recurso."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/system/health": {
+        "get": {
+          "summary": "Health + ping MSSQL",
+          "tags": [
+            "Sistema"
+          ],
+          "x-iss-doc-md": "## Health + ping MSSQL\r\n\r\nComprueba que el servicio responde y que la conexión a SQL Server está activa.\r\n\r\n### Cuándo usarlo\r\n\r\n- Smoke test tras desplegar o reiniciar la API local (\\`npm start\\`, puerto 5502).\r\n- Diagnóstico cuando fallan endpoints que leen BD (banner amarillo en el visor).\r\n\r\n### Cómo llamarlo\r\n\r\n\\`\\`\\`http\r\nGET /api/system/health\r\nAccept: application/json\r\n\\`\\`\\`\r\n\r\nNo requiere JWT.\r\n\r\n### Campos Útiles en \\`respuesta.datos\\`\r\n\r\n| Campo | Descripción |\r\n|-------|-------------|\r\n| \\`database.bconnected\\` | \\`true\\` si MSSQL respondió al ping |\r\n| \\`database.database\\` | Nombre de la base (ej. \\`AYUDASCP_IA\\`) |\r\n| \\`database.timeconnect\\` | Latencia del ping en ms |\r\n| \\`slot\\` | Slot Azure (\\`STAGING\\` en local con \\`WEBSITE_SLOT_NAME\\`) |\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
+          "responses": {
+            "200": {
+              "description": "Servicio operativo",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "respuesta": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": true,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.042Z"
+                    },
+                    "respuesta": {
+                      "ok": true,
+                      "service": "iss-ayudascpia",
+                      "authMode": "worker",
+                      "datos": {
+                        "name": "3_iss_agenteia",
+                        "version": "1.0.0",
+                        "timezone": "SA Pacific Standard Time",
+                        "nodeversion": "v22.x",
+                        "slot": "PRODUCTION",
+                        "database": {
+                          "database": "AyudasCP",
+                          "bconnected": true,
+                          "timeconnect": 12
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "503": {
+              "description": "Servicio no disponible",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 503010,
+                      "mensaje": "El servicio no está disponible temporalmente."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/system/swagger/config.json": {
+        "get": {
+          "summary": "Config IS-Swagger (BD)",
+          "tags": [
+            "Sistema"
+          ],
+          "x-isa-subgroup": "documentacion",
+          "x-iss-doc-md": "## Config IS-Swagger (BD)\r\n\r\nDevuelve el documento **insoft.openapi-config** persistido en `dbo.SYSTEM` (clave `swagger`). Es la **fuente de verdad** que consume el componente IS-Swagger al conectar con esta API.\r\n\r\n\\`\\`\\`http\r\nGET /api/system/swagger/config.json\r\n\\`\\`\\`\r\n\r\nNo requiere autenticación. Tras editar en el visor y publicar, use **PUT** `/api/system/swagger.json` (usuarios en `swagger_editors`).\r\n\r\n### Rutas API\r\n\r\n| Ruta | Contenido |\r\n|------|-----------|\r\n| `GET /system/swagger/config.json` | Config IS (lectura desde BD) |\r\n| `PUT /system/swagger.json` | Persistir config IS |\r\n\r\nOpenAPI, documento IS y colección Postman se generan en el **visor IS-Swagger** (GH Pages) a partir de la config.\r\n\r\n### Formato de respuesta\n\nJSON crudo `insoft.openapi-config` (sin envelope InSoft).",
+          "responses": {
+            "200": {
+              "description": "insoft.openapi-config desde dbo.SYSTEM.swagger",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "version"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "insoft.openapi-config"
+                        ]
+                      },
+                      "version": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": true,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.042Z"
+                    },
+                    "respuesta": {
+                      "kind": "insoft.openapi-config",
+                      "version": 1,
+                      "info": {
+                        "title": "iss-ayudascpia API",
+                        "version": "1.0.0"
+                      },
+                      "viewer": {
+                        "ns": "ISS",
+                        "app": "swagger-viewer",
+                        "shell": true,
+                        "auth": {
+                          "enabled": true,
+                          "loginKind": "portal",
+                          "loginPath": "/api/auth/token",
+                          "app": "isa-patyia"
+                        },
+                        "brand": {
+                          "title": "ISS PatyIA",
+                          "icon": "mdi:robot-happy-outline"
+                        },
+                        "nav": [
+                          {
+                            "id": "conversaciones",
+                            "label": "Conversaciones",
+                            "icon": "mdi:forum-outline",
+                            "tags": [
+                              "Conversaciones"
+                            ],
+                            "access": "*"
+                          },
+                          {
+                            "id": "sistema",
+                            "label": "Sistema",
+                            "icon": "mdi:heart-pulse",
+                            "tags": [
+                              "Sistema"
+                            ],
+                            "access": "*"
+                          },
+                          {
+                            "id": "testing",
+                            "label": "Testing",
+                            "icon": "mdi:flask-outline",
+                            "tags": [
+                              "Testing"
+                            ],
+                            "access": "*"
+                          }
+                        ]
+                      },
+                      "protocol": {
+                        "serverUrl": "/api",
+                        "pathPrefix": "/api",
+                        "ensureApiPrefix": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/system/swagger.json": {
+        "put": {
+          "summary": "Actualizar config IS-Swagger (BD)",
+          "tags": [
+            "Sistema"
+          ],
+          "x-isa-subgroup": "documentacion",
+          "security": [
+            {
+              "Bearer": []
+            }
+          ],
+          "tryitConfirm": "swaggerPut",
+          "x-iss-doc-md": "## Actualizar config IS-Swagger (BD)\r\n\r\nPersiste el documento **insoft.openapi-config** en `dbo.SYSTEM` (clave `swagger`). Actualiza la documentación que ve este visor y las apps conectadas a la API — **no** es un reemplazo genérico de OpenAPI externo.\r\n\r\n### Autenticación\n\nRequiere header `Authorization: Bearer <JWT>`. Solo usuarios en `SYSTEM.swagger_editors`.\r\n\r\n\\`\\`\\`http\r\nPUT /api/system/swagger.json\r\nAuthorization: Bearer <JWT>\r\nContent-Type: application/json\r\n\\`\\`\\`\r\n\r\nEl cuerpo debe ser el documento completo `insoft.openapi-config` (mismo formato que **GET** `/api/system/swagger/config.json`).\r\n\r\n### Respuestas\r\n\r\n| Código | Significado |\r\n|--------|-------------|\r\n| 200 | Config IS actualizada; `updatedBy` indica el icontacto autorizado |\r\n| 401 | Sin JWT o usuario no está en `swagger_editors` |\r\n| 400 | JSON inválido o no cumple `insoft.openapi-config` |\r\n\r\n### Formato de respuesta\n\nEnvelope InSoft: `encabezado` (metadatos, `resultado`, tiempos) + `respuesta` (payload). Revise la pestaña **Ejemplos** para JSON por código HTTP.",
+          "requestBody": {
+            "required": true,
+            "description": "Documento insoft.openapi-config completo (mismo formato que GET /system/swagger/config.json).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "version",
+                    "paths"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "insoft.openapi-config"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "paths": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "example": {}
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Config IS actualizada en SYSTEM",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "respuesta": {
+                        "type": "object",
+                        "properties": {
+                          "ok": {
+                            "type": "boolean"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "updatedBy": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": true,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.042Z"
+                    },
+                    "respuesta": {
+                      "ok": true,
+                      "key": "swagger",
+                      "updatedBy": "JAGUDELOE"
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "No autorizado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 401020,
+                      "mensaje": "No se ha definido el parámetro de autenticación, por favor verifique que esté enviando el header, query o parámetro \"authorization\""
+                    }
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Prohibido",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "encabezado"
+                    ],
+                    "properties": {
+                      "encabezado": {
+                        "type": "object",
+                        "properties": {
+                          "resultado": {
+                            "type": "boolean"
+                          },
+                          "tiempo": {
+                            "type": "number"
+                          },
+                          "fhentrada": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "fhsalida": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "imensaje": {
+                            "type": "integer"
+                          },
+                          "mensaje": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "example": {
+                    "encabezado": {
+                      "resultado": false,
+                      "tiempo": -1,
+                      "fhentrada": "2026-06-19T15:30:00.000Z",
+                      "fhsalida": "2026-06-19T15:30:00.012Z",
+                      "imensaje": 403010,
+                      "mensaje": "No tiene permisos para acceder a este recurso."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/system/swagger/meta.json": {
+        "get": {
+          "summary": "Meta IS-Swagger (BD)",
+          "tags": [
+            "Sistema"
+          ],
+          "x-isa-subgroup": "documentacion",
+          "x-iss-doc-md": "## Config IS-Swagger (BD)\r\n\r\nDevuelve el documento **insoft.openapi-config** persistido en `dbo.SYSTEM` (clave `swagger`). Es la **fuente de verdad** que consume el componente IS-Swagger al conectar con esta API.\r\n\r\n\\`\\`\\`http\r\nGET /api/system/swagger/config.json\r\n\\`\\`\\`\r\n\r\nNo requiere autenticación. Tras editar en el visor y publicar, use **PUT** `/api/system/swagger.json` (usuarios en `swagger_editors`).\r\n\r\n### Rutas API\r\n\r\n| Ruta | Contenido |\r\n|------|-----------|\r\n| `GET /system/swagger/config.json` | Config IS (lectura desde BD) |\r\n| `PUT /system/swagger.json` | Persistir config IS |\r\n\r\nOpenAPI, documento IS y colección Postman se generan en el **visor IS-Swagger** (GH Pages) a partir de la config.\r\n\r\n### Formato de respuesta\n\nJSON crudo `insoft.openapi-config` (sin envelope InSoft).",
+          "responses": {
+            "200": {
+              "description": "insoft.openapi-meta desde SYS_VALUES.swagger",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "insoft.openapi-meta"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/system/swagger/paths.json": {
+        "get": {
+          "summary": "Paths IS-Swagger (BD)",
+          "tags": [
+            "Sistema"
+          ],
+          "x-isa-subgroup": "documentacion",
+          "responses": {
+            "200": {
+              "description": "Paths + catalog desde SYS_VALUES.swagger/config",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "paths": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/system/swagger/docs/{key}": {
+        "get": {
+          "summary": "Doc markdown por clave",
+          "tags": [
+            "Sistema"
+          ],
+          "x-isa-subgroup": "documentacion",
+          "parameters": [
+            {
+              "name": "key",
+              "in": "path",
+              "required": true,
+              "description": "Clave en catalog.docs",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "conversacionDetalle",
+                  "conversacionLogs",
+                  "conversacionSse",
+                  "conversacionesList",
+                  "deleteConversacion",
+                  "health",
+                  "mensajeCalificado",
+                  "resumenConversacion",
+                  "runUnitConversation",
+                  "runUnitTest",
+                  "swaggerConfig",
+                  "swaggerJsonPut",
+                  "swaggerUi",
+                  "systemOpenai",
+                  "systemOpenaiPut",
+                  "tiquete",
+                  "unitTestCatalog"
+                ],
+                "example": "health"
+              },
+              "x-iss-enum-from": "catalog.docs"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Markdown text/plain",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Clave no encontrada",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
-    }
-  }
+    },
+    "x-iss-catalog-doc-keys": [
+      "conversacionDetalle",
+      "conversacionLogs",
+      "conversacionSse",
+      "conversacionesList",
+      "deleteConversacion",
+      "health",
+      "mensajeCalificado",
+      "resumenConversacion",
+      "runUnitConversation",
+      "runUnitTest",
+      "swaggerConfig",
+      "swaggerJsonPut",
+      "swaggerUi",
+      "systemOpenai",
+      "systemOpenaiPut",
+      "tiquete",
+      "unitTestCatalog"
+    ]
+  },
+  "builtAt": "2026-06-29T05:59:43.229Z"
 }
