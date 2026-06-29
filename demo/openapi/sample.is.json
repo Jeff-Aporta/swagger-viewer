@@ -37,6 +37,15 @@
     "frontSharedRef": "33acc67",
     "nav": [
       {
+        "id": "testing",
+        "label": "Testing",
+        "icon": "mdi:flask-outline",
+        "tags": [
+          "Testing"
+        ],
+        "access": "*"
+      },
+      {
         "id": "conversaciones",
         "label": "Conversaciones",
         "icon": "mdi:forum-outline",
@@ -51,15 +60,6 @@
         "icon": "mdi:heart-pulse",
         "tags": [
           "Sistema"
-        ],
-        "access": "*"
-      },
-      {
-        "id": "testing",
-        "label": "Testing",
-        "icon": "mdi:flask-outline",
-        "tags": [
-          "Testing"
         ],
         "access": "*"
       }
