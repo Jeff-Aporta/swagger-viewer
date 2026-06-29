@@ -21,6 +21,7 @@ import { buildNavRows, filterGroupsByNavTab, activeSectionTabId, resolveInitialN
 import { catalogDocKeysFromSources } from "./lib/openapi/param-enum.js";
 import { readNavTabFromUrl, writeNavTabToUrl } from "./lib/nav/nav-url.js";
 import { ClientTestTagGroup, readClientTestsFromSpec } from "./components/tester/ClientTestTagGroup.jsx";
+import { loadClientTesting, normalizeTests } from "./lib/test/load-client-testing.js";
 
 const { useState, useEffect, useMemo, useCallback } = React;
 const { Box, Typography, Alert } = MaterialUI;
@@ -41,9 +42,11 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
       config?.auth?.loginKind === "portal" ||
       String(config?.auth?.loginPath || "").includes("portal-login"));
   const [spec, setSpec] = useState(specProp || null);
+  const [mergedConfig, setMergedConfig] = useState(config);
   const [err, setErr] = useState("");
   const [session, setSession] = useState(() => (authEnabled ? getStoredJwt() : null));
   const [navTab, setNavTabState] = useState(() => readNavTabFromUrl());
+  const [remoteClientTests, setRemoteClientTests] = useState(null); // tests cargados del server (testing.json)
 
   const setNavTab = useCallback((tabId) => {
     const id = String(tabId || "").trim();
@@ -61,13 +64,13 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
 
   useEffect(() => {
     const urlTab = readNavTabFromUrl();
-    const next = resolveInitialNavTab(config, session, urlTab);
+    const next = resolveInitialNavTab(mergedConfig, session, urlTab);
     setNavTabState((prev) => {
       if (next === prev) return prev;
       if (next !== urlTab) writeNavTabToUrl(next);
       return next;
     });
-  }, [config, session]);
+  }, [mergedConfig, session]);
 
   useEffect(() => {
     if (specProp) {
@@ -77,9 +80,19 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
     let cancelled = false;
     (async () => {
       try {
-        const { loadSpec } = await import("./lib/openapi/openapi.js");
-        const loaded = await loadSpec(config);
-        if (!cancelled) setSpec(loaded);
+        const { loadSpec, loadViewerDocument } = await import("./lib/openapi/openapi.js");
+        // loadViewerDocument retorna {config, spec} (incluye viewer.client.tests cuando es IS)
+        try {
+          const vd = await loadViewerDocument(config);
+          if (!cancelled) {
+            if (vd?.spec) setSpec(vd.spec);
+            if (vd?.config) setMergedConfig((prev) => ({ ...prev, ...vd.config }));
+          }
+        } catch {
+          // Fallback al flat spec si la URL no retorna un documento IS válido
+          const loaded = await loadSpec(config);
+          if (!cancelled) setSpec(loaded);
+        }
       } catch (e) {
         if (!cancelled) setErr(e.message || String(e));
       }
@@ -88,6 +101,30 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
       cancelled = true;
     };
   }, [specProp, config]);
+
+  // Carga tests agnósticos desde el server (GET /system/testing.json)
+  // cuando hay apiBase. Si el server no expone esa ruta o falla, usa fallback embebido.
+  const serverBaseCtx = useServerBase();
+  const fallbackTests = useMemo(() => readClientTestsFromSpec({ ...mergedConfig, spec }), [mergedConfig, spec]);
+  useEffect(() => {
+    let cancelled = false;
+    const apiBase = serverBaseCtx?.serverBase || mergedConfig?.apiBase || "";
+    if (!apiBase) {
+      setRemoteClientTests(null);
+      return () => { cancelled = true; };
+    }
+    (async () => {
+      const loaded = await loadClientTesting({
+        apiBase,
+        viewer: { ...mergedConfig, swaggerPaths: serverBaseCtx?.swaggerPaths, testingPath: serverBaseCtx?.testingPath },
+        testingPath: serverBaseCtx?.testingPath,
+        fallback: fallbackTests,
+        getJwt: authEnabled ? () => getStoredJwt()?.token : undefined,
+      });
+      if (!cancelled) setRemoteClientTests(loaded);
+    })();
+    return () => { cancelled = true; };
+  }, [mergedConfig, authEnabled, fallbackTests, serverBaseCtx]);
 
   const groups = useMemo(() => {
     if (!spec) return [];
@@ -102,27 +139,36 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
       return ia - ib;
     });
   }, [spec]);
-  const navRows = useMemo(() => buildNavRows(config, session, navTab, setNavTab), [config, session, navTab]);
+  const navRows = useMemo(() => buildNavRows(mergedConfig, session, navTab, setNavTab), [mergedConfig, session, navTab]);
+  const activeNavTab = useMemo(() => activeSectionTabId(navRows, mergedConfig), [navRows, mergedConfig]);
+  const isTestingTab = useMemo(() => {
+    if (!activeNavTab) return false;
+    const t = String(activeNavTab).toLowerCase();
+    return t === "testing" || t === "tests" || t === "test";
+  }, [activeNavTab]);
   const visibleGroups = useMemo(() => {
-    const active = activeSectionTabId(navRows, config);
-    if (!active) return groups;
-    return filterGroupsByNavTab(groups, config, active);
-  }, [groups, config, navRows]);
+    if (isTestingTab) return [];
+    if (!activeNavTab) return groups;
+    return filterGroupsByNavTab(groups, mergedConfig, activeNavTab);
+  }, [groups, mergedConfig, activeNavTab, isTestingTab]);
   const catalogDocKeys = useMemo(
-    () => catalogDocKeysFromSources(spec, config?.catalogDocKeys),
-    [spec, config?.catalogDocKeys],
+    () => catalogDocKeysFromSources(spec, mergedConfig?.catalogDocKeys),
+    [spec, mergedConfig?.catalogDocKeys],
   );
   const docIndex = useMemo(() => (spec ? buildDocIndex(spec) : {}), [spec]);
   const lookupIndex = useMemo(() => (spec ? buildLookupIndex(spec) : {}), [spec]);
-  const clientTests = useMemo(() => readClientTestsFromSpec({ ...config, spec }), [config, spec]);
-  const brand = useMemo(() => resolveViewerBrand(config, spec), [config, spec]);
+  const clientTests = useMemo(() => {
+    if (Array.isArray(remoteClientTests) && remoteClientTests.length) return remoteClientTests;
+    return fallbackTests;
+  }, [remoteClientTests, fallbackTests]);
+  const brand = useMemo(() => resolveViewerBrand(mergedConfig, spec), [mergedConfig, spec]);
   const brandTitle = brand.title;
   const brandIcon = brand.icon;
-  const ns = config?.ns || "ISA";
+  const ns = mergedConfig?.ns || "ISA";
 
   useEffect(() => {
-    applyBrandToDocument(brand, { lockMeta: !!(config?.brandLock || config?.brandLocked) });
-  }, [brandTitle, brandIcon, config?.brandLock, config?.brandLocked]);
+    applyBrandToDocument(brand, { lockMeta: !!(mergedConfig?.brandLock || mergedConfig?.brandLocked) });
+  }, [brandTitle, brandIcon, mergedConfig?.brandLock, mergedConfig?.brandLocked]);
 
   useEffect(() => {
     if (!authEnabled) return;
@@ -131,9 +177,9 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   }, [authEnabled]);
 
   const Shell = globalThis.ISAFront?.Layout?.AppShell;
-  const embed = config?.embed === true;
-  const useShell = config?.shell !== false && Shell && !embed;
-  const externalAuth = config?.authUi === "external";
+  const embed = mergedConfig?.embed === true;
+  const useShell = mergedConfig?.shell !== false && Shell && !embed;
+  const externalAuth = mergedConfig?.authUi === "external";
   const shellLayout = useShell || embed;
 
   function onNeedLogin(hint) {
@@ -199,6 +245,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
               authEnabled={authEnabled}
               onNeedLogin={onNeedLogin}
               ns={ns}
+              autoExpandFirst={isTestingTab}
             />
           ) : null}
           {visibleGroups.map((group, tagIndex) => (
@@ -215,6 +262,14 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
               ns={ns}
             />
           ))}
+          {isTestingTab && clientTests.length === 0 ? (
+            <Box className="isa-sw-testing-empty" sx={{ mt: 4, p: 3, textAlign: "center", borderRadius: 2, border: "1px dashed", borderColor: "divider", color: "text.secondary" }}>
+              <Typography variant="body2">
+                Esta sección está reservada para tests agnósticos. Agrega un <code>viewer.client.tests[]</code> en
+                <code>is-swagger.json</code> y recarga.
+              </Typography>
+            </Box>
+          ) : null}
         </>
       ) : !err ? (
         <Typography color="text.secondary">Cargando especificación OpenAPI…</Typography>
@@ -235,7 +290,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
 
   const framed = useShell ? (
     <Shell
-      ns={config.ns || "ISA"}
+      ns={mergedConfig.ns || "ISA"}
       title={brandTitle}
       icon={brandIcon}
       showTarget={false}

@@ -12,10 +12,11 @@ import { ClientTestRunnerPanel } from "./ClientTestRunnerPanel.jsx";
 import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 
 const { Accordion, AccordionSummary, AccordionDetails, Box, Typography, Chip } = MaterialUI;
+const { useState } = React;
 
 /** Una sola card de test agnóstico. */
-function TestCard({ test, index, authEnabled, onNeedLogin, ns = "ISA" }) {
-    const [expanded, setExpanded] = useState(false);
+function TestCard({ test, index, authEnabled, onNeedLogin, ns = "ISA", autoExpandFirst = false }) {
+    const [expanded, setExpanded] = useState(autoExpandFirst && index === 0);
     const steps = Array.isArray(test?.steps) ? test.steps : [];
     return (
         <Accordion
@@ -57,7 +58,7 @@ function TestCard({ test, index, authEnabled, onNeedLogin, ns = "ISA" }) {
 }
 
 /** Tag-group "Testing" en el visor. Agrupa los tests agnósticos. */
-export function ClientTestTagGroup({ tests, tagIndex = 0, authEnabled, onNeedLogin, ns = "ISA" }) {
+export function ClientTestTagGroup({ tests, tagIndex = 0, authEnabled, onNeedLogin, ns = "ISA", autoExpandFirst = false }) {
     if (!Array.isArray(tests) || !tests.length) return null;
     return (
         <Box
@@ -93,6 +94,7 @@ export function ClientTestTagGroup({ tests, tagIndex = 0, authEnabled, onNeedLog
                         authEnabled={authEnabled}
                         onNeedLogin={onNeedLogin}
                         ns={ns}
+                        autoExpandFirst={autoExpandFirst}
                     />
                 ))}
             </Box>
