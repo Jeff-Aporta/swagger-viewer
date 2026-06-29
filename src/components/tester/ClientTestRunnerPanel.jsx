@@ -189,7 +189,12 @@ export function ClientTestRunnerPanel({ test, docMd, authEnabled, onNeedLogin, n
     const [err, setErr] = useState("");
     const [tab, setTab] = useState("protocol"); // protocol | run
     const eventTickRef = useRef(0);
-    const baseUrl = `${(serverBase || "").replace(/\/+$/, "")}/api`;
+    // serverBaseCtx.serverBase ya incluye /api (es el apiBase del config),
+    // así que NO concatenamos /api otra vez para evitar /api/api/…
+    // Si llega vacío (caso fallback local), usamos DEFAULT_BASEURL = "/api".
+    const baseUrl = (serverBase || "").replace(/\/+$/, "") || "/api";
+    const baseUrlHasApi = /\/api$/i.test(baseUrl);
+    const finalBaseUrl = baseUrlHasApi ? baseUrl : `${baseUrl}/api`;
 
     const finalDocs = docMd || test?.docs || "";
 
@@ -218,7 +223,7 @@ export function ClientTestRunnerPanel({ test, docMd, authEnabled, onNeedLogin, n
         try {
             const r = await runStepsAsStream({
                 steps,
-                baseUrl,
+                baseUrl: finalBaseUrl,
                 getJwt: () => getStoredJwt()?.token,
                 emit: (ev) => push(ev),
                 session: test?.id || test?.title || "client-test",
