@@ -238,7 +238,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
           {exportToolbarBody}
           <ServerHealthBanner ns={ns} />
           {!shellLayout ? <InfoHeader spec={spec} showTitle ns={ns} /> : null}
-          {clientTests.length > 0 ? (
+          {isTestingTab && clientTests.length > 0 ? (
             <ClientTestTagGroup
               tests={clientTests}
               tagIndex={0}
