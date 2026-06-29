@@ -10,28 +10,32 @@
 
 import { ClientTestRunnerPanel } from "./ClientTestRunnerPanel.jsx";
 import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { useGlassColors, glassAccordionSx } from "../../lib/ui/glass.jsx";
 
 const { Accordion, AccordionSummary, AccordionDetails, Box, Typography, Chip } = MaterialUI;
 const { useState } = React;
+
+const TEST_ACCENT = "#f59e0b"; // warning.main — mismo color del head del grupo
 
 /** Una sola card de test agnóstico. */
 function TestCard({ test, index, authEnabled, onNeedLogin, ns = "ISA", autoExpandFirst = false }) {
     const [expanded, setExpanded] = useState(autoExpandFirst && index === 0);
     const steps = Array.isArray(test?.steps) ? test.steps : [];
+    const glassC = useGlassColors();
     return (
         <Accordion
             expanded={expanded}
             onChange={(_e, v) => setExpanded(v)}
             className="isa-sw-operation isa-sw-operation--test"
+            disableGutters
+            elevation={0}
+            slotProps={{ transition: { unmountOnExit: true } }}
             sx={{
+                ...glassAccordionSx(glassC, { accent: TEST_ACCENT, tone: "amber" }),
                 mb: 1,
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1.5,
-                bgcolor: "background.paper",
-                boxShadow: "none",
-                "&:before": { display: "none" },
                 overflow: "hidden",
+                "--Paper-shadow": "none",
+                "&:before": { display: "none" },
             }}
         >
             <AccordionSummary expandIcon={<SwIcon icon="mdi:chevron-down" size={22} ns={ns} />}>
