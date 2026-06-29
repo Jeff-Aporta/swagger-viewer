@@ -12,16 +12,20 @@ import { ClientTestRunnerPanel } from "./ClientTestRunnerPanel.jsx";
 import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 import { useGlassColors, glassAccordionSx } from "../../lib/ui/glass.jsx";
 
-const { Accordion, AccordionSummary, AccordionDetails, Box, Typography, Chip } = MaterialUI;
+const { Accordion, AccordionSummary, AccordionDetails, Box, Typography, Chip, Tooltip } = MaterialUI;
 const { useState } = React;
 
 const TEST_ACCENT = "#f59e0b"; // warning.main — mismo color del head del grupo
+const AUTH_LOCK_TIP =
+    "Requiere Authorization: Bearer <JWT>. Use Iniciar sesión o Pegar JWT en la barra superior.";
 
 /** Una sola card de test agnóstico. */
 function TestCard({ test, index, authEnabled, onNeedLogin, ns = "ISA", autoExpandFirst = false }) {
     const [expanded, setExpanded] = useState(autoExpandFirst && index === 0);
     const steps = Array.isArray(test?.steps) ? test.steps : [];
     const glassC = useGlassColors();
+    // Los tests agnósticos hacen HTTP al server → siempre requieren JWT cuando authEnabled
+    const needsAuth = !!authEnabled;
     return (
         <Accordion
             expanded={expanded}
@@ -43,6 +47,18 @@ function TestCard({ test, index, authEnabled, onNeedLogin, ns = "ISA", autoExpan
                     <Box className="isa-sw-method-chip isa-sw-method-chip--test" sx={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 56, height: 24, px: 1, borderRadius: 1, bgcolor: "warning.main", color: "warning.contrastText", fontWeight: 700, fontSize: "0.7rem", letterSpacing: 0.5 }}>
                         TEST
                     </Box>
+                    {needsAuth ? (
+                        <Tooltip title={AUTH_LOCK_TIP} arrow placement="top">
+                            <Box
+                                component="span"
+                                className="isa-sw-auth-lock"
+                                aria-label={AUTH_LOCK_TIP}
+                                sx={{ display: "inline-flex", color: "warning.main", opacity: 0.9, flexShrink: 0 }}
+                            >
+                                <SwIcon icon="mdi:lock-outline" size={16} ns={ns} />
+                            </Box>
+                        </Tooltip>
+                    ) : null}
                     <SwIcon icon="mdi:test-tube" size={18} ns={ns} style={{ color: "var(--mui-palette-warning-main)" }} />
                     <Typography variant="body2" sx={{ fontWeight: 600, flex: 0, whiteSpace: "nowrap" }}>{test?.title || test?.id || "Test"}</Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ flex: 1, minWidth: 0, opacity: 0.6 }} noWrap>{test?.description || ""}</Typography>
