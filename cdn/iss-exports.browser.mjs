@@ -945,7 +945,7 @@ function stripIsaExtensionsForExport(openApi) {
 
 // server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "bda3789";
+var SWAGGER_VIEWER_REF = "36e3162";
 var SWAGGER_FRONT_SHARED_REF = "e584b60";
 
 // server/orchestrator-auth.ts
@@ -972,9 +972,23 @@ function viewerConfigFromBoot(config) {
   }
   return out;
 }
+function mergeStrayPayloads(raw) {
+  const stray = raw.payloads;
+  if (!stray || typeof stray !== "object" || Array.isArray(stray)) return raw;
+  const catalog = { ...raw.catalog ?? {} };
+  const payloads = { ...catalog.payloads ?? {} };
+  for (const [k, v] of Object.entries(stray)) {
+    if (v !== void 0 && payloads[k] === void 0) payloads[k] = v;
+  }
+  catalog.payloads = payloads;
+  const out = { ...raw, catalog };
+  delete out.payloads;
+  return out;
+}
 function prepareOpenApiConfig(raw) {
-  const catalog = enrichListFilterCatalog(raw.catalog ?? {});
-  return { ...raw, catalog: { ...raw.catalog, ...catalog } };
+  const merged = mergeStrayPayloads(raw);
+  const catalog = enrichListFilterCatalog(merged.catalog ?? {});
+  return { ...merged, catalog: { ...merged.catalog, ...catalog } };
 }
 function resolveApiBase(serverUrl, absoluteBaseUrl) {
   const raw = (absoluteBaseUrl ?? serverUrl ?? "/api").replace(/\/$/, "");

@@ -70,9 +70,24 @@ function viewerConfigFromBoot(config: Record<string, unknown>): Record<string, u
     return out;
 }
 
+function mergeStrayPayloads(raw: IsOpenApiConfig): IsOpenApiConfig {
+    const stray = (raw as Record<string, unknown>).payloads;
+    if (!stray || typeof stray !== "object" || Array.isArray(stray)) return raw;
+    const catalog = { ...(raw.catalog ?? {}) } as NonNullable<IsOpenApiConfig["catalog"]>;
+    const payloads = { ...(catalog.payloads ?? {}) } as Record<string, unknown>;
+    for (const [k, v] of Object.entries(stray as Record<string, unknown>)) {
+        if (v !== undefined && payloads[k] === undefined) payloads[k] = v;
+    }
+    catalog.payloads = payloads;
+    const out = { ...raw, catalog } as IsOpenApiConfig;
+    delete (out as Record<string, unknown>).payloads;
+    return out;
+}
+
 function prepareOpenApiConfig(raw: IsOpenApiConfig): IsOpenApiConfig {
-    const catalog = enrichListFilterCatalog(raw.catalog ?? {});
-    return { ...raw, catalog: { ...raw.catalog, ...catalog } };
+    const merged = mergeStrayPayloads(raw);
+    const catalog = enrichListFilterCatalog(merged.catalog ?? {});
+    return { ...merged, catalog: { ...merged.catalog, ...catalog } };
 }
 
 function resolveApiBase(serverUrl: string | undefined, absoluteBaseUrl?: string): string {
