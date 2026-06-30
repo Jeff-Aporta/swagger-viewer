@@ -159,8 +159,8 @@ function build() {
     syncVersionsAndPins();
     buildCdn();
     copyEmbedToCdn();
-    copyCdnToDemo();
     buildVendorBundles();
+    copyCdnToDemo();
     console.log("IS-Swagger build OK");
     console.log("  CDN:", BOOT_JS);
     console.log("  vendor:", join(CDN_DIR, "vendor", "iss-exports.cjs"));
