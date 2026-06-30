@@ -3,9 +3,9 @@
   "slug": "swagger-viewer",
   "repo": "Jeff-Aporta/swagger-viewer",
   "cdnPath": "cdn",
-  "componentRef": "eb37556",
+  "componentRef": "5890223",
   "refExport": "SWAGGER_VIEWER_REF",
   "distribution": "cdn",
   "note": "Runtime: jsDelivr GitHub pin o /api/swagger/cdn del host (vendor, sin npm).",
-  "jsdelivr": "https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@eb37556/cdn"
+  "jsdelivr": "https://cdn.jsdelivr.net/gh/Jeff-Aporta/swagger-viewer@5890223/cdn"
 }

@@ -1,5 +1,5 @@
 /** Pin jsDelivr front-shared + rutas del paquete swagger-viewer. */
-export const PIN = "e584b60";
+export const PIN = "6177587";
 
 /** Demo embebido vía ISS (/api/swagger/demo). */
 function isIssSwaggerDemoHost() {
@@ -48,7 +48,7 @@ export const bootHelperUrl = `${joinCdn("boot-helper.mjs")}?v=${PIN}`;
 
 /* @isa-swagger-boot:start */
 /** Jeff-Aporta/swagger-viewer — pin CDN git (sync-component-refs.mjs) */
-export const SWAGGER_VIEWER_REF = "bda3789";
+export const SWAGGER_VIEWER_REF = "5890223";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;

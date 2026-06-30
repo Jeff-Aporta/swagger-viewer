@@ -155,7 +155,7 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
             detail,
             endpoint: url,
             context: swaggerPut ? "swagger-put" : undefined,
-            hint: detail.includes("GetConnection") ? "La base de datos no está accesible. Revisa GET /health → database.bconnected." : undefined,
+            hint: detail.includes("GetConnection") ? "La base de datos no está accesible. Revisa GET /info → database.bconnected." : undefined,
           }),
         );
       } else {

@@ -6,6 +6,7 @@ import { HttpErrorAlert } from "../try-it-out/HttpErrorAlert.jsx";
 const { useState, useEffect } = React;
 
 const RETRY_MS = 3000;
+const INFO_PATH = "/info";
 
 function mssqlWarningMessage(db) {
   return [
@@ -29,7 +30,7 @@ export function ServerHealthBanner({ ns = "ISA" }) {
     async function check() {
       if (cancelled) return;
       try {
-        const { data } = await fetchApiJson(joinApiUrl(serverBase, "/health"), { auth: false });
+        const { data } = await fetchApiJson(joinApiUrl(serverBase, INFO_PATH), { auth: false });
         if (cancelled) return;
         const db = data?.respuesta?.datos?.database;
         if (db?.bconnected === false) {
