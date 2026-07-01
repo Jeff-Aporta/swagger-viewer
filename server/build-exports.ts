@@ -182,13 +182,13 @@ function buildIsDocument(viewer: Record<string, unknown>, spec: Record<string, u
 
 /** Normaliza y valida documento insoft.openapi-config (opcional). */
 export function normalizeOpenApiConfig(raw: unknown): IsOpenApiConfig {
-    if (!raw || typeof raw !== "object") throw new Error("openapi-config: documento inválido");
+    if (!raw || typeof raw !== "object") throw new Error("iss-swagger: documento inválido");
     const cfg = raw as IsOpenApiConfig;
     if (cfg.kind && cfg.kind !== OPENAPI_CONFIG_KIND) {
-        throw new Error(`openapi-config: kind esperado «${OPENAPI_CONFIG_KIND}», recibido «${cfg.kind}»`);
+        throw new Error(`iss-swagger: kind esperado «${OPENAPI_CONFIG_KIND}», recibido «${cfg.kind}»`);
     }
-    if (!cfg.info?.title) throw new Error("openapi-config: info.title es requerido");
-    if (!cfg.paths || typeof cfg.paths !== "object") throw new Error("openapi-config: paths es requerido");
+    if (!cfg.info?.title) throw new Error("iss-swagger: info.title es requerido");
+    if (!cfg.paths || typeof cfg.paths !== "object") throw new Error("iss-swagger: paths es requerido");
     return prepareOpenApiConfig(cfg);
 }
 
