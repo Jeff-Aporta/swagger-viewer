@@ -5,10 +5,14 @@ import { getSwaggerExpandUrlState } from "./swagger-url-state.js";
 export const OP_TAB_DEFAULT = "try";
 export const OP_TAB_IDS = ["try", "overview", "doc"];
 
+/** Devuelve el id de pestaña persistido para esta operación, con fallback a OP_TAB_DEFAULT
+ * si no hay valor guardado o si el valor guardado está vacío / fuera del set permitido. */
 export function readOpTabFromUrl(expandId) {
   const api = getSwaggerExpandUrlState();
   if (!api || !expandId) return OP_TAB_DEFAULT;
-  return api.getOpTab(expandId);
+  const raw = api.getOpTab(expandId);
+  const id = String(raw ?? "").trim();
+  return OP_TAB_IDS.includes(id) ? id : OP_TAB_DEFAULT;
 }
 
 export function writeOpTabToUrl(expandId, tabId) {

@@ -6,7 +6,7 @@ import { ClientTestRunnerPanel } from "../tester/ClientTestRunnerPanel.jsx";
 import { operationRequiresBearer } from "../../lib/openapi/openapi.js";
 import { SwIcon, tabLabel } from "../../lib/ui/sw-icon.jsx";
 import { opExpandIndex } from "../../lib/nav/expand-stack.js";
-import { readOpTabFromUrl, subscribeOpTabUrl, writeOpTabToUrl } from "../../lib/nav/operation-tab-url.js";
+import { OP_TAB_DEFAULT, OP_TAB_IDS, readOpTabFromUrl, subscribeOpTabUrl, writeOpTabToUrl } from "../../lib/nav/operation-tab-url.js";
 import { useExpandStack } from "../../context/ExpandStackContext.jsx";
 import { useGlassColors, glassAccordionSx, methodAccent } from "../../lib/ui/glass.jsx";
 
@@ -40,20 +40,22 @@ export function OperationCard({
   const { isOpen, toggle } = useExpandStack();
   const expandId = opExpandIndex(tagIndex, opIndex);
   const expanded = isOpen(expandId);
-  const [tab, setTab] = useState(() => readOpTabFromUrl(expandId));
+  const [tab, setTab] = useState(() => readOpTabFromUrl(expandId) || OP_TAB_DEFAULT);
   const glassC = useGlassColors();
   const accent = methodAccent(op.method);
   const needsAuth = authEnabled && operationRequiresBearer(op, spec);
 
   useEffect(() => {
     return subscribeOpTabUrl(() => {
-      setTab(readOpTabFromUrl(expandId));
+      const next = readOpTabFromUrl(expandId);
+      setTab(OP_TAB_IDS.includes(next) ? next : OP_TAB_DEFAULT);
     });
   }, [expandId]);
 
   function onTabChange(_e, v) {
-    setTab(v);
-    writeOpTabToUrl(expandId, v);
+    const safe = OP_TAB_IDS.includes(v) ? v : OP_TAB_DEFAULT;
+    setTab(safe);
+    writeOpTabToUrl(expandId, safe);
   }
 
   const isClientTest = !!(op?._clientTest || op?.["x-iss-client-test"] || op?._clientProtocol || op?.["x-iss-client-protocol"]);
