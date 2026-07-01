@@ -1,10 +1,27 @@
+/**
+ * Panel Testing del visor IS-Swagger.
+ * Carga GET /system/testing.json y renderiza una card por test, con:
+ *   - métricas (cards grid)
+ *   - progress bar
+ *   - driver por step (conv | http | raw | script)
+ *   - línea de tiempo de cambios de título
+ *   - modal de detalle por step
+ *   - alert final con el verdict formateado
+ *
+ * El runner expone `recalcularTituloCadaMensajesUsuario` desde
+ * GET /system/config/conversacion y la usa como criterio del juez.
+ */
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 const MaterialUI = globalThis.MaterialUI;
 import { SwIcon } from "../../lib/ui/sw-icon.jsx";
+import { useGlassColors, glassCardSx, NEON_COLORS } from "../../lib/ui/glass.jsx";
 import { getStoredJwt } from "../../lib/auth/auth.js";
 import { runTest, formatVerdict } from "../../lib/test-runner/index.mjs";
+import { TestingStepDriver } from "./TestingStepDriver.jsx";
+import { TestingMetricsBar } from "./TestingMetricsBar.jsx";
+import { TestingTimeline } from "./TestingTimeline.jsx";
 
-const { Accordion, AccordionSummary, AccordionDetails, Box, Typography, Button, Chip, Stack, LinearProgress, Alert, Tooltip } = MaterialUI;
+const { Accordion, AccordionSummary, AccordionDetails, Box, Typography, Button, Chip, Stack, LinearProgress, Alert, Tooltip, IconButton, Collapse } = MaterialUI;
 
 const TESTING_PATHS = { testing: "/system/testing.json" };
 
@@ -23,11 +40,6 @@ function hasAuthSession(session) {
     return !!resolveTestJwt(session);
 }
 
-/**
- * Acordeón de testing para el visor IS-Swagger.
- * Carga GET /system/testing.json y renderiza accordions por test (tag "testing").
- * Click "Ejecutar" → runTest() → onStep incremental + verdict final.
- */
 export function TestingAccordion({ config, ns, onNeedLogin, authEnabled, session }) {
     const apiBase = config?.apiBase;
     const testingPath = config?.paths?.testing || TESTING_PATHS.testing;
@@ -82,38 +94,39 @@ export function TestingAccordion({ config, ns, onNeedLogin, authEnabled, session
 
     return (
         <Box className="isa-sw-testing" sx={{ mt: 2 }}>
-            {tests.map((test) => (
-                <TestingTestAccordion
-                    key={test.id ?? Math.random()}
-                    test={test}
-                    apiBase={apiBase}
-                    ns={ns}
-                    authEnabled={authEnabled}
-                    session={session}
-                    onNeedLogin={onNeedLogin}
-                    startTest={startTest}
-                    running={running}
-                    results={results}
-                />
-            ))}
+            <Stack spacing={2}>
+                {tests.map((test) => (
+                    <TestingTestCard
+                        key={test.id ?? Math.random()}
+                        test={test}
+                        apiBase={apiBase}
+                        ns={ns}
+                        authEnabled={authEnabled}
+                        session={session}
+                        onNeedLogin={onNeedLogin}
+                        startTest={startTest}
+                        running={running}
+                        results={results}
+                    />
+                ))}
+            </Stack>
         </Box>
     );
 }
 
-function TestingTestAccordion({ test, apiBase, ns, authEnabled, session, onNeedLogin, startTest, running, results }) {
+function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin, startTest, running, results }) {
+    const c = useGlassColors();
     const id = test.id ?? "?";
     const isRunning = !!running[id];
     const result = results[id];
     const verdict = result?.verdict;
     const liveSteps = result?.liveSteps ?? [];
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(true);
     const needsAuth = authEnabled && testRequiresAuth(test);
     const blockedByAuth = needsAuth && !hasAuthSession(session);
 
-    const subtitle = useMemo(() => {
-        const n = (test.steps ?? []).length;
-        return `${n} step${n === 1 ? "" : "s"}`;
-    }, [test.steps]);
+    const totalSteps = (test.steps ?? []).length;
+    const currentStep = liveSteps.length;
 
     const onRun = useCallback(() => {
         startTest(test, resolveTestJwt(session)).catch(() => {});
@@ -123,7 +136,7 @@ function TestingTestAccordion({ test, apiBase, ns, authEnabled, session, onNeedL
         <Button
             variant="contained"
             color="secondary"
-            startIcon={isRunning ? null : <SwIcon icon="mdi:play-circle-outline" ns={ns} />}
+            startIcon={isRunning ? <SwIcon icon="mdi:loading" size={16} ns={ns} className="isa-sw-spin" /> : <SwIcon icon="mdi:play-circle-outline" size={16} ns={ns} />}
             onClick={onRun}
             disabled={isRunning || blockedByAuth}
             size="small"
@@ -132,99 +145,137 @@ function TestingTestAccordion({ test, apiBase, ns, authEnabled, session, onNeedL
         </Button>
     );
 
+    const cardSx = {
+        ...glassCardSx(c, { accent: verdict ? (verdict.pass ? "#22c55e" : "#ef4444") : NEON_COLORS.purple, tone: "default", radius: "0.75rem", neon: true }),
+        p: 0,
+        overflow: "hidden",
+    };
+
     return (
-        <Accordion
-            expanded={expanded}
-            onChange={(_e, v) => setExpanded(!!v)}
-            className="isa-sw-testing-row"
-            sx={{
-                border: "1px solid rgba(168, 85, 247, 0.25)",
-                borderRadius: 1,
-                mb: 1,
-                background: "rgba(168, 85, 247, 0.04)",
-            }}
-        >
-            <AccordionSummary expandIcon={<SwIcon icon="mdi:chevron-down" ns={ns} />}>
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: "100%" }}>
-                    <SwIcon icon="mdi:flask-outline" ns={ns} sx={{ color: "rgb(168, 85, 247)" }} />
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                            {test.title ?? id}
+        <Box className="isa-sw-testing-row" sx={cardSx}>
+            {/* Header */}
+            <Box sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5, borderBottom: `1px solid ${c.border}` }}>
+                <SwIcon icon="mdi:flask-outline" size={22} ns={ns} sx={{ color: "#a855f7" }} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        {test.title ?? id}
+                    </Typography>
+                    {test.description && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            {test.description}
                         </Typography>
-                        {test.description && (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                                {test.description}
-                            </Typography>
-                        )}
-                    </Box>
-                    <Chip size="small" label={subtitle} sx={{ ml: 1 }} />
+                    )}
+                </Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                        size="small"
+                        icon={<SwIcon icon="mdi:format-list-numbered" size={12} ns={ns} />}
+                        label={`${totalSteps} step${totalSteps === 1 ? "" : "s"}`}
+                        variant="outlined"
+                    />
                     {verdict && (
                         <Chip
                             size="small"
-                            label={verdict.pass ? "PASS" : "FAIL"}
                             color={verdict.pass ? "success" : "error"}
-                            sx={{ ml: 1 }}
+                            icon={<SwIcon icon={verdict.pass ? "mdi:check-decagram" : "mdi:close-octagon"} size={14} ns={ns} />}
+                            label={verdict.pass ? "PASS" : "FAIL"}
+                            sx={{ fontWeight: 700 }}
                         />
                     )}
                 </Stack>
-            </AccordionSummary>
-            <AccordionDetails>
-                <Stack spacing={1.5}>
-                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        {blockedByAuth ? (
-                            <Tooltip title="Inicie sesión para ejecutar este test" arrow>
-                                <span>{runBtn}</span>
-                            </Tooltip>
-                        ) : runBtn}
-                        {needsAuth && blockedByAuth ? (
-                            <Button variant="outlined" onClick={() => onNeedLogin?.("Este test requiere JWT (POST /conversacion).")} size="small" disabled={isRunning}>
-                                Iniciar sesión
-                            </Button>
-                        ) : null}
-                    </Stack>
-                    {blockedByAuth ? (
-                        <Alert severity="info" sx={{ py: 0 }}>
-                            Requiere sesión activa — use <strong>Iniciar sesión</strong> en la barra superior o el botón junto a Ejecutar.
-                        </Alert>
-                    ) : null}
-                    {isRunning && <LinearProgress />}
-                    {liveSteps.length > 0 && (
-                        <Box>
-                            <Typography variant="overline" color="text.secondary">Pasos ({liveSteps.length})</Typography>
-                            <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-                                {liveSteps.map((s) => (
-                                    <TestingStepRow key={s.index} step={s} ns={ns} />
-                                ))}
-                            </Stack>
-                        </Box>
-                    )}
-                    {verdict && (
-                        <Alert severity={verdict.pass ? "success" : "error"} sx={{ whiteSpace: "pre-wrap" }}>
+            </Box>
+
+            {/* Métricas */}
+            <Box sx={{ p: 2, borderBottom: `1px solid ${c.border}` }}>
+                <TestingMetricsBar
+                    verdict={verdict}
+                    totalSteps={totalSteps}
+                    isRunning={isRunning}
+                    currentStep={currentStep}
+                    ns={ns}
+                />
+            </Box>
+
+            {/* Progress bar en vivo */}
+            {isRunning && (
+                <Box sx={{ px: 2, pt: 1 }}>
+                    <LinearProgress
+                        variant="determinate"
+                        value={totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0}
+                        sx={{ height: 4, borderRadius: 2 }}
+                    />
+                </Box>
+            )}
+
+            {/* Acciones */}
+            <Stack direction="row" spacing={1} sx={{ p: 2, borderBottom: `1px solid ${c.border}`, flexWrap: "wrap" }}>
+                {blockedByAuth ? (
+                    <Tooltip title="Inicie sesión para ejecutar este test" arrow>
+                        <span>{runBtn}</span>
+                    </Tooltip>
+                ) : (
+                    runBtn
+                )}
+                {needsAuth && blockedByAuth && (
+                    <Button variant="outlined" onClick={() => onNeedLogin?.("Este test requiere JWT (POST /conversacion).")} size="small" disabled={isRunning}>
+                        Iniciar sesión
+                    </Button>
+                )}
+                <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => setExpanded((v) => !v)}
+                    startIcon={<SwIcon icon={expanded ? "mdi:chevron-up" : "mdi:chevron-down"} size={14} ns={ns} />}
+                >
+                    {expanded ? "Ocultar detalle" : "Mostrar detalle"}
+                </Button>
+            </Stack>
+
+            {blockedByAuth && (
+                <Alert severity="info" sx={{ mx: 2, my: 1, py: 0 }}>
+                    Requiere sesión activa — use <strong>Iniciar sesión</strong> en la barra superior o el botón junto a Ejecutar.
+                </Alert>
+            )}
+
+            <Collapse in={expanded}>
+                {/* Steps */}
+                {liveSteps.length > 0 && (
+                    <Box sx={{ p: 2 }}>
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                            <SwIcon icon="mdi:format-list-checks" size={16} ns={ns} aria-hidden />
+                            <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700 }}>
+                                Pasos ejecutados
+                            </Typography>
+                            <Chip size="small" variant="outlined" label={`${liveSteps.length}/${totalSteps}`} sx={{ height: 18, fontSize: "0.65rem" }} />
+                        </Stack>
+                        <Stack spacing={1}>
+                            {liveSteps.map((s) => (
+                                <TestingStepDriver key={s.index} step={s} ns={ns} />
+                            ))}
+                        </Stack>
+                    </Box>
+                )}
+
+                {/* Timeline */}
+                {verdict?.changesTimeline && (
+                    <Box sx={{ px: 2, pb: 2 }}>
+                        <TestingTimeline changes={verdict.changesTimeline} totalMessages={verdict.totalMessages} ns={ns} />
+                    </Box>
+                )}
+
+                {/* Verdict alert */}
+                {verdict && (
+                    <Box sx={{ px: 2, pb: 2 }}>
+                        <Alert
+                            severity={verdict.pass ? "success" : "error"}
+                            icon={<SwIcon icon={verdict.pass ? "mdi:check-decagram" : "mdi:close-octagon"} size={20} ns={ns} />}
+                            sx={{ whiteSpace: "pre-wrap", fontFamily: "ui-monospace, monospace", fontSize: "0.78rem" }}
+                        >
                             {formatVerdict(verdict, { verbose: false, color: false })}
                         </Alert>
-                    )}
-                </Stack>
-            </AccordionDetails>
-        </Accordion>
-    );
-}
-
-function TestingStepRow({ step, ns }) {
-    const tag = step.ok ? "✓" : "✗";
-    const color = step.ok ? "success" : "error";
-    return (
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ fontFamily: "monospace", fontSize: 12 }}>
-            <Chip size="small" label={`${step.index}`} variant="outlined" />
-            <Chip size="small" color={color} label={tag} sx={{ minWidth: 28 }} />
-            <Chip size="small" label={step.kind} variant="outlined" />
-            {step.iconversacion != null && <Chip size="small" label={`iconv=${step.iconversacion}`} variant="outlined" />}
-            {step.titulo && <Typography variant="caption" sx={{ ml: 1 }}>titulo: {step.titulo}</Typography>}
-            {step.titleChange && (
-                <Typography variant="caption" color="warning.main" sx={{ ml: 1 }}>
-                    Δ {step.titleChange.from ?? "(vacío)"} → {step.titleChange.to}
-                </Typography>
-            )}
-            {step.error && <Typography variant="caption" color="error.main">error: {step.error}</Typography>}
-        </Stack>
+                    </Box>
+                )}
+            </Collapse>
+        </Box>
     );
 }

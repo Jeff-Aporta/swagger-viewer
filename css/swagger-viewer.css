@@ -965,3 +965,23 @@ html[data-mui-color-scheme="light"] .isa-sw-toolbar--docked {
   overflow-x: auto !important;
   overflow-y: auto !important;
 }
+
+/* === Testing panel === */
+
+@keyframes isa-sw-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.isa-sw-spin {
+  animation: isa-sw-spin 1s linear infinite;
+  display: inline-block;
+}
+
+.isa-sw-testing .MuiChip-root {
+  font-feature-settings: "tnum" 1;
+}
+
+.isa-sw-testing-driver-row pre {
+  font-feature-settings: "tnum" 1;
+}
