@@ -49,12 +49,15 @@ function MetricCard({ icon, label, value, sub, accent, c, ns }) {
 
 function formatDuration(ms) {
     if (ms == null) return "—";
-    if (ms < 1000) return `${Math.round(ms)} ms`;
-    const s = ms / 1000;
-    if (s < 60) return `${s.toFixed(1)} s`;
-    const m = Math.floor(s / 60);
-    const rest = Math.round(s - m * 60);
-    return `${m}m ${rest}s`;
+    if (!Number.isFinite(ms)) return "—";
+    const total = Math.max(0, Math.round(ms));
+    const h = Math.floor(total / 3_600_000);
+    const m = Math.floor((total % 3_600_000) / 60_000);
+    const s = Math.floor((total % 60_000) / 1000);
+    const pad2 = (n) => String(n).padStart(2, "0");
+    if (h > 0) return `${h}:${pad2(m)}:${pad2(s)}`;
+    if (m > 0) return `${m}:${pad2(s)}`;
+    return `${total} ms`;
 }
 
 export function TestingMetricsBar({ verdict, totalSteps, isRunning, currentStep, ns = "ISS" }) {

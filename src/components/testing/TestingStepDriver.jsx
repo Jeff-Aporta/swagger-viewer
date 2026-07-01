@@ -1,8 +1,9 @@
 /**
  * Driver de presentación por step — un componente especializado por kind
  * (conv | http | raw | script). Cada driver muestra los campos relevantes
- * del step en un grid alineado (índice / status / método / descripción /
- * duración / timestamp / acción), con botón "Ver detalle" que abre el modal.
+ * del step en un grid alineado (status con #idx / método / body / duración
+ * hh:mm:ss / timestamp / acción "info"), con botón "Ver detalle" que abre
+ * el modal.
  *
  * Los datos vienen del StepResult producido por src/lib/test-runner/runner.mjs.
  */
@@ -12,7 +13,7 @@ import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 import { useGlassColors, methodAccent } from "../../lib/ui/glass.jsx";
 import { TestingStepDetail } from "./TestingStepDetail.jsx";
 
-const { Box, Stack, Chip, Tooltip, Typography, IconButton, Button, Collapse } = MaterialUI;
+const { Box, Stack, Chip, Tooltip, Typography, IconButton, Button } = MaterialUI;
 
 function relativeTime(iso) {
     if (!iso) return "";
@@ -34,10 +35,25 @@ function clockTime(iso) {
     }
 }
 
+/** hh:mm:ss.ms — siempre 3 dígitos para ms, ms últimos 3 dígitos. */
+function formatHmsMs(ms) {
+    if (ms == null || !Number.isFinite(ms)) return "—";
+    const total = Math.max(0, Math.round(ms));
+    const h = Math.floor(total / 3_600_000);
+    const m = Math.floor((total % 3_600_000) / 60_000);
+    const s = Math.floor((total % 60_000) / 1000);
+    const mss = total % 1000;
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const pad3 = (n) => String(n).padStart(3, "0");
+    if (h > 0) return `${pad2(h)}:${pad2(m)}:${pad2(s)}.${pad3(mss)}`;
+    return `${pad2(m)}:${pad2(s)}.${pad3(mss)}`;
+}
+
 function durationChip(duration, ns) {
-    const ms = Math.round(duration ?? 0);
+    const txt = formatHmsMs(duration);
     let color = "default";
     let icon = "mdi:timer-outline";
+    const ms = Math.round(duration ?? 0);
     if (ms > 5000) {
         color = "warning";
         icon = "mdi:timer-alert-outline";
@@ -45,25 +61,28 @@ function durationChip(duration, ns) {
         color = "error";
         icon = "mdi:timer-sand";
     }
-    return <Chip size="small" variant="outlined" color={color} icon={<SwIcon icon={icon} size={12} ns={ns} />} label={`${ms} ms`} sx={{ height: 22 }} />;
+    return <Chip size="small" variant="outlined" color={color} icon={<SwIcon icon={icon} size={12} ns={ns} />} label={txt} sx={{ height: 22, fontFamily: "ui-monospace, monospace" }} />;
 }
 
-function statusBadge(ok, ns) {
-    return ok ? (
+function statusBadge(step, ns) {
+    const idxLabel = `#${String(step.index).padStart(2, "0")}`;
+    return step.ok ? (
         <Chip
             size="small"
             color="success"
             icon={<SwIcon icon="mdi:check-circle" size={14} ns={ns} />}
-            label="OK"
-            sx={{ fontWeight: 700, height: 24 }}
+            label={idxLabel}
+            title="OK"
+            sx={{ fontWeight: 700, height: 24, fontFamily: "ui-monospace, monospace" }}
         />
     ) : (
         <Chip
             size="small"
             color="error"
             icon={<SwIcon icon="mdi:close-circle" size={14} ns={ns} />}
-            label="FAIL"
-            sx={{ fontWeight: 700, height: 24 }}
+            label={idxLabel}
+            title="FAIL"
+            sx={{ fontWeight: 700, height: 24, fontFamily: "ui-monospace, monospace" }}
         />
     );
 }
@@ -89,9 +108,7 @@ function kindBadge(kind, ns) {
 
 function stepShell(step, driver, ns) {
     const c = useGlassColors();
-    const [open, setOpen] = useState(false);
     const [detailOpen, setDetailOpen] = useState(false);
-    const [expand, setExpand] = useState(false);
 
     const rowBg = step.ok ? c.cardBg : c.errTint;
     const rowBorder = step.ok ? c.border : "rgba(239, 68, 68, 0.35)";
@@ -101,12 +118,13 @@ function stepShell(step, driver, ns) {
             className="isa-sw-testing-driver-row"
             sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "36px 80px 1fr", sm: "44px 96px 1fr 110px 110px 130px 64px" },
+                gridTemplateColumns: { xs: "1fr 96px", sm: "auto 1fr 116px 56px" },
                 gridTemplateAreas: {
-                    xs: `"idx status body" "meta meta meta"`,
-                    sm: `"idx status body duration ts detail"`,
+                    xs: `"body status" "meta meta"`,
+                    sm: `"status body duration info"`,
                 },
-                gap: 1,
+                columnGap: 1.25,
+                rowGap: 0.75,
                 alignItems: "center",
                 p: 1.25,
                 borderRadius: 1,
@@ -119,57 +137,40 @@ function stepShell(step, driver, ns) {
                 },
             }}
         >
-            {/* idx */}
-            <Box sx={{ gridArea: "idx" }}>
-                <Chip
-                    size="small"
-                    variant="outlined"
-                    label={`#${String(step.index).padStart(2, "0")}`}
-                    sx={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, height: 22 }}
-                />
-            </Box>
-            {/* status */}
+            {/* status (#idx integrado) + kind */}
             <Box sx={{ gridArea: "status", display: "flex", gap: 0.5, alignItems: "center", flexWrap: "wrap" }}>
-                {statusBadge(step.ok, ns)}
+                {statusBadge(step, ns)}
                 {kindBadge(step.kind, ns)}
             </Box>
+
             {/* body */}
             <Box sx={{ gridArea: "body", minWidth: 0 }}>
                 {driver}
             </Box>
-            {/* duration (sm+) */}
-            <Box sx={{ gridArea: "duration", display: { xs: "none", sm: "flex" }, justifyContent: "flex-end" }}>
+
+            {/* duración hh:mm:ss.ms */}
+            <Box sx={{ gridArea: "duration", display: { xs: "none", sm: "flex" }, justifyContent: "flex-end", alignItems: "center" }}>
                 {durationChip(step.duration, ns)}
             </Box>
-            {/* ts (sm+) */}
-            <Box sx={{ gridArea: "ts", display: { xs: "none", sm: "flex" }, justifyContent: "flex-end" }}>
-                <Tooltip arrow title={`${step.startedAt ?? "—"} → ${step.endedAt ?? "—"}`}>
-                    <Chip
-                        size="small"
-                        variant="outlined"
-                        icon={<SwIcon icon="mdi:clock-outline" size={12} ns={ns} />}
-                        label={`${clockTime(step.startedAt)} · ${relativeTime(step.startedAt)}`}
-                        sx={{ height: 22, fontFamily: "ui-monospace, monospace", fontSize: "0.7rem" }}
-                    />
-                </Tooltip>
-            </Box>
-            {/* detail btn (sm+) */}
-            <Box sx={{ gridArea: "detail", display: { xs: "none", sm: "flex" }, justifyContent: "flex-end" }}>
-                <Tooltip arrow title="Ver detalle">
-                    <IconButton size="small" onClick={() => setDetailOpen(true)} aria-label="Ver detalle del step">
-                        <SwIcon icon="mdi:dots-horizontal" size={16} ns={ns} />
+
+            {/* botón info detalle */}
+            <Box sx={{ gridArea: "info", display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+                <Tooltip arrow title="Ver detalle (request / response / meta)">
+                    <IconButton size="small" onClick={() => setDetailOpen(true)} aria-label="Ver detalle del step" sx={{ color: "primary.main" }}>
+                        <SwIcon icon="mdi:information-outline" size={18} ns={ns} />
                     </IconButton>
                 </Tooltip>
             </Box>
-            {/* xs meta (timestamp + duration + detail) */}
+
+            {/* xs meta row (timestamp + duración + botón) */}
             <Box sx={{ gridArea: "meta", display: { xs: "flex", sm: "none" }, gap: 1, alignItems: "center", justifyContent: "space-between" }}>
-                <Stack direction="row" spacing={0.5} alignItems="center">
+                <Stack direction="row" spacing={0.75} alignItems="center">
                     {durationChip(step.duration, ns)}
                     <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "ui-monospace, monospace", fontSize: "0.7rem" }}>
-                        {clockTime(step.startedAt)}
+                        {clockTime(step.startedAt)} · {relativeTime(step.startedAt)}
                     </Typography>
                 </Stack>
-                <Button size="small" onClick={() => setDetailOpen(true)} startIcon={<SwIcon icon="mdi:open-in-new" size={12} ns={ns} />}>
+                <Button size="small" onClick={() => setDetailOpen(true)} startIcon={<SwIcon icon="mdi:information-outline" size={14} ns={ns} />}>
                     Detalle
                 </Button>
             </Box>
@@ -179,10 +180,11 @@ function stepShell(step, driver, ns) {
     );
 }
 
-/** Driver para kind="conv" — POST /conversacion. */
+/** Driver para kind="conv" — POST /conversacion. Muestra prompt enviado + delta recibido. */
 function ConvDriverInner({ step, ns }) {
     const c = useGlassColors();
     const titleChanged = !!step.titleChange;
+    const prompt = typeof step.prompt === "string" ? step.prompt : null;
     return (
         <Stack spacing={0.5} sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
@@ -208,10 +210,47 @@ function ConvDriverInner({ step, ns }) {
                     {step.description}
                 </Typography>
             )}
+            {prompt && (
+                <Stack direction="row" spacing={0.5} alignItems="flex-start">
+                    <SwIcon icon="mdi:arrow-up-bold" size={12} ns={ns} sx={{ color: "#1e90ff", mt: "2px", flexShrink: 0 }} />
+                    <Typography
+                        variant="caption"
+                        component="span"
+                        sx={{
+                            fontFamily: "ui-monospace, monospace",
+                            color: "#1e90ff",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            wordBreak: "break-word",
+                            whiteSpace: "pre-wrap",
+                        }}
+                    >
+                        {prompt}
+                    </Typography>
+                </Stack>
+            )}
             {step.delta && (
-                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "ui-monospace, monospace", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    ↳ {step.delta.slice(0, 200)}{step.delta.length > 200 ? "…" : ""}
-                </Typography>
+                <Stack direction="row" spacing={0.5} alignItems="flex-start">
+                    <SwIcon icon="mdi:arrow-down-bold" size={12} ns={ns} sx={{ color: "#a855f7", mt: "2px", flexShrink: 0 }} />
+                    <Typography
+                        variant="caption"
+                        component="span"
+                        sx={{
+                            fontFamily: "ui-monospace, monospace",
+                            color: "text.secondary",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            wordBreak: "break-word",
+                            whiteSpace: "pre-wrap",
+                        }}
+                    >
+                        {step.delta.slice(0, 320)}{step.delta.length > 320 ? "…" : ""}
+                    </Typography>
+                </Stack>
             )}
             {titleChanged && (
                 <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: "#f59e0b" }}>
