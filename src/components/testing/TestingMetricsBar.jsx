@@ -1,6 +1,13 @@
 /**
- * Barra de métricas del test: cards con total de pasos, mensajes, cambios de título,
- * intervalo leído del ISS, duración, veredicto. Grid alineado y compacto.
+ * Barra de métricas del test — consume métricas declarativas.
+ *
+ * Cada test declara su `metrics[]` (con showWhen/compute); el runner calcula
+ * los valores y los expone como `verdict.metrics[key] = { value, sub, accent,
+ * icon, label }`. Esta barra solo renderiza lo declarado; nunca muestra
+ * métricas hardcodeadas.
+ *
+ * Si el test no declara métricas, se muestran defaults mínimos útiles:
+ * pass/fail, total de pasos y duración.
  */
 const { useMemo } = React;
 const MaterialUI = globalThis.MaterialUI;
@@ -60,79 +67,97 @@ function formatDuration(ms) {
     return `${total} ms`;
 }
 
+function formatMetricValue(v, kind) {
+    if (v === undefined || v === null || v === "") return "—";
+    if (typeof v === "object" && v !== null && "value" in v) return formatMetricValue(v.value, kind);
+    if (kind === "duration") return formatDuration(Number(v));
+    if (kind === "ratio") {
+        const num = Number(v);
+        if (!Number.isFinite(num)) return String(v);
+        return `${Math.round(num * 100)}%`;
+    }
+    if (typeof v === "number") return v.toLocaleString();
+    return String(v);
+}
+
+const DEFAULT_METRICS = [
+    { key: "_verdict", label: "Veredicto", icon: "mdi:check-decagram", accent: "#a855f7", order: 0 },
+    { key: "_steps", label: "Pasos", icon: "mdi:format-list-numbered", accent: "#1e90ff", order: 10 },
+    { key: "_duration", label: "Duración", icon: "mdi:timer-outline", accent: "#a855f7", order: 999 },
+];
+
 export function TestingMetricsBar({ verdict, totalSteps, isRunning, currentStep, ns = "ISS" }) {
     const c = useGlassColors();
-    const interval = verdict?.recalcularTituloCadaMensajesUsuario;
-    const configSource = verdict?.conversacionConfig?.source;
-    const expected = verdict?.expectedMinChanges;
-    const pass = verdict?.pass;
-    const accentPass = "#22c55e";
-    const accentFail = "#ef4444";
-    const accentInfo = "#1e90ff";
-    const accentNeutral = "#a855f7";
-
-    const progress = totalSteps > 0 ? Math.min(100, Math.round((currentStep / totalSteps) * 100)) : 0;
+    const declared = verdict?.metrics && typeof verdict.metrics === "object" ? verdict.metrics : null;
+    const metrics = useMemo(() => {
+        const list = [];
+        if (declared) {
+            for (const [key, m] of Object.entries(declared)) {
+                list.push({
+                    key,
+                    label: m.label ?? key,
+                    icon: m.icon ?? "mdi:chart-line-variant",
+                    accent: m.accent ?? "#a855f7",
+                    sub: m.sub ?? "",
+                    value: m.value,
+                    kind: "value",
+                    order: 100,
+                });
+            }
+        }
+        // Defaults mínimos si no hay declarados
+        if (!list.length) {
+            const pass = verdict?.pass;
+            list.push({
+                key: "_verdict",
+                label: "Veredicto",
+                icon: pass ? "mdi:check-decagram" : "mdi:close-octagon-outline",
+                accent: pass ? "#22c55e" : "#ef4444",
+                value: verdict ? (pass ? "PASS" : "FAIL") : (isRunning ? "En curso" : "Pendiente"),
+                sub: verdict?.reason?.slice(0, 80) ?? "",
+                order: 0,
+            });
+            list.push({
+                key: "_steps",
+                label: "Pasos",
+                icon: "mdi:format-list-numbered",
+                accent: "#1e90ff",
+                value: isRunning ? `${currentStep}/${totalSteps}` : `${totalSteps}`,
+                sub: isRunning ? `${totalSteps > 0 ? Math.round((currentStep / totalSteps) * 100) : 0}% completado` : `${totalSteps} ejecutados`,
+                order: 10,
+            });
+            list.push({
+                key: "_duration",
+                label: "Duración",
+                icon: "mdi:timer-outline",
+                accent: "#a855f7",
+                value: verdict ? formatDuration(verdict.duration) : isRunning ? "…" : "—",
+                sub: verdict?.startedAt ? new Date(verdict.startedAt).toLocaleTimeString() : "",
+                kind: "duration",
+                order: 999,
+            });
+        }
+        return list.sort((a, b) => a.order - b.order);
+    }, [declared, verdict, isRunning, currentStep, totalSteps]);
 
     return (
         <Stack
             direction={{ xs: "column", sm: "row" }}
             spacing={1}
-            sx={{ width: "100%" }}
+            sx={{ width: "100%", flexWrap: "wrap" }}
         >
-            <MetricCard
-                icon={pass ? "mdi:check-decagram" : "mdi:close-octagon-outline"}
-                label="Veredicto"
-                value={verdict ? (pass ? "PASS" : "FAIL") : (isRunning ? "En curso" : "Pendiente")}
-                sub={verdict?.reason?.slice(0, 80)}
-                accent={verdict ? (pass ? accentPass : accentFail) : accentNeutral}
-                c={c}
-                ns={ns}
-            />
-            <MetricCard
-                icon="mdi:format-list-numbered"
-                label="Pasos"
-                value={isRunning ? `${currentStep}/${totalSteps}` : `${totalSteps}`}
-                sub={isRunning ? `${progress}% completado` : `${totalSteps} ejecutados`}
-                accent={accentInfo}
-                c={c}
-                ns={ns}
-            />
-            <MetricCard
-                icon="mdi:message-text-outline"
-                label="Mensajes"
-                value={verdict?.totalMessages ?? "—"}
-                sub="steps conv ejecutados"
-                accent={accentNeutral}
-                c={c}
-                ns={ns}
-            />
-            <MetricCard
-                icon="mdi:rename-box-outline"
-                label="Cambios título"
-                value={verdict ? `${verdict.titleChanges}/${expected ?? "?"}` : "—"}
-                sub={verdict ? `esperado ≥ ${expected}` : "cambios detectados"}
-                accent={(verdict?.titleChanges ?? 0) >= (expected ?? Infinity) ? accentPass : accentNeutral}
-                c={c}
-                ns={ns}
-            />
-            <MetricCard
-                icon="mdi:cog-outline"
-                label="Intervalo ISS"
-                value={interval != null ? `cada ${interval}` : "—"}
-                sub={configSource ? `fuente: ${configSource}` : "config/conversacion"}
-                accent={accentInfo}
-                c={c}
-                ns={ns}
-            />
-            <MetricCard
-                icon="mdi:timer-outline"
-                label="Duración"
-                value={verdict ? formatDuration(verdict.duration) : isRunning ? "…" : "—"}
-                sub={verdict?.startedAt ? new Date(verdict.startedAt).toLocaleTimeString() : ""}
-                accent={accentNeutral}
-                c={c}
-                ns={ns}
-            />
+            {metrics.map((m) => (
+                <MetricCard
+                    key={m.key}
+                    icon={m.icon}
+                    label={m.label}
+                    value={formatMetricValue(m.value, m.kind)}
+                    sub={m.sub}
+                    accent={m.accent}
+                    c={c}
+                    ns={ns}
+                />
+            ))}
         </Stack>
     );
 }

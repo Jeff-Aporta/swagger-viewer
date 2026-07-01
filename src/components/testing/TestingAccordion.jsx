@@ -1,27 +1,28 @@
 /**
  * Panel Testing del visor IS-Swagger.
  * Carga GET /system/testing.json y renderiza una card por test, con:
- *   - métricas (cards grid)
- *   - progress bar
+ *   - métricas declarativas (`verdict.metrics`, populadas por el runner)
+ *   - tools declarativas (`test.tools`, renderizadas vía TestingTool)
+ *   - progress bar en vivo
  *   - driver por step (conv | http | raw | script)
- *   - línea de tiempo de cambios de título
- *   - modal de detalle por step
+ *   - tabla de filas registradas (`test.table` + step.record)
  *   - alert final con el verdict formateado
  *
- * El runner expone `recalcularTituloCadaMensajesUsuario` desde
- * GET /system/config/conversacion y la usa como criterio del juez.
+ * El runner ejecuta `test.hooks.onStart | onUpdate | onEnd | onRegister` y
+ * el resultado se mapea a `verdict.metrics`, `verdict.ctx.rows`,
+ * `verdict.ctx.toolsData`.
  */
-const { useState, useEffect, useCallback, useRef, useMemo } = React;
+const { useState, useEffect, useCallback, useMemo } = React;
 const MaterialUI = globalThis.MaterialUI;
 import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 import { useGlassColors, glassCardSx, NEON_COLORS } from "../../lib/ui/glass.jsx";
 import { getStoredJwt } from "../../lib/auth/auth.js";
-import { runTest, formatVerdict } from "../../lib/test-runner/index.mjs";
+import { runTest, formatVerdict, getTool } from "../../lib/test-runner/index.mjs";
 import { TestingStepDriver } from "./TestingStepDriver.jsx";
 import { TestingMetricsBar } from "./TestingMetricsBar.jsx";
-import { TestingTimeline } from "./TestingTimeline.jsx";
+import { TestingTool } from "./TestingTool.jsx";
 
-const { Accordion, AccordionSummary, AccordionDetails, Box, Typography, Button, Chip, Stack, LinearProgress, Alert, Tooltip, IconButton, Collapse } = MaterialUI;
+const { Box, Typography, Button, Chip, Stack, LinearProgress, Alert, Tooltip, Collapse } = MaterialUI;
 
 const TESTING_PATHS = { testing: "/system/testing.json" };
 
@@ -40,6 +41,17 @@ function hasAuthSession(session) {
     return !!resolveTestJwt(session);
 }
 
+/** Calcula la data para cada tool declarativo del test. */
+function computeToolData(tool, ctx, steps, verdict) {
+    const def = getTool(tool.id);
+    if (!def || typeof def.compute !== "function") return null;
+    try {
+        return def.compute(ctx || {}, steps || [], verdict || {});
+    } catch (e) {
+        return { _error: e?.message ?? String(e) };
+    }
+}
+
 export function TestingAccordion({ config, ns, onNeedLogin, authEnabled, session }) {
     const apiBase = config?.apiBase;
     const testingPath = config?.paths?.testing || TESTING_PATHS.testing;
@@ -47,7 +59,6 @@ export function TestingAccordion({ config, ns, onNeedLogin, authEnabled, session
     const [err, setErr] = useState("");
     const [running, setRunning] = useState({});
     const [results, setResults] = useState({});
-    const liveSteps = useRef({});
 
     useEffect(() => {
         if (!apiBase) return;
@@ -71,18 +82,19 @@ export function TestingAccordion({ config, ns, onNeedLogin, authEnabled, session
     const startTest = useCallback(async (test, jwt) => {
         const id = test.id ?? `test-${tests.indexOf(test)}`;
         setRunning((s) => ({ ...s, [id]: true }));
-        liveSteps.current[id] = [];
-        setResults((s) => ({ ...s, [id]: null }));
+        setResults((s) => ({ ...s, [id]: { liveSteps: [] } }));
         try {
             const verdict = await runTest(test, {
                 apiBase,
                 jwt,
                 onStep: (r) => {
-                    liveSteps.current[id] = [...(liveSteps.current[id] ?? []), r];
-                    setResults((s) => ({ ...s, [id]: { ...(s[id] ?? {}), liveSteps: liveSteps.current[id] } }));
+                    setResults((s) => {
+                        const prev = s[id] || { liveSteps: [] };
+                        return { ...s, [id]: { ...prev, liveSteps: [...prev.liveSteps, r] } };
+                    });
                 },
             });
-            setResults((s) => ({ ...s, [id]: { ...(s[id] ?? {}), verdict } }));
+            setResults((s) => ({ ...s, [id]: { ...(s[id] || {}), verdict } }));
         } finally {
             setRunning((s) => ({ ...s, [id]: false }));
         }
@@ -125,8 +137,24 @@ function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin,
     const needsAuth = authEnabled && testRequiresAuth(test);
     const blockedByAuth = needsAuth && !hasAuthSession(session);
 
-    const totalSteps = (test.steps ?? []).length;
-    const currentStep = liveSteps.length;
+    // totalSteps se calcula del array steps real del test
+    const declaredSteps = test.steps ?? [];
+    const totalSteps = declaredSteps.length;
+
+    // Tools + table desde la declaración del test (normalizadas por el runner en verdict.ctx.declaracion)
+    const declaracion = verdict?.ctx?.declaracion;
+    const declaredTools = declaracion?.tools ?? [];
+    const declaredTable = declaracion?.table ?? null;
+
+    const toolsData = useMemo(() => {
+        if (!verdict?.ctx) return [];
+        return declaredTools.map((tool) => {
+            const data = tool.id === "table" && declaredTable
+                ? { rows: verdict.ctx.rows ?? [] }
+                : computeToolData(tool, verdict.ctx, verdict.steps ?? [], verdict);
+            return { tool, data, table: declaredTable };
+        });
+    }, [declaredTools, declaredTable, verdict]);
 
     const onRun = useCallback(() => {
         startTest(test, resolveTestJwt(session)).catch(() => {});
@@ -155,7 +183,7 @@ function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin,
         <Box className="isa-sw-testing-row" sx={cardSx}>
             {/* Header */}
             <Box sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5, borderBottom: `1px solid ${c.border}` }}>
-                <SwIcon icon="mdi:flask-outline" size={22} ns={ns} sx={{ color: "#a855f7" }} />
+                <SwIcon icon={test.icon || "mdi:flask-outline"} size={22} ns={ns} sx={{ color: test.accent || "#a855f7" }} />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                         {test.title ?? id}
@@ -173,6 +201,15 @@ function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin,
                         label={`${totalSteps} step${totalSteps === 1 ? "" : "s"}`}
                         variant="outlined"
                     />
+                    {test.protocol && (
+                        <Chip
+                            size="small"
+                            variant="outlined"
+                            color="default"
+                            label={`protocol: ${test.protocol}`}
+                            sx={{ height: 22 }}
+                        />
+                    )}
                     {verdict && (
                         <Chip
                             size="small"
@@ -185,13 +222,13 @@ function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin,
                 </Stack>
             </Box>
 
-            {/* Métricas */}
+            {/* Métricas declarativas */}
             <Box sx={{ p: 2, borderBottom: `1px solid ${c.border}` }}>
                 <TestingMetricsBar
                     verdict={verdict}
                     totalSteps={totalSteps}
                     isRunning={isRunning}
-                    currentStep={currentStep}
+                    currentStep={liveSteps.length}
                     ns={ns}
                 />
             </Box>
@@ -201,7 +238,7 @@ function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin,
                 <Box sx={{ px: 2, pt: 1 }}>
                     <LinearProgress
                         variant="determinate"
-                        value={totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0}
+                        value={totalSteps > 0 ? (liveSteps.length / totalSteps) * 100 : 0}
                         sx={{ height: 4, borderRadius: 2 }}
                     />
                 </Box>
@@ -256,10 +293,27 @@ function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin,
                     </Box>
                 )}
 
-                {/* Timeline */}
-                {verdict?.changesTimeline && (
+                {/* Tools declarativas (timeline, histogram, table) */}
+                {verdict && toolsData.length > 0 && (
                     <Box sx={{ px: 2, pb: 2 }}>
-                        <TestingTimeline changes={verdict.changesTimeline} totalMessages={verdict.totalMessages} ns={ns} />
+                        <Stack spacing={2}>
+                            {toolsData.map(({ tool, data, table }, i) => {
+                                const effective = tool.id === "table" && table ? { ...tool, table } : tool;
+                                return (
+                                    <Box
+                                        key={`${tool.id}-${i}`}
+                                        sx={{
+                                            p: 1.5,
+                                            borderRadius: 1,
+                                            background: c.cardBg,
+                                            border: `1px solid ${c.border}`,
+                                        }}
+                                    >
+                                        <TestingTool tool={effective} data={data} ns={ns} />
+                                    </Box>
+                                );
+                            })}
+                        </Stack>
                     </Box>
                 )}
 
