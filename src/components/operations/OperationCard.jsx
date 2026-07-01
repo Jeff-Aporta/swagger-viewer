@@ -110,14 +110,14 @@ export function OperationCard({
             sx={{ flex: 1, minWidth: 0, opacity: 0.5 }}
             noWrap
           >
-            {op.summary || op.description || ""}
+            {[op.summary, op.description].filter(Boolean).join(" · ") || ""}
           </Typography>
         </Box>
       </AccordionSummary>
       <AccordionDetails>
         {expanded ? (
           <>
-            {op.description ? (
+            {op.description && !op.summary ? (
               <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, opacity: 0.5, display: "block" }}>
                 {op.description}
               </Typography>
