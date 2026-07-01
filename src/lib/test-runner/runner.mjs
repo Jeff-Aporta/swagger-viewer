@@ -1,38 +1,60 @@
 /**
  * Client test runner — agnóstico, ejecuta tests `insoft.client-testing`.
  * Server solo datos (SYS_VALUES.swagger/testing); el runner es 100% cliente.
- * Step kinds: conv | http | raw | script.
  *
- * Estado entre steps:
- *   - vars:      {iconversacion, titulo, ...} — outputs explícitos disponibles vía {{key}}.
- *   - trace:     runtime libre del test (logs/debug del runner).
- *   - _trace:    convenciones del juez (messages, titleChangesSoFar, ...).
- *   - steps:     StepResult[] — uno por step ejecutado.
+ * Modelo declarativo:
+ *   - test.protocol       nombre lógico (icono/color opcional, no cambia ejecución)
+ *   - test.requiresAuth   bool (def. true si algún step es conv)
+ *   - test.metrics[]      métricas declarativas con showWhen/compute
+ *   - test.tools[]        herramientas declarativas (timeline, histogram, table)
+ *   - test.table          config de tabla (columns[] + getRows)
+ *   - test.hooks          { onStart, onUpdate, onEnd, onRegister }
+ *   - test.steps[]        conv | http | raw | script
  *
- * `conv` envía a POST /api/conversacion.
- *   - Primer step SIN iconversacion en ctx → crea conversación.
- *   - Steps posteriores HEREDAN el iconversacion del SSE del step anterior.
+ * Contexto `ctx` compartido:
+ *   - vars        outputs explícitos para {{interpolación}}
+ *   - trace       runtime libre del test
+ *   - _trace      convenciones (messages, titleChangesSoFar, iconversacion, ...)
+ *   - steps       StepResult[] acumulados
+ *   - rows        buffer de filas registradas por steps con `record`
+ *   - toolsData   mapa { [toolId]: any } (poblado por hooks.onUpdate)
+ *   - metrics     mapa { [metricKey]: value } (poblado por hooks.onEnd)
+ *
+ * Step kinds:
+ *   - conv        POST /api/conversacion (SSE)
+ *   - http / raw  HTTP genérico contra opts.apiBase
+ *   - script      código libre con `with (ctx)`, devuelve valor o setea ctx.vars.verdict
  */
 
-/** @typedef {{ kind: "conv", description?: string, prompt?: string }} RunnerStepConv */
-/** @typedef {{ kind: "http"|"raw", description?: string, method?: string, path?: string, body?: unknown, expectStatus?: number, expectField?: string, expectMatches?: string, extract?: string, timeoutMs?: number }} RunnerStepHttp */
+import { runHook, normalizeMetrics, normalizeTools, normalizeTable } from "./hooks.mjs";
+import { getTool } from "./tools.mjs";
+import { computeMetric } from "./metrics.mjs";
+
+/** @typedef {{ kind: "conv", description?: string, prompt?: string, record?: RecordSpec }} RunnerStepConv */
+/** @typedef {{ kind: "http"|"raw", description?: string, method?: string, path?: string, body?: unknown, expectStatus?: number, expectField?: string, expectMatches?: string, extract?: string, timeoutMs?: number, record?: RecordSpec }} RunnerStepHttp */
 /** @typedef {{ kind: "script", description?: string, run?: string, timeoutMs?: number }} RunnerStepScript */
-/** @typedef {RunnerStepConv|RunnerStepHttp|RunnerStepScript} RunnerStep */
+/** @typedef RunnerStep */
+
+/** @typedef {{ as?: string, columns?: Record<string, string> }} RecordSpec */
+/** Step con `record` agrega fila(s) a ctx.rows al finalizar. Las `columns` son
+ *  expresiones `with (ctx)` que producen strings para cada columna. */
 
 /**
  * @typedef RunnerContext
  * @property {Record<string, unknown>} vars
  * @property {Record<string, unknown>} trace
- * @property {{ messages: number, titleChangesSoFar: Array<{afterMessage:number, from: string|null, to: string}> }} _trace
+ * @property {Record<string, unknown>} _trace
  * @property {Array<any>} steps
+ * @property {Array<Record<string, unknown>>} rows
+ * @property {Record<string, unknown>} toolsData
+ * @property {Record<string, unknown>} metrics
  * @property {number|null} iconversacion
  * @property {string|null} lastTitulo
  */
 
 const DEFAULT_RECALCULAR_TITULO_CADA_MENSAJES_USUARIO = 3;
 
-/** GET público /system/config/conversacion — envelope InSoft o body plano. */
-async function loadConversacionConfigFromApi(apiBase, fetchImpl) {
+export async function loadConversacionConfigFromApi(apiBase, fetchImpl) {
     const f = fetchImpl ?? fetch;
     const url = `${String(apiBase ?? "").replace(/\/$/, "")}/system/config/conversacion`;
     try {
@@ -62,8 +84,6 @@ async function loadConversacionConfigFromApi(apiBase, fetchImpl) {
     }
 }
 
-export { loadConversacionConfigFromApi };
-
 const PLACEHOLDER_RX = /\{\{\s*([a-zA-Z_][\w.-]*)\s*\}\}/g;
 
 function interpolate(input, vars) {
@@ -87,8 +107,11 @@ function newContext() {
     return {
         vars: {},
         trace: {},
-        _trace: { messages: 0, titleChangesSoFar: [] },
+        _trace: { messages: 0, titleChangesSoFar: [], iconversacion: null, lastTitulo: null },
         steps: [],
+        rows: [],
+        toolsData: {},
+        metrics: {},
         iconversacion: null,
         lastTitulo: null,
     };
@@ -122,6 +145,30 @@ function parseSseStream(text) {
     return events;
 }
 
+/** Evalúa `columns` de un step.record y agrega fila(s) al ctx.rows. */
+async function recordStep(step, stepResult, ctx) {
+    const rec = step.record;
+    if (!rec) return;
+    const columns = rec.columns && typeof rec.columns === "object" ? rec.columns : {};
+    const as = String(rec.as ?? "row");
+    const row = { _as: as, _stepIndex: stepResult.index };
+    for (const [key, expr] of Object.entries(columns)) {
+        try {
+            // eslint-disable-next-line no-new-func
+            const fn = new Function("ctx", "step", `with (ctx) { return (function(step){ ${expr} })(); }`);
+            const v = fn(ctx, stepResult);
+            row[key] = v == null ? "" : typeof v === "string" ? v : JSON.stringify(v);
+        } catch (e) {
+            row[key] = `error: ${e?.message ?? String(e)}`;
+        }
+    }
+    if (ctx.rows) ctx.rows.push(row);
+    // Hook onRegister(row, ctx)
+    if (ctx.hooks?.onRegister) {
+        await runHook("onRegister", ctx.hooks.onRegister, ctx, [row], 2000);
+    }
+}
+
 async function executeConv(step, ctx, opts) {
     const startedAt = nowIso();
     const t0 = performance.now();
@@ -129,8 +176,6 @@ async function executeConv(step, ctx, opts) {
     const prompt = interpolate(step.prompt ?? "", ctx.vars);
     const body = { prompt };
     if (ctx.iconversacion != null) body.iconversacion = ctx.iconversacion;
-    // Pausa entre steps evita que la conexión SSE recién cerrada colisione
-    // con el siguiente POST (Node undici keep-alive).
     if (ctx.iconversacion != null) await new Promise((r) => setTimeout(r, opts.stepDelayMs ?? 250));
     let res;
     try {
@@ -145,11 +190,11 @@ async function executeConv(step, ctx, opts) {
             body: JSON.stringify(body),
         });
     } catch (e) {
-        return { index: ctx.steps.length, kind: "conv", description: step.description, ok: false, error: e?.message ?? String(e), duration: performance.now() - t0, startedAt, endedAt: nowIso() };
+        return { index: ctx.steps.length, kind: "conv", description: step.description, prompt, ok: false, error: e?.message ?? String(e), duration: performance.now() - t0, startedAt, endedAt: nowIso() };
     }
     const text = await res.text();
     if (!res.ok) {
-        return { index: ctx.steps.length, kind: "conv", description: step.description, ok: false, error: `HTTP ${res.status}: ${text.slice(0, 240)}`, duration: performance.now() - t0, startedAt, endedAt: nowIso() };
+        return { index: ctx.steps.length, kind: "conv", description: step.description, prompt, ok: false, error: `HTTP ${res.status}: ${text.slice(0, 240)}`, duration: performance.now() - t0, startedAt, endedAt: nowIso() };
     }
     const events = parseSseStream(text);
     let lastEnd = null;
@@ -172,7 +217,10 @@ async function executeConv(step, ctx, opts) {
         if (Number.isFinite(ic) && ic > 0) iconversacion = ic;
         if (typeof lastEnd.titulo === "string") titulo = lastEnd.titulo;
     }
-    if (iconversacion != null) ctx.iconversacion = iconversacion;
+    if (iconversacion != null) {
+        ctx.iconversacion = iconversacion;
+        ctx._trace.iconversacion = iconversacion;
+    }
     if (titulo) ctx.vars.titulo = titulo;
     if (iconversacion != null) ctx.vars.iconversacion = iconversacion;
     const titleChange = titulo ? inferTitleChange(ctx, titulo) : null;
@@ -180,6 +228,7 @@ async function executeConv(step, ctx, opts) {
         index: ctx.steps.length,
         kind: "conv",
         description: step.description,
+        prompt,
         ok: true,
         duration: performance.now() - t0,
         startedAt,
@@ -255,6 +304,9 @@ function executeScript(step, ctx) {
         trace: ctx.trace,
         _trace: ctx._trace,
         steps: ctx.steps,
+        rows: ctx.rows,
+        toolsData: ctx.toolsData,
+        metrics: ctx.metrics,
         iconversacion: ctx.iconversacion,
         lastTitulo: ctx.lastTitulo,
     };
@@ -289,9 +341,20 @@ function executeScript(step, ctx) {
     };
 }
 
+/** Aplica el hook `onUpdate` después de cada step, alimentando `toolsData`/`metrics`. */
+async function runUpdateHook(test, stepResult, ctx) {
+    if (!test?.hooks?.onUpdate) return;
+    const r = await runHook("onUpdate", test.hooks.onUpdate, ctx, [stepResult, ctx], 3000);
+    if (!r.ok) {
+        ctx.trace.hookErrors = ctx.trace.hookErrors || [];
+        ctx.trace.hookErrors.push({ where: "onUpdate", stepIndex: stepResult.index, error: r.error });
+    }
+    await recordStep(stepResult._step, stepResult, ctx);
+}
+
 /**
- * @param {{id?: string, title?: string, description?: string, steps: RunnerStep[]}} test
- * @param {{apiBase: string, jwt?: string, origin?: string, fetchImpl?: typeof fetch, onStep?: (s: any) => void}} opts
+ * @param {{id?: string, title?: string, protocol?: string, metrics?: any[], tools?: any[], table?: any, hooks?: any, steps: RunnerStep[]}} test
+ * @param {{apiBase: string, jwt?: string, origin?: string, fetchImpl?: typeof fetch, stepDelayMs?: number, onStep?: (s: any, ctx?: any) => void}} opts
  * @returns {Promise<Verdict>}
  */
 export async function runTest(test, opts) {
@@ -299,9 +362,27 @@ export async function runTest(test, opts) {
     const t0 = performance.now();
     const ctx = newContext();
     if (opts.jwt) ctx.vars.jwt = opts.jwt;
+
     const conversacionConfig = await loadConversacionConfigFromApi(opts.apiBase, opts.fetchImpl);
     ctx.vars.recalcularTituloCadaMensajesUsuario = conversacionConfig.recalcularTituloCadaMensajesUsuario;
     ctx.trace.conversacionConfig = conversacionConfig;
+
+    // Metadata declarativa
+    ctx.test = {
+        id: test.id,
+        title: test.title,
+        protocol: test.protocol,
+        metrics: normalizeMetrics(test.metrics),
+        tools: normalizeTools(test.tools),
+        table: normalizeTable(test.table),
+        hooks: test.hooks || {},
+    };
+
+    // Hook onStart
+    if (test.hooks?.onStart) {
+        await runHook("onStart", test.hooks.onStart, ctx, [test], 3000);
+    }
+
     let lastScript = null;
     for (const step of (test.steps ?? [])) {
         let r;
@@ -309,35 +390,77 @@ export async function runTest(test, opts) {
         else if (step.kind === "http" || step.kind === "raw") r = await executeHttp(step, ctx, opts);
         else if (step.kind === "script") r = executeScript(step, ctx);
         else r = { index: ctx.steps.length, kind: step.kind, ok: false, error: `kind desconocido: ${step.kind}`, duration: 0, startedAt: nowIso(), endedAt: nowIso() };
+        r._step = step;
         ctx.steps.push(r);
         if (step.kind === "script") lastScript = r;
-        if (opts.onStep) try { opts.onStep(r); } catch { /* ignore onStep errors */ }
+        await runUpdateHook(test, r, ctx);
+        if (opts.onStep) try { opts.onStep(r, ctx); } catch { /* ignore */ }
     }
+
+    // Hook onEnd → puede devolver verdict y/o metrics adicionales
+    let verdictFromEnd = null;
+    let metricsFromEnd = null;
+    if (test.hooks?.onEnd) {
+        const r = await runHook("onEnd", test.hooks.onEnd, ctx, [ctx.steps, test], 5000);
+        if (r.ok) {
+            if (r.value && typeof r.value === "object") {
+                if (r.value.verdict) verdictFromEnd = r.value.verdict;
+                if (r.value.metrics) metricsFromEnd = r.value.metrics;
+            }
+        } else if (!r.ok) {
+            ctx.trace.hookErrors = ctx.trace.hookErrors || [];
+            ctx.trace.hookErrors.push({ where: "onEnd", error: r.error });
+        }
+    }
+
+    // Pre-resolver verdict
+    let verdict;
+    if (verdictFromEnd) {
+        verdict = { ...verdictFromEnd };
+    } else if (lastScript && lastScript.verdict) {
+        verdict = { ...lastScript.verdict };
+    } else {
+        // Default mínimo: depende del test (sin lógica dura).
+        verdict = {
+            pass: false,
+            reason: "El test no produjo un verdict (sin hook onEnd y sin step kind=script con verdict).",
+        };
+    }
+    if (metricsFromEnd) verdict.metrics = { ...(verdict.metrics || {}), ...metricsFromEnd };
+
+    // Mezclar metrics declarativas computadas
+    const declaredMetrics = ctx.test.metrics;
+    const computedMetrics = [];
+    for (const m of declaredMetrics) {
+        const r = await computeMetric(m, ctx, verdict, ctx.steps);
+        if (r) computedMetrics.push(r);
+    }
+    if (computedMetrics.length) {
+        verdict.metrics = verdict.metrics || {};
+        for (const cm of computedMetrics) verdict.metrics[cm.key] = { value: cm.value, sub: cm.sub, accent: cm.accent, icon: cm.icon, label: cm.label };
+    }
+
     const endedAt = nowIso();
     const duration = performance.now() - t0;
-    if (lastScript && lastScript.verdict) {
-        return { ...lastScript.verdict, steps: ctx.steps, startedAt, endedAt, duration };
-    }
-    const totalMessages = ctx._trace.messages;
-    const changes = ctx._trace.titleChangesSoFar.length;
-    const interval = Number(ctx.vars.recalcularTituloCadaMensajesUsuario) || DEFAULT_RECALCULAR_TITULO_CADA_MENSAJES_USUARIO;
-    const expected = Math.floor(totalMessages / interval);
-    const pass = changes >= expected;
-    const reason = pass
-        ? `OK: ${changes} cambios de título en ${totalMessages} mensajes (>= ${expected}).`
-        : `FAIL: solo ${changes} cambios en ${totalMessages} mensajes (esperaba >= ${expected}).`;
+
     return {
-        pass,
-        reason,
-        totalMessages,
-        titleChanges: changes,
-        expectedMinChanges: expected,
-        recalcularTituloCadaMensajesUsuario: interval,
-        conversacionConfig,
-        changesTimeline: ctx._trace.titleChangesSoFar.slice(),
+        ...verdict,
         steps: ctx.steps,
         startedAt,
         endedAt,
         duration,
+        ctx: {
+            rows: ctx.rows,
+            toolsData: ctx.toolsData,
+            metrics: ctx.metrics,
+            trace: ctx.trace,
+            _trace: ctx._trace,
+            vars: ctx.vars,
+            declaracion: {
+                metrics: declaredMetrics,
+                tools: ctx.test.tools,
+                table: ctx.test.table,
+            },
+        },
     };
 }

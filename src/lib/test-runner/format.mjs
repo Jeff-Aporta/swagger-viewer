@@ -8,7 +8,17 @@ const ANSI = {
     green: "\x1b[32m",
     yellow: "\x1b[33m",
     cyan: "\x1b[36m",
+    magenta: "\x1b[35m",
 };
+
+function fmtValue(v) {
+    if (v == null) return "—";
+    if (typeof v === "object") {
+        if ("value" in v) return fmtValue(v.value);
+        return JSON.stringify(v);
+    }
+    return String(v);
+}
 
 /**
  * @param {Verdict} verdict
@@ -20,9 +30,25 @@ export function formatVerdict(verdict, opts = {}) {
     const title = `${verdict.pass ? "✅ PASS" : "❌ FAIL"} ${verdict.reason}`;
     lines.push(useColor && verdict.pass ? ANSI.green + ANSI.bold + title + ANSI.reset : title);
     lines.push("");
-    const summary = `Pasos: ${verdict.steps.length} · Mensajes: ${verdict.totalMessages} · Cambios título: ${verdict.titleChanges} (esperado >= ${verdict.expectedMinChanges}) · Duración: ${Math.round(verdict.duration)} ms`;
-    lines.push(useColor ? ANSI.dim + summary + ANSI.reset : summary);
-    lines.push("");
+
+    // Resumen declarativo si verdict.metrics existe
+    if (verdict.metrics && typeof verdict.metrics === "object") {
+        lines.push("Métricas declaradas por el test:");
+        for (const [key, m] of Object.entries(verdict.metrics)) {
+            const v = fmtValue(m);
+            const sub = m?.sub ? ` — ${m.sub}` : "";
+            lines.push(`  · ${m.label ?? key}: ${v}${sub}`);
+        }
+        lines.push("");
+    }
+
+    // Compat: resumen clásico si no hay métricas
+    if (!verdict.metrics) {
+        const summary = `Pasos: ${verdict.steps.length} · Mensajes: ${verdict.totalMessages} · Cambios título: ${verdict.titleChanges} (esperado >= ${verdict.expectedMinChanges}) · Duración: ${Math.round(verdict.duration)} ms`;
+        lines.push(useColor ? ANSI.dim + summary + ANSI.reset : summary);
+        lines.push("");
+    }
+
     if (verdict.changesTimeline?.length) {
         lines.push("Línea de tiempo de cambios de título:");
         for (const c of verdict.changesTimeline) {
