@@ -104,7 +104,7 @@ export function ParamLookupField({
       setOptions([]);
       try {
         const { data } = await fetchApiJson(url, {
-          errorHint: "Si el mensaje menciona GetConnection, la base de datos no está accesible. Revisa GET /system/health.",
+          errorHint: "Si el mensaje menciona GetConnection, la base de datos no está accesible. Revisa GET /info → database.bconnected.",
         });
         if (gen !== searchGenRef.current) return;
         const rows = extractLookupRows(data, lookup);

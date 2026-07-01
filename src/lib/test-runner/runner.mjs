@@ -307,8 +307,10 @@ function executeScript(step, ctx) {
         rows: ctx.rows,
         toolsData: ctx.toolsData,
         metrics: ctx.metrics,
-        iconversacion: ctx.iconversacion,
-        lastTitulo: ctx.lastTitulo,
+        get iconversacion() { return ctx.iconversacion; },
+        set iconversacion(v) { ctx.iconversacion = v; },
+        get lastTitulo() { return ctx.lastTitulo; },
+        set lastTitulo(v) { ctx.lastTitulo = v; },
     };
     let output;
     let verdict;

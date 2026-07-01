@@ -6,7 +6,7 @@ const ServerBaseContext = createContext({
   serverBase: "",
   defaultBase: "",
   swaggerPaths: null,
-  healthPath: "/system/health",
+  healthPath: "/info",
   testingPath: "/system/testing.json",
 });
 
@@ -14,7 +14,7 @@ const ServerBaseContext = createContext({
 export function ServerBaseProvider({ spec, config, children }) {
   const serverBase = useMemo(() => inferDefaultServerBase(spec, config), [spec, config]);
   const swaggerPaths = config?.swaggerPaths ?? null;
-  const healthPath = swaggerPaths?.health || "/system/health";
+  const healthPath = swaggerPaths?.health || "/info";
   const testingPath = swaggerPaths?.testing || config?.testingPath || "/system/testing.json";
   return (
     <ServerBaseContext.Provider value={{ serverBase, defaultBase: serverBase, swaggerPaths, healthPath, testingPath }}>
