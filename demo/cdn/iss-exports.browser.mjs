@@ -1,4 +1,4 @@
-// components/swagger/server/envelope.ts
+// ../../components/swagger/server/envelope.ts
 var TS = "2026-06-19T15:30:00.000Z";
 var TS_OUT = "2026-06-19T15:30:00.042Z";
 var INSOFT_ENCABEZADO_OK = {
@@ -63,31 +63,42 @@ var EXAMPLE_503 = {
   encabezado: insoftEncabezadoError(503010, "El servicio no est\xE1 disponible temporalmente.")
 };
 
-// components/swagger/server/api-presets.ts
+// ../../components/swagger/server/api-presets.ts
 var ISS_LOCAL_API_BASE = "http://127.0.0.1:8802/api";
 var ISS_WEB_API_BASE = "https://ayudascp-ia-staging.azurewebsites.net/api";
 function normApiBase(url) {
-  return String(url || "").replace(/\/$/, "");
+  let s = String(url ?? "").trim();
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
+  try {
+    const u = new URL(s);
+    let path = u.pathname.replace(/\/+$/, "");
+    if (!path.endsWith("/api")) path = path ? `${path}/api` : "/api";
+    u.pathname = path;
+    u.search = "";
+    u.hash = "";
+    return `${u.origin}${u.pathname}`;
+  } catch {
+    return "";
+  }
 }
 function buildOpenApiServers(activeBase) {
   const active = normApiBase(activeBase || ISS_WEB_API_BASE);
-  const presets = [
-    [active, "API activa (contexto actual)"],
+  const candidates = [
     [ISS_LOCAL_API_BASE, "Local (ISS Functions)"],
     [ISS_WEB_API_BASE, "Web (staging Azure)"]
   ];
-  const seen = /* @__PURE__ */ new Set();
   const out = [];
-  for (const [url, description] of presets) {
-    const u = normApiBase(url);
-    if (seen.has(u)) continue;
-    seen.add(u);
-    out.push({ url: u, description });
+  if (active) out.push({ url: active, description: "Activo" });
+  for (const [base, desc] of candidates) {
+    const u = normApiBase(base);
+    if (!u || u === active) continue;
+    out.push({ url: u, description: desc });
   }
   return out;
 }
 
-// components/swagger/server/spec.ts
+// ../../components/swagger/server/spec.ts
 var ISS_DOC_MD_EXTENSION = "x-iss-doc-md";
 var ISS_LOOKUP_EXTENSION = "x-iss-lookup";
 var ISS_LIST_FILTER_EXTENSION = "x-iss-list-filter";
@@ -198,7 +209,7 @@ function issRspSseDoc(okDesc, example) {
   };
 }
 
-// components/swagger/server/list-filter-schema.ts
+// ../../components/swagger/server/list-filter-schema.ts
 var ISS_LIST_FILTER_DEFAULT_LIMIT = 9999;
 var ISS_LIST_FILTER_MAX_LIMIT = 9999;
 function sortKeysFromMeta(meta) {
@@ -277,7 +288,7 @@ function enrichListFilterCatalog(catalog) {
   return { ...catalog, listFilters: enriched };
 }
 
-// components/swagger/server/build-spec.ts
+// ../../components/swagger/server/build-spec.ts
 function encodeIssFilterB64(obj) {
   const json = JSON.stringify(obj);
   const bytes = new TextEncoder().encode(json);
@@ -289,14 +300,16 @@ function resolveFPreset(catalog, key) {
   if (!key) return void 0;
   const p = catalog.fPresets?.[key];
   if (!p || typeof p !== "object" || Array.isArray(p)) {
-    throw new Error(`openapi-config: fPreset \xAB${key}\xBB no definido`);
+    if (typeof console !== "undefined") console.warn(`[iss-swagger] fPreset \xAB${key}\xBB no definido \u2014 usando vac\xEDo.`);
+    return { fields: [] };
   }
   return { ...p };
 }
 function resolveInputRecommendation(catalog, key) {
   const rec = catalog.inputRecommendations?.[key];
   if (!rec || typeof rec !== "object" || Array.isArray(rec)) {
-    throw new Error(`openapi-config: inputRecommendations \xAB${key}\xBB no definido`);
+    if (typeof console !== "undefined") console.warn(`[iss-swagger] inputRecommendations \xAB${key}\xBB no definido \u2014 usando vac\xEDo.`);
+    return {};
   }
   const out = { ...rec };
   if (typeof out.fPreset === "string") {
@@ -340,13 +353,19 @@ function sg(id) {
 }
 function resolvePayload(catalog, key) {
   const p = catalog.payloads?.[key];
-  if (p === void 0) throw new Error(`openapi-config: payload \xAB${key}\xBB no definido`);
+  if (p === void 0) {
+    if (typeof console !== "undefined") console.warn(`[iss-swagger] payload \xAB${key}\xBB no definido en catalog.payloads \u2014 usando fallback {}.`);
+    return { ok: true, data: {}, note: `payload \xAB${key}\xBB no definido` };
+  }
   return exampleOk(p);
 }
 function resolveSchema(catalog, key) {
   if (!key) return void 0;
   const s = catalog.schemas?.[key];
-  if (!s) throw new Error(`openapi-config: schema \xAB${key}\xBB no definido`);
+  if (!s) {
+    if (typeof console !== "undefined") console.warn(`[iss-swagger] schema \xAB${key}\xBB no definido en catalog.schemas \u2014 usando schema gen\xE9rico.`);
+    return { type: "object" };
+  }
   return s;
 }
 function resolveExample(catalog, item) {
@@ -357,33 +376,54 @@ function resolveExample(catalog, item) {
 function buildResponses(catalog, def) {
   switch (def.template) {
     case "health":
-      if (!def.payload) throw new Error("openapi-config: health requiere payload");
+      if (!def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] health requiere payload \u2014 usando fallback.");
+        return issRspHealth({ ok: true, data: {}, note: "payload faltante" });
+      }
       return issRspHealth(resolvePayload(catalog, def.payload));
     case "auth":
-      if (!def.description || !def.payload) throw new Error("openapi-config: auth requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] auth requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return issRspAuth(def.description, resolvePayload(catalog, def.payload), resolveSchema(catalog, def.schema));
     case "authForbidden":
-      if (!def.description || !def.payload) throw new Error("openapi-config: authForbidden requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] authForbidden requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return issRspAuthForbidden(
         def.description,
         resolvePayload(catalog, def.payload),
         resolveSchema(catalog, def.schema)
       );
     case "authNotFound":
-      if (!def.description || !def.payload) throw new Error("openapi-config: authNotFound requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] authNotFound requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return issRspAuthNotFound(
         def.description,
         resolvePayload(catalog, def.payload),
         resolveSchema(catalog, def.schema)
       );
     case "sse":
-      if (!def.description || !def.payload) throw new Error("openapi-config: sse requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] sse requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return issRspSseDoc(def.description, resolvePayload(catalog, def.payload));
     case "ok":
-      if (!def.description || !def.payload) throw new Error("openapi-config: ok requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] ok requiere description y payload \u2014 usando fallback.");
+        return { "200": issRspOk(def.description || "OK", def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return { "200": issRspOk(def.description, resolvePayload(catalog, def.payload)) };
     case "deleteEnvelope": {
-      if (!def.description || !def.payload) throw new Error("openapi-config: deleteEnvelope requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] deleteEnvelope requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       const rowSchema = resolveSchema(catalog, def.schema ?? "conversacionRow");
       return {
         "200": jsonResponse(
@@ -402,7 +442,10 @@ function buildResponses(catalog, def) {
       };
     }
     case "raw": {
-      if (!def.items) throw new Error("openapi-config: raw requiere items");
+      if (!def.items) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] raw requiere items \u2014 usando 200 vac\xEDo.");
+        return { "200": jsonResponse("OK", { type: "object" }, {}) };
+      }
       const out = {};
       for (const [code, item] of Object.entries(def.items)) {
         out[code] = jsonResponse(item.description, item.schema ?? { type: "object" }, resolveExample(catalog, item));
@@ -410,7 +453,8 @@ function buildResponses(catalog, def) {
       return out;
     }
     default:
-      throw new Error(`openapi-config: template de respuesta desconocido \xAB${def.template}\xBB`);
+      if (typeof console !== "undefined") console.warn(`[iss-swagger] template de respuesta desconocido \xAB${def.template}\xBB \u2014 usando 200 vac\xEDo.`);
+      return { "200": jsonResponse("OK", { type: "object" }, {}) };
   }
 }
 function resolveParam(catalog, p) {
@@ -447,7 +491,9 @@ function resolveParam(catalog, p) {
     delete raw.enumFrom;
     let keys = [];
     if (enumFrom === "catalog.docs") keys = Object.keys(catalog.docs || {}).sort();
-    else throw new Error(`openapi-config: enumFrom \xAB${enumFrom}\xBB no soportado`);
+    else {
+      if (typeof console !== "undefined") console.warn(`[iss-swagger] enumFrom \xAB${enumFrom}\xBB no soportado \u2014 usando [].`);
+    }
     const schema = { ...typeof raw.schema === "object" && raw.schema ? raw.schema : {}, type: "string", enum: keys };
     if (schema.example == null && keys.length) schema.example = keys.includes("health") ? "health" : keys[0];
     raw.schema = schema;
@@ -535,7 +581,7 @@ function buildOpenApiFromConfig(config, serverUrl) {
   };
 }
 
-// components/swagger/server/docs.ts
+// ../../components/swagger/server/docs.ts
 var ISS_DOC_STANDARD = "DI-QA-001";
 function buildApiInfoDescription(baseDesc, frontLink) {
   const panel = frontLink?.url ? `
@@ -602,7 +648,7 @@ Las operaciones marcadas con seguridad en OpenAPI heredan **Bearer {{token}}** d
 `.trim();
 }
 
-// components/swagger/server/postman.ts
+// ../../components/swagger/server/postman.ts
 var POSTMAN_SCHEMA = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
 var HTTP_METHODS = ["get", "post", "put", "patch", "delete", "options", "head"];
 var SKIP_PATHS = /* @__PURE__ */ new Set(["/swagger", "/system/swagger.json", "/system/swagger/config.json", "/swagger/postman.json", "/swagger/is.json"]);
@@ -944,7 +990,7 @@ function openApiToPostmanCollection(spec, opts = {}) {
   };
 }
 
-// components/swagger/server/strip-export-extensions.ts
+// ../../components/swagger/server/strip-export-extensions.ts
 var STRIP_KEYS = /* @__PURE__ */ new Set([
   ISS_DOC_MD_EXTENSION,
   ISS_LOOKUP_EXTENSION,
@@ -974,12 +1020,12 @@ function stripIsaExtensionsForExport(openApi) {
   return stripNode(openApi);
 }
 
-// components/swagger/server/viewer-pins.ts
+// ../../components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "client-tests-wrap-toggle-2026-06-30";
-var SWAGGER_FRONT_SHARED_REF = "33acc67";
+var SWAGGER_VIEWER_REF = "8b71995";
+var SWAGGER_FRONT_SHARED_REF = "6177587";
 
-// components/swagger/server/orchestrator-auth.ts
+// ../../components/swagger/server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
 var DEFAULT_AUTH_LOGIN_PATH = "/api/auth/token";
 function resolveOrchestratorBase(_apiBase) {
@@ -991,7 +1037,7 @@ function resolveAuthAppId(app) {
   return AUTH_APP_ALIASES[raw] || raw || "isa-patyia";
 }
 
-// components/swagger/server/build-exports.ts
+// ../../components/swagger/server/build-exports.ts
 var IS_DOCUMENT_KIND = "insoft.swagger-viewer";
 var IS_DOCUMENT_VERSION = 1;
 var RUNTIME_VIEWER_KEYS = /* @__PURE__ */ new Set(["cssUrl", "stackUrl", "isaUrl", "appUrl", "specUrl", "url", "spec", "root", "exports", "loadMarked"]);
