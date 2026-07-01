@@ -9,7 +9,7 @@
  *   Si paths se omite, defaults ISS: /system/swagger/config.json, /system/swagger.json, …
  */
 
-import { normalizeApiBase, DEFAULT_SWAGGER_PATHS } from "./swagger-api.js";
+import { normalizeApiBase, DEFAULT_PAYLOAD_PATHS } from "./swagger-api.js";
 
 export const GH_PAGES_SWAGGER_DEMO = "https://jeff-aporta.github.io/swagger-viewer/index.html";
 
@@ -32,11 +32,19 @@ export function parseConnParam(raw) {
   }
 }
 
-/** ?conn= o ?s= (b64url JSON); prioriza conn. */
+/** ?conn= o ?s= solo si parece embed conn (no estado ?s= del visor con v/tab/open). */
 export function parseEmbedParams(searchParams) {
   const connRaw = searchParams?.get?.("conn");
+  if (connRaw) {
+    const conn = parseConnParam(connRaw);
+    if (conn) return conn;
+  }
   const sRaw = searchParams?.get?.("s");
-  return parseConnParam(connRaw) || parseConnParam(sRaw);
+  if (!sRaw) return null;
+  const s = parseConnParam(sRaw);
+  if (!s || typeof s !== "object") return null;
+  if (s.apiBase || s.embed != null || s.auto != null || s.paths || s.title || s.icon) return s;
+  return null;
 }
 
 /** Marca temprana desde conn (?title/?name + ?icon o brand.*). */
@@ -64,7 +72,7 @@ export function buildConnPayload(apiBase, extra = {}) {
     apiBase: base,
     auto: extra.auto !== false,
     embed: extra.embed === true,
-    paths: { ...DEFAULT_SWAGGER_PATHS, ...(extra.paths && typeof extra.paths === "object" ? extra.paths : {}) },
+    paths: { ...DEFAULT_PAYLOAD_PATHS, ...(extra.paths && typeof extra.paths === "object" ? extra.paths : {}) },
   };
   if (extra.fixedServer) conn.fixedServer = true;
   if (brand?.title) conn.title = brand.title;

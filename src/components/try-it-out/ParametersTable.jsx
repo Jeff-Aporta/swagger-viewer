@@ -2,12 +2,6 @@ import { ParamLookupField } from "../filters/ParamLookupField.jsx";
 import { IssFusedSelectField } from "../filters/IssFusedSelectField.jsx";
 import { GlassTableWrap } from "../../lib/ui/glass.jsx";
 import { paramInputMode, paramSchemaType, sanitizeParamInputValue } from "../../lib/openapi/param-schema.js";
-import { resolveParamEnumOptions } from "../../lib/openapi/param-enum.js";
-import {
-  readOpParamFromUrl,
-  subscribeOpParamsUrl,
-  writeOpParamToUrl,
-} from "../../lib/nav/operation-params-url.js";
 
 const {
   Table,
@@ -30,10 +24,19 @@ function paramPlaceholder(p) {
 }
 
 function paramTypeLabel(p) {
+  if (p.schema?.enum?.length) return "enum";
   return p.schema?.type || p.schema?.format || "—";
 }
 
-export function ParametersTable({ parameters = [], values, onChange, lookupIndex = {}, spec, opPath = "", catalogDocKeys = null, expandId = "", disabled, authEnabled, onNeedLogin }) {
+function paramEnumOptions(p) {
+  const labels = p.schema?.enumLabels;
+  return (p.schema?.enum || []).map((opt) => {
+    const value = String(opt);
+    return { value, label: labels?.[opt] ?? labels?.[value] ?? value };
+  });
+}
+
+export function ParametersTable({ parameters = [], values, onChange, lookupIndex = {}, disabled, authEnabled, onNeedLogin }) {
   const pathParams = pathParamsOnly(parameters);
   if (!pathParams.length) return null;
 
@@ -51,13 +54,9 @@ export function ParametersTable({ parameters = [], values, onChange, lookupIndex
           {pathParams.map((p) => {
             const name = p.name || "";
             const lookup = lookupIndex[name] || p["x-iss-lookup"];
+            const enumOptions = paramEnumOptions(p);
             const typeLabel = paramTypeLabel(p);
             const schemaType = paramSchemaType(p.schema);
-            const enumOpts = resolveParamEnumOptions(p, spec, opPath, catalogDocKeys);
-            const persistParam = (v) => {
-              onChange(name, v);
-              if (expandId) writeOpParamToUrl(expandId, name, v);
-            };
             return (
               <TableRow key={name} className="isa-sw-param-row">
                 <TableCell className="isa-sw-param-name">
@@ -67,27 +66,27 @@ export function ParametersTable({ parameters = [], values, onChange, lookupIndex
                 </TableCell>
                 <TableCell className="isa-sw-param-type">{typeLabel}</TableCell>
                 <TableCell className="isa-sw-param-value">
-                  {lookup ? (
+                  {enumOptions.length ? (
+                    <IssFusedSelectField
+                      value={values[name] || ""}
+                      onChange={(v) => onChange(name, v)}
+                      disabled={disabled}
+                      allowEmpty={!p.required}
+                      options={enumOptions}
+                      emptyLabel={paramPlaceholder(p) || "(elegir clave)"}
+                    />
+                  ) : lookup ? (
                     <ParamLookupField
                       lookup={lookup}
                       paramName={name}
                       schema={p.schema}
                       value={values[name] || ""}
-                      onChange={persistParam}
+                      onChange={(v) => onChange(name, v)}
                       disabled={disabled}
                       hideLabel
                       placeholder={paramPlaceholder(p)}
                       authEnabled={authEnabled}
                       onNeedLogin={onNeedLogin}
-                    />
-                  ) : enumOpts?.length ? (
-                    <IssFusedSelectField
-                      value={values[name] || ""}
-                      options={enumOpts.map((v) => ({ value: String(v), label: String(v) }))}
-                      onChange={(v) => persistParam(sanitizeParamInputValue(p.schema, v))}
-                      disabled={disabled}
-                      allowEmpty={!p.required}
-                      placeholder="Elegir clave…"
                     />
                   ) : (
                     <TextField
@@ -95,7 +94,7 @@ export function ParametersTable({ parameters = [], values, onChange, lookupIndex
                       fullWidth
                       disabled={disabled}
                       value={values[name] || ""}
-                      onChange={(e) => persistParam(sanitizeParamInputValue(p.schema, e.target.value))}
+                      onChange={(e) => onChange(name, sanitizeParamInputValue(p.schema, e.target.value))}
                       placeholder={paramPlaceholder(p)}
                       inputProps={{
                         "aria-label": name,

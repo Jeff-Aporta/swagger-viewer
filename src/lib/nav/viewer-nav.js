@@ -118,3 +118,12 @@ export function activeSectionTabId(navRows, config) {
   const tabs = resolveNavTabDefs(config);
   return tabs[0]?.id || "";
 }
+
+/** Runner cliente (TestingAccordion) solo en la pestaña nav cuyo tags incluye "Testing". */
+export function isTestingNavSectionActive(navRows, config) {
+  const tabs = resolveNavTabDefs(config);
+  if (!tabs.length) return true;
+  const activeId = activeSectionTabId(navRows, config);
+  const tab = tabs.find((t) => t.id === activeId);
+  return tab?.tags?.includes("Testing") ?? false;
+}

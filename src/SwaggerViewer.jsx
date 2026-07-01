@@ -6,9 +6,10 @@ import { SwaggerHeaderAuth } from "./components/toolbar/SwaggerHeaderAuth.jsx";
 import { SwaggerOpenGhPagesBtn } from "./components/toolbar/SwaggerOpenGhPagesBtn.jsx";
 import { SwaggerReloadBtn } from "./components/toolbar/SwaggerReloadBtn.jsx";
 import { SwaggerToolbarThemeBtn } from "./components/toolbar/SwaggerToolbarThemeBtn.jsx";
+import { ServerUrlField } from "./components/server/ServerUrlField.jsx";
 import { ServerHealthBanner } from "./components/server/ServerHealthBanner.jsx";
 import { ExpandStackProvider } from "./context/ExpandStackContext.jsx";
-import { ServerBaseProvider, useServerBase } from "./context/ServerBaseContext.jsx";
+import { ServerBaseProvider } from "./context/ServerBaseContext.jsx";
 import {
   groupOperationsByTag,
   buildDocIndex,
@@ -17,21 +18,15 @@ import {
 import { getStoredJwt, clearJwt } from "./lib/auth/auth.js";
 import { resolveAuthConfig } from "./lib/auth/orchestrator-base.js";
 import { applyBrandToDocument, resolveViewerBrand } from "./lib/brand/viewer-brand.js";
-import { buildNavRows, filterGroupsByNavTab, activeSectionTabId, resolveInitialNavTab } from "./lib/nav/viewer-nav.js";
-import { catalogDocKeysFromSources } from "./lib/openapi/param-enum.js";
-import { readNavTabFromUrl, writeNavTabToUrl } from "./lib/nav/nav-url.js";
-import { ClientTestTagGroup, readClientTestsFromSpec } from "./components/tester/ClientTestTagGroup.jsx";
-import { loadClientTesting, normalizeTests } from "./lib/test/load-client-testing.js";
+import { buildNavRows, filterGroupsByNavTab, activeSectionTabId, resolveVisibleNavTabs, isTestingNavSectionActive } from "./lib/nav/viewer-nav.js";
+import { initSwaggerExpandUrlState } from "./lib/nav/swagger-url-state.js";
+import { resolveInitialNavTab } from "./lib/nav/viewer-nav-url.js";
+import { TestingAccordion } from "./components/testing/TestingAccordion.jsx";
 
 const { useState, useEffect, useMemo, useCallback } = React;
 const { Box, Typography, Alert } = MaterialUI;
 
-function SwaggerReloadBtnWithBase({ onReload, busy, ns }) {
-  const { serverBase } = useServerBase();
-  return <SwaggerReloadBtn onReload={onReload} busy={busy} ns={ns} serverBase={serverBase} />;
-}
-
-export function SwaggerViewer({ config: configProp, spec: specProp, onReload, reloadBusy = false }) {
+export function SwaggerViewer({ config: configProp, spec: specProp, onReload, reloadBusy = false, fixedServer = false }) {
   const config = useMemo(
     () => (configProp ? { ...configProp, auth: resolveAuthConfig(configProp.auth, configProp.apiBase, configProp) } : configProp),
     [configProp],
@@ -42,35 +37,32 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
       config?.auth?.loginKind === "portal" ||
       String(config?.auth?.loginPath || "").includes("portal-login"));
   const [spec, setSpec] = useState(specProp || null);
-  const [mergedConfig, setMergedConfig] = useState(config);
   const [err, setErr] = useState("");
   const [session, setSession] = useState(() => (authEnabled ? getStoredJwt() : null));
-  const [navTab, setNavTabState] = useState(() => readNavTabFromUrl());
-  const [remoteClientTests, setRemoteClientTests] = useState(null); // tests cargados del server (testing.json)
-
-  const setNavTab = useCallback((tabId) => {
-    const id = String(tabId || "").trim();
-    setNavTabState(id);
-    writeNavTabToUrl(id);
+  const [navTab, setNavTabState] = useState(() =>
+    resolveInitialNavTab(() => initSwaggerExpandUrlState()?.getNavTab?.()),
+  );
+  const setNavTab = useCallback((v) => {
+    const tab = String(v ?? "").trim();
+    setNavTabState(tab);
+    initSwaggerExpandUrlState()?.mergePartial({ tab });
   }, []);
 
   useEffect(() => {
-    function onPopState() {
-      setNavTabState(readNavTabFromUrl());
-    }
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
-
-  useEffect(() => {
-    const urlTab = readNavTabFromUrl();
-    const next = resolveInitialNavTab(mergedConfig, session, urlTab);
-    setNavTabState((prev) => {
-      if (next === prev) return prev;
-      if (next !== urlTab) writeNavTabToUrl(next);
-      return next;
+    const api = initSwaggerExpandUrlState();
+    if (!api?.subscribe) return undefined;
+    return api.subscribe((snap) => {
+      const tab = String(snap?.tab ?? "").trim();
+      setNavTabState((prev) => (prev === tab ? prev : tab));
     });
-  }, [mergedConfig, session]);
+  }, []);
+
+  useEffect(() => {
+    if (!config || !navTab) return;
+    const allowed = resolveVisibleNavTabs(config, session).some((t) => t.id === navTab);
+    if (!allowed) return;
+    initSwaggerExpandUrlState()?.mergePartial({ tab: navTab });
+  }, [config, session, navTab]);
 
   useEffect(() => {
     if (specProp) {
@@ -80,19 +72,9 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
     let cancelled = false;
     (async () => {
       try {
-        const { loadSpec, loadViewerDocument } = await import("./lib/openapi/openapi.js");
-        // loadViewerDocument retorna {config, spec} (incluye viewer.client.tests cuando es IS)
-        try {
-          const vd = await loadViewerDocument(config);
-          if (!cancelled) {
-            if (vd?.spec) setSpec(vd.spec);
-            if (vd?.config) setMergedConfig((prev) => ({ ...prev, ...vd.config }));
-          }
-        } catch {
-          // Fallback al flat spec si la URL no retorna un documento IS válido
-          const loaded = await loadSpec(config);
-          if (!cancelled) setSpec(loaded);
-        }
+        const { loadSpec } = await import("./lib/openapi/openapi.js");
+        const loaded = await loadSpec(config);
+        if (!cancelled) setSpec(loaded);
       } catch (e) {
         if (!cancelled) setErr(e.message || String(e));
       }
@@ -101,30 +83,6 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
       cancelled = true;
     };
   }, [specProp, config]);
-
-  // Carga tests agnósticos desde el server (GET /system/testing.json)
-  // cuando hay apiBase. Si el server no expone esa ruta o falla, usa fallback embebido.
-  const serverBaseCtx = useServerBase();
-  const fallbackTests = useMemo(() => readClientTestsFromSpec({ ...mergedConfig, spec }), [mergedConfig, spec]);
-  useEffect(() => {
-    let cancelled = false;
-    const apiBase = serverBaseCtx?.serverBase || mergedConfig?.apiBase || "";
-    if (!apiBase) {
-      setRemoteClientTests(null);
-      return () => { cancelled = true; };
-    }
-    (async () => {
-      const loaded = await loadClientTesting({
-        apiBase,
-        viewer: { ...mergedConfig, swaggerPaths: serverBaseCtx?.swaggerPaths, testingPath: serverBaseCtx?.testingPath },
-        testingPath: serverBaseCtx?.testingPath,
-        fallback: fallbackTests,
-        getJwt: authEnabled ? () => getStoredJwt()?.token : undefined,
-      });
-      if (!cancelled) setRemoteClientTests(loaded);
-    })();
-    return () => { cancelled = true; };
-  }, [mergedConfig, authEnabled, fallbackTests, serverBaseCtx]);
 
   const groups = useMemo(() => {
     if (!spec) return [];
@@ -139,36 +97,23 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
       return ia - ib;
     });
   }, [spec]);
-  const navRows = useMemo(() => buildNavRows(mergedConfig, session, navTab, setNavTab), [mergedConfig, session, navTab]);
-  const activeNavTab = useMemo(() => activeSectionTabId(navRows, mergedConfig), [navRows, mergedConfig]);
-  const isTestingTab = useMemo(() => {
-    if (!activeNavTab) return false;
-    const t = String(activeNavTab).toLowerCase();
-    return t === "testing" || t === "tests" || t === "test";
-  }, [activeNavTab]);
+  const navRows = useMemo(() => buildNavRows(config, session, navTab, setNavTab), [config, session, navTab]);
   const visibleGroups = useMemo(() => {
-    if (isTestingTab) return [];
-    if (!activeNavTab) return groups;
-    return filterGroupsByNavTab(groups, mergedConfig, activeNavTab);
-  }, [groups, mergedConfig, activeNavTab, isTestingTab]);
-  const catalogDocKeys = useMemo(
-    () => catalogDocKeysFromSources(spec, mergedConfig?.catalogDocKeys),
-    [spec, mergedConfig?.catalogDocKeys],
-  );
+    const active = activeSectionTabId(navRows, config);
+    if (!active) return groups;
+    return filterGroupsByNavTab(groups, config, active);
+  }, [groups, config, navRows]);
+  const showTestingRunner = useMemo(() => isTestingNavSectionActive(navRows, config), [navRows, config]);
   const docIndex = useMemo(() => (spec ? buildDocIndex(spec) : {}), [spec]);
   const lookupIndex = useMemo(() => (spec ? buildLookupIndex(spec) : {}), [spec]);
-  const clientTests = useMemo(() => {
-    if (Array.isArray(remoteClientTests) && remoteClientTests.length) return remoteClientTests;
-    return fallbackTests;
-  }, [remoteClientTests, fallbackTests]);
-  const brand = useMemo(() => resolveViewerBrand(mergedConfig, spec), [mergedConfig, spec]);
+  const brand = useMemo(() => resolveViewerBrand(config, spec), [config, spec]);
   const brandTitle = brand.title;
   const brandIcon = brand.icon;
-  const ns = mergedConfig?.ns || "ISA";
+  const ns = config?.ns || "ISA";
 
   useEffect(() => {
-    applyBrandToDocument(brand, { lockMeta: !!(mergedConfig?.brandLock || mergedConfig?.brandLocked) });
-  }, [brandTitle, brandIcon, mergedConfig?.brandLock, mergedConfig?.brandLocked]);
+    applyBrandToDocument(brand, { lockMeta: !!(config?.brandLock || config?.brandLocked) });
+  }, [brandTitle, brandIcon, config?.brandLock, config?.brandLocked]);
 
   useEffect(() => {
     if (!authEnabled) return;
@@ -177,9 +122,9 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   }, [authEnabled]);
 
   const Shell = globalThis.ISAFront?.Layout?.AppShell;
-  const embed = mergedConfig?.embed === true;
-  const useShell = mergedConfig?.shell !== false && Shell && !embed;
-  const externalAuth = mergedConfig?.authUi === "external";
+  const embed = config?.embed === true;
+  const useShell = config?.shell !== false && Shell && !embed;
+  const externalAuth = config?.authUi === "external";
   const shellLayout = useShell || embed;
 
   function onNeedLogin(hint) {
@@ -219,7 +164,8 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   const shellToolbarEnd = (
     <Box className="isa-sw-toolbar-tools" sx={{ display: "inline-flex", alignItems: "center", gap: { xs: 1.75, sm: 2.25 }, flexShrink: 0, minWidth: 0 }}>
       <SwaggerFrontLinks frontLinks={config?.frontLinks || []} brandIcon={brandIcon} ns={ns} dense />
-      <SwaggerReloadBtnWithBase onReload={onReload} busy={reloadBusy} ns={ns} />
+      {spec ? <ServerUrlField ns={ns} compact dense fixed={fixedServer} /> : null}
+      <SwaggerReloadBtn onReload={onReload} busy={reloadBusy} ns={ns} />
       <SwaggerOpenGhPagesBtn config={config} ns={ns} />
       {authToolbarEnd}
       <SwaggerToolbarThemeBtn ns={ns} />
@@ -227,7 +173,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   );
 
   const exportToolbarBody = !useShell && spec ? (
-    <ExportToolbar frontLinks={config?.frontLinks || []} ns={ns} brandIcon={brandIcon} docked={embed} toolbarEnd={authToolbarEnd} />
+    <ExportToolbar frontLinks={config?.frontLinks || []} ns={ns} brandIcon={brandIcon} docked={embed} showServer toolbarEnd={authToolbarEnd} />
   ) : null;
 
   const viewerBody = (
@@ -238,37 +184,27 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
           {exportToolbarBody}
           <ServerHealthBanner ns={ns} />
           {!shellLayout ? <InfoHeader spec={spec} showTitle ns={ns} /> : null}
-          {isTestingTab && clientTests.length > 0 ? (
-            <ClientTestTagGroup
-              tests={clientTests}
-              tagIndex={0}
-              authEnabled={authEnabled}
-              onNeedLogin={onNeedLogin}
-              ns={ns}
-              autoExpandFirst={isTestingTab}
-            />
-          ) : null}
           {visibleGroups.map((group, tagIndex) => (
             <OperationTagGroup
               key={group.name}
-              tagIndex={tagIndex + (clientTests.length > 0 ? 1 : 0)}
+              tagIndex={tagIndex}
               group={group}
               spec={spec}
               docIndex={docIndex}
               lookupIndex={lookupIndex}
-              catalogDocKeys={catalogDocKeys}
               authEnabled={authEnabled}
               onNeedLogin={onNeedLogin}
               ns={ns}
             />
           ))}
-          {isTestingTab && clientTests.length === 0 ? (
-            <Box className="isa-sw-testing-empty" sx={{ mt: 4, p: 3, textAlign: "center", borderRadius: 2, border: "1px dashed", borderColor: "divider", color: "text.secondary" }}>
-              <Typography variant="body2">
-                Esta sección está reservada para tests agnósticos. Agrega un <code>viewer.client.tests[]</code> en
-                <code>is-swagger.json</code> y recarga.
-              </Typography>
-            </Box>
+          {showTestingRunner ? (
+            <TestingAccordion
+              config={config}
+              ns={ns}
+              onNeedLogin={onNeedLogin}
+              authEnabled={authEnabled}
+              session={session}
+            />
           ) : null}
         </>
       ) : !err ? (
@@ -290,7 +226,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
 
   const framed = useShell ? (
     <Shell
-      ns={mergedConfig.ns || "ISA"}
+      ns={config.ns || "ISA"}
       title={brandTitle}
       icon={brandIcon}
       showTarget={false}
@@ -306,7 +242,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   );
 
   return (
-    <ServerBaseProvider spec={spec} config={config}>
+    <ServerBaseProvider spec={spec} config={config} fixed={fixedServer}>
       <ExpandStackProvider>{framed}</ExpandStackProvider>
     </ServerBaseProvider>
   );

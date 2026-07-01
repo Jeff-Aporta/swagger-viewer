@@ -23,6 +23,7 @@ export function JsonCodeBlock({
   value,
   minHeight,
   maxHeight = JSON_BLOCK_MAX_HEIGHT,
+  fill = false,
   readOnly = true,
   onChange,
   disabled = false,
@@ -126,15 +127,23 @@ export function JsonCodeBlock({
 
   if (Panel) {
     return (
-      <Box className={`isa-sw-json-block ${className}`.trim()} sx={{ border: 1, borderColor: "divider", borderRadius: "0.5rem", overflow: "hidden", maxHeight, minHeight: 0 }}>
+      <Box
+        className={`isa-sw-json-block${fill ? " isa-sw-json-block--fill" : ""} ${className}`.trim()}
+        sx={
+          fill
+            ? { flex: "1 1 auto", minHeight: 0, height: "100%", maxHeight: "none", display: "flex", flexDirection: "column", overflow: "hidden" }
+            : { border: 1, borderColor: "divider", borderRadius: "0.5rem", overflow: "hidden", maxHeight, minHeight: 0 }
+        }
+      >
         <Panel
           value={value || ""}
           readOnly={isReadOnly}
           onChange={editable ? (text) => onChangeRef.current?.(text) : undefined}
           json
           lineNumbers
-          minHeight={resolvedMinHeight}
-          maxHeight={maxHeight}
+          fill={fill}
+          minHeight={fill ? "0" : resolvedMinHeight}
+          maxHeight={fill ? undefined : maxHeight}
           placeholder={placeholder}
           toolbarExtra={toolbarExtra}
         />

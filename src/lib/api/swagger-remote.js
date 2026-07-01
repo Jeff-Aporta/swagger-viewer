@@ -10,7 +10,7 @@ export async function fetchRemoteIsDocument(apiBase, pathOverrides = null) {
   try {
     built = buildIssExportsFromConfig(rawConfig, { absoluteBaseUrl: urls.apiBase });
   } catch (e) {
-    throw new Error(`No se pudo generar OpenAPI/IS desde la config: ${e?.message || e}`);
+    throw new Error(`No se pudo generar el documento del visor IS-Swagger desde la config: ${e?.message || e}`);
   }
   if (!built?.is) throw new Error("La config no produjo documento IS (revisar paths y viewer en SYSTEM.swagger).");
   const parsed = parseIsDocument(built.is);
