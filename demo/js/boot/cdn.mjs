@@ -48,7 +48,7 @@ export const bootHelperUrl = `${joinCdn("boot-helper.mjs")}?v=${PIN}`;
 
 /* @isa-swagger-boot:start */
 /** Jeff-Aporta/swagger-viewer — pin CDN git (sync-component-refs.mjs) */
-export const SWAGGER_VIEWER_REF = "client-tests-wrap-toggle-2026-06-30";
+export const SWAGGER_VIEWER_REF = "8b71995";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;
