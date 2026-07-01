@@ -1,18 +1,18 @@
 import { SwaggerViewer } from "../../../src/SwaggerViewer.jsx";
 import { parseIsDocument, isDocumentText } from "../../../src/lib/openapi/is-document.js";
 import { readBrandFromMeta } from "../../../src/lib/brand/viewer-brand.js";
-import { fetchRemoteOpenApiConfig, inferSwaggerUrls, normalizeApiBase, putRemoteOpenApiConfig, resolveConnPaths, DEFAULT_SWAGGER_PATHS } from "../../../src/lib/api/swagger-api.js";
+import { fetchRemoteOpenApiConfig, inferSwaggerUrls, normalizeApiBase, putRemoteOpenApiConfig } from "../../../src/lib/api/swagger-api.js";
 import { fetchRemoteIsDocument } from "../../../src/lib/api/swagger-remote.js";
 import { notifyApiError } from "../../../src/lib/api/api-notify.js";
 import { parseEmbedParams, resolveConnBrand } from "../../../src/lib/api/conn-config.js";
-import { resolveConnectBases, connectWithFallback } from "../../../src/lib/api/api-base-resolve.js";
+import { connectWithFallback, isLocalApiBase } from "../../../src/lib/api/api-base-resolve.js";
 import { getStoredJwt } from "../../../src/lib/auth/auth.js";
 import { resolveAuthConfig } from "../../../src/lib/auth/orchestrator-base.js";
 import { IsEditorDrawer } from "./IsEditorDrawer.jsx";
+import { PayloadInspectorModal } from "./PayloadInspectorModal.jsx";
 import { WelcomeScreen } from "./WelcomeScreen.jsx";
 import { ConnectionScreen } from "./ConnectionScreen.jsx";
 import { DemoShell } from "./DemoShell.jsx";
-import { readStoredApiBase, storeApiBase } from "./ApiBaseSelect.jsx";
 import { buildDemoExportUrls, revokeDemoExportUrls } from "./demo-exports.js";
 import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
 
@@ -36,21 +36,15 @@ function demoBrandDefaults(conn) {
 
 const DEMO_NS = "ISS";
 
-function enrichViewerConfig(viewer = {}, { remoteApiBase, conn, swaggerUrls, catalogDocKeys } = {}) {
+function enrichViewerConfig(viewer = {}, { remoteApiBase, conn } = {}) {
   const defaults = demoBrandDefaults(conn);
-  const apiBase = normalizeApiBase(remoteApiBase || viewer.apiBase || "");
-  const auth = resolveAuthConfig({ enabled: true, loginKind: "portal", ...viewer.auth }, apiBase);
-  const pathRel = swaggerUrls?.pathRel || { ...DEFAULT_SWAGGER_PATHS, ...resolveConnPaths(conn) };
+  const auth = resolveAuthConfig({ enabled: true, loginKind: "portal", ...viewer.auth }, remoteApiBase || viewer.apiBase);
   return {
     shell: true,
     brandLock: true,
     ...viewer,
     ns: viewer.ns ?? DEMO_NS,
     brand: defaults,
-    ...(apiBase ? { apiBase } : {}),
-    swaggerPaths: pathRel,
-    ...(swaggerUrls?.config ? { configUrl: swaggerUrls.config } : {}),
-    ...(Array.isArray(catalogDocKeys) && catalogDocKeys.length ? { catalogDocKeys } : {}),
     auth,
   };
 }
@@ -61,8 +55,7 @@ function applyIsDocument(doc, opts = {}) {
     throw new Error("Se espera kind «insoft.swagger-viewer» con objetos viewer y spec.");
   }
   const { spec: _omit, specUrl: _specUrl, ...viewer } = parsed.config || {};
-  const catalogDocKeys = opts.catalogDocKeys ?? viewer.catalogDocKeys;
-  return { config: enrichViewerConfig(viewer, { ...opts, catalogDocKeys }), spec: parsed.spec };
+  return { config: enrichViewerConfig(viewer, opts), spec: parsed.spec };
 }
 
 function formatConnectError(e, apiBase) {
@@ -77,11 +70,12 @@ export function App() {
   const params = new URLSearchParams(location.search);
   const conn = useMemo(() => parseEmbedParams(params), []);
   const embedMode = !!conn?.embed;
+  const fixedServer = !!conn?.fixedServer;
   const specUrl = params.get("spec");
   const apiParam = params.get("api");
   const connApiBase = conn?.apiBase ? normalizeApiBase(conn.apiBase) : "";
-  const connPathOverrides = useMemo(() => resolveConnPaths(conn), [conn]);
   const [drawerOpen, setDrawerOpen] = useState(() => params.has("editor"));
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [sourceText, setSourceText] = useState("");
   const [parseErr, setParseErr] = useState("");
   const [applied, setApplied] = useState(null);
@@ -93,32 +87,34 @@ export function App() {
   const exportRevokeRef = useRef([]);
   const ns = applied?.config?.ns ?? DEMO_NS;
 
+  /** Bases de conexión: SOLO ?conn= o ?api=. Prohibido fallback a presets/LS. */
+  function resolveInitialBases() {
+    const list = [];
+    if (connApiBase) list.push(connApiBase);
+    if (apiParam) {
+      const p = normalizeApiBase(decodeURIComponent(apiParam));
+      if (p && !list.includes(p)) list.push(p);
+    }
+    return list;
+  }
+
   const connectApi = useCallback(
     async (baseInput, { forceBases } = {}) => {
-      const bases = forceBases || resolveConnectBases({
-        connApiBase: connApiBase || (baseInput ? normalizeApiBase(baseInput) : ""),
-        apiParam: apiParam ? decodeURIComponent(apiParam) : "",
-        storedBase: baseInput || apiBase || readStoredApiBase(),
-      });
+      const bases = forceBases || resolveInitialBases();
       const primary = bases[0];
       if (!primary) {
-        setParseErr("Indique la base API (…/api/).");
+        setParseErr("Sin conexión. Abra el visor con ?conn= o use el botón «Conectar con ISS PatyIA».");
         return;
       }
       setConnectBusy(true);
       setParseErr("");
       try {
-        const { doc, urls, built, base: _base, usedFallback: _fb } = await connectWithFallback(
-          (base) => fetchRemoteIsDocument(base, connPathOverrides),
-          bases,
-        );
-        storeApiBase(urls.apiBase);
-        const catalogDocKeys = Object.keys(built.config?.catalog?.docs || {}).sort();
+        const { doc, urls, built } = await connectWithFallback(fetchRemoteIsDocument, bases);
         setRemoteUrls(urls);
         setRemoteBuilt(built);
         setApiBase(urls.apiBase);
         setSourceText(isDocumentText(doc));
-        setApplied(applyIsDocument(doc, { remoteApiBase: urls.apiBase, conn, swaggerUrls: urls, catalogDocKeys }));
+        setApplied(applyIsDocument(doc, { remoteApiBase: urls.apiBase, conn }));
         setParseErr("");
         setDrawerOpen(false);
       } catch (e) {
@@ -129,30 +125,25 @@ export function App() {
         setConnectBusy(false);
       }
     },
-    [apiBase, conn, connApiBase, connPathOverrides, apiParam],
+    [conn],
   );
 
   useEffect(() => {
     if (specUrl) return;
-    if (!connApiBase && !apiParam) return;
-    const bases = resolveConnectBases({
-      connApiBase,
-      apiParam: apiParam ? decodeURIComponent(apiParam) : "",
-      storedBase: readStoredApiBase(),
-    });
-    if (!bases.length || (conn && conn.auto === false && !connApiBase)) return;
+    const bases = resolveInitialBases();
+    if (!bases.length || (conn && conn.auto === false)) return;
     connectApi(bases[0], { forceBases: bases });
-  }, [specUrl, apiParam, connApiBase, conn, connectApi]);
+  }, [specUrl, apiParam, conn, connectApi]);
 
   const pullConfig = useCallback(async () => {
     if (!apiBase) {
-      setParseErr("Indique la base API (…/api/).");
+      setParseErr("Sin base API conectada. Use «Conectar con ISS PatyIA» o indique ?api=.");
       return;
     }
     setConnectBusy(true);
     setParseErr("");
     try {
-      const { doc } = await fetchRemoteOpenApiConfig(apiBase, connPathOverrides);
+      const { doc } = await fetchRemoteOpenApiConfig(apiBase);
       setSourceText(isDocumentText(doc));
     } catch (e) {
       const msg = formatConnectError(e, apiBase);
@@ -161,7 +152,7 @@ export function App() {
     } finally {
       setConnectBusy(false);
     }
-  }, [apiBase, connPathOverrides]);
+  }, [apiBase]);
 
   const pushConfig = useCallback(async () => {
     const raw = String(getEditorTextRef.current?.() ?? sourceText ?? "").trim();
@@ -188,7 +179,7 @@ export function App() {
     setConnectBusy(true);
     setParseErr("");
     try {
-      await putRemoteOpenApiConfig(apiBase, doc, jwt, connPathOverrides);
+      await putRemoteOpenApiConfig(apiBase, doc, jwt);
       await connectApi(apiBase);
     } catch (e) {
       const msg = notifyApiError(e?.message || String(e));
@@ -196,7 +187,7 @@ export function App() {
     } finally {
       setConnectBusy(false);
     }
-  }, [apiBase, sourceText, connectApi, connPathOverrides]);
+  }, [apiBase, sourceText, connectApi]);
 
   const handleApply = useCallback(
     (forcedText) => {
@@ -244,15 +235,13 @@ export function App() {
   const viewerConfig = useMemo(() => {
     if (!applied?.spec) return null;
     revokeDemoExportUrls(exportRevokeRef.current);
-    const urls = remoteUrls || (apiBase ? inferSwaggerUrls(apiBase, connPathOverrides) : null);
+    const urls = remoteUrls || (apiBase ? inferSwaggerUrls(apiBase) : null);
     if (urls?.apiBase && remoteBuilt) {
       const names = applied.config.exports || {};
       return {
         ...applied.config,
         shell: true,
         apiBase: urls.apiBase,
-        swaggerPaths: urls.pathRel,
-        configUrl: urls.config,
         exports: {
           apiBase: urls.apiBase,
           openApiDownloadName: names.openApiDownloadName || DEMO_EXPORT_NAMES.openApiDownloadName,
@@ -278,7 +267,18 @@ export function App() {
         isDownloadName: runtime.isDownloadName,
       },
     };
-  }, [applied, apiBase, remoteUrls, remoteBuilt, connPathOverrides]);
+  }, [applied, apiBase, remoteUrls, remoteBuilt]);
+
+  const payloadInspector = (
+    <PayloadInspectorModal
+      open={inspectorOpen}
+      onClose={() => setInspectorOpen(false)}
+      apiBase={apiBase}
+      connPaths={conn?.paths}
+      remoteBuilt={remoteBuilt}
+      ns={ns}
+    />
+  );
 
   const drawer = (
     <IsEditorDrawer
@@ -293,11 +293,11 @@ export function App() {
       ns={ns}
       apiBase={apiBase}
       onApiBaseChange={setApiBase}
-      onConnectApi={() => connectApi()}
+      onConnectApi={() => connectApi(apiBase)}
       onPullConfig={pullConfig}
       onPushConfig={pushConfig}
       connectBusy={connectBusy}
-      pathOverrides={connPathOverrides}
+      fixedServer={fixedServer}
     />
   );
 
@@ -317,11 +317,7 @@ export function App() {
 
   if (!viewerConfig || !applied?.spec) {
     const brand = demoBrandDefaults(conn);
-    const retryBases = resolveConnectBases({
-      connApiBase,
-      apiParam: apiParam ? decodeURIComponent(apiParam) : "",
-      storedBase: apiBase || readStoredApiBase(),
-    });
+    const retryBases = resolveInitialBases();
     if (embedMode || connectBusy || parseErr) {
       return (
         <>
@@ -335,12 +331,13 @@ export function App() {
             onRetry={retryBases.length ? () => connectApi(retryBases[0], { forceBases: retryBases }) : null}
           />
           {drawerOpen ? drawer : null}
+          {payloadInspector}
         </>
       );
     }
     return (
       <DemoShell ns={DEMO_NS}>
-        <WelcomeScreen ns={DEMO_NS} onOpenEditor={() => setDrawerOpen(true)} onConnectCustom={() => setDrawerOpen(true)} />
+        <WelcomeScreen ns={DEMO_NS} />
         {drawerOpen ? drawer : null}
       </DemoShell>
     );
@@ -350,13 +347,14 @@ export function App() {
     <>
       <SwaggerViewer config={viewerConfig} spec={applied.spec} onReload={apiBase ? () => connectApi(apiBase) : null} reloadBusy={connectBusy} />
       {!embedMode ? (
-        <Tooltip title="Constructor IS-Swagger" placement="left" arrow>
-          <Fab className="isa-sw-demo__fab" color="primary" aria-label="Abrir constructor" onClick={() => setDrawerOpen(true)}>
-            <SwIcon icon="mdi:code-json" size={24} ns={ns} />
+        <Tooltip title="Carga IS-Swagger (JSONs)" placement="left" arrow>
+          <Fab className="isa-sw-demo__fab" color="primary" aria-label="Ver JSONs de carga" onClick={() => setInspectorOpen(true)}>
+            <SwIcon icon="mdi:database-eye-outline" size={24} ns={ns} />
           </Fab>
         </Tooltip>
       ) : null}
       {drawerOpen ? drawer : null}
+      {payloadInspector}
     </>
   );
 }

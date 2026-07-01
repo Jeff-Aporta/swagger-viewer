@@ -1,41 +1,24 @@
-import { normalizeApiBase, inferSwaggerUrls } from "../../../src/lib/api/swagger-api.js";
+import { inferSwaggerUrls } from "../../../src/lib/api/swagger-api.js";
 import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
 
-const { Box, Button, Typography, Tooltip, Chip, Stack, TextField } = MaterialUI;
-
-const LS_KEY = "isa-sw-demo-api-base";
+const { Box, Button, TextField, Typography, Tooltip, Chip, Stack } = MaterialUI;
 
 const TOOLBAR_INPUT_SX = {
   "& .MuiInput-underline:before": { borderBottom: "none" },
   "& .MuiInput-underline:after": { borderBottom: "none" },
   "& .MuiInput-underline:hover:not(.Mui-disabled):before": { borderBottom: "none" },
+  "& .MuiInputBase-root": { overflow: "hidden" },
 };
 
-export function readStoredApiBase() {
-  try {
-    const saved = normalizeApiBase(localStorage.getItem(LS_KEY) || "");
-    if (saved) return saved;
-  } catch {
-    /* ignore */
-  }
-  return "";
-}
-
-export function storeApiBase(base) {
-  try {
-    const n = normalizeApiBase(base);
-    if (n) localStorage.setItem(LS_KEY, n);
-    else localStorage.removeItem(LS_KEY);
-    return n;
-  } catch {
-    return normalizeApiBase(base);
-  }
-}
-
-/** Campo base API + conectar; infiere GET/PUT swagger (override vía pathOverrides). */
-export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISA", pathOverrides = null }) {
-  const urls = inferSwaggerUrls(value, pathOverrides);
-
+/**
+ * Selector de base API — solo URL libre.
+ *
+ * Quedan prohibidos los presets y la opción "Otro": la conexión es siempre
+ * real contra una API viva (?conn= / ?api= / TextField). El viewer
+ * no consume nunca JSONs quemados.
+ */
+export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISS", disabled = false }) {
+  const urls = inferSwaggerUrls(value);
   return (
     <Box className="isa-sw-demo__api-base" sx={{ px: 1.5, py: 1, flexShrink: 0, borderBottom: 1, borderColor: "divider" }}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }}>
@@ -44,17 +27,19 @@ export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISA", pa
           size="small"
           variant="standard"
           hiddenLabel
-          value={value}
+          label={undefined}
+          value={value || ""}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder="https://host…/api"
           fullWidth
+          disabled={disabled}
           sx={{
-            minWidth: 0,
-            flex: "1 1 12rem",
-            maxWidth: 420,
+            minWidth: { xs: 180, sm: 260 },
+            flex: "1 1 260px",
+            maxWidth: 520,
             ...TOOLBAR_INPUT_SX,
             "& .MuiInputBase-root": { height: 36 },
-            "& .MuiInputBase-input": { fontFamily: "ui-monospace, monospace", fontSize: "0.8125rem" },
+            "& .MuiInputBase-input": { fontFamily: "ui-monospace, monospace", fontSize: "0.8125rem", py: 0.75 },
           }}
           slotProps={{
             input: {
@@ -64,8 +49,8 @@ export function ApiBaseSelect({ value, onChange, onConnect, busy, ns = "ISA", pa
             },
           }}
         />
-        <Tooltip title={`GET ${urls.pathRel?.config || "/system/swagger/config.json"}`} arrow>
-          <Button size="small" variant="contained" disabled={!value?.trim() || busy} onClick={() => onConnect?.()} startIcon={<SwIcon icon="mdi:lan-connect" size={18} ns={ns} />}>
+        <Tooltip title="GET público /swagger/config.json" arrow>
+          <Button size="small" variant="contained" disabled={!value?.trim() || busy || disabled} onClick={() => onConnect?.()} startIcon={<SwIcon icon="mdi:lan-connect" size={18} ns={ns} />}>
             Conectar
           </Button>
         </Tooltip>
