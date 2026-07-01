@@ -6,63 +6,67 @@ import {
   opIndexFromResp,
   toggleInStack,
 } from "./expand-stack.js";
+import { readLegacyNavParam, stripLegacyNavParam } from "./viewer-nav-url.js";
 
 const STATE_VERSION = 1;
+/** Tabs por operación persistidas en `?s=` (v→open→tab→opTabs→params). */
 const OP_TAB_IDS = new Set(["try", "overview", "doc"]);
-
-let _api = null;
+const PARAM_VALUE_MAX = 200;
 
 function normalizeOpTabId(raw) {
-  const id = String(raw || "").trim();
+  const id = String(raw ?? "").trim();
   return OP_TAB_IDS.has(id) ? id : "try";
 }
 
 function normalizeOpTabs(raw, openStack = []) {
-  if (!raw || typeof raw !== "object") return {};
-  const openOps = new Set();
-  for (const id of normalizeOpenStack(openStack)) {
-    if (isOpIndex(id)) openOps.add(id);
-    else {
-      const opId = opIndexFromResp(id);
-      if (opId) openOps.add(opId);
-    }
-  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const openOps = collectOpenOpIndexes(openStack);
   const out = {};
   for (const [k, v] of Object.entries(raw)) {
-    if (!isOpIndex(k)) continue;
-    if (openOps.size && !openOps.has(k)) continue;
-    out[k] = normalizeOpTabId(v);
+    const id = String(k ?? "").trim();
+    if (!isOpIndex(id)) continue;
+    if (openOps.size && !openOps.has(id)) continue;
+    const tab = normalizeOpTabId(v);
+    out[id] = tab;
   }
   return out;
 }
 
 function normalizeParamValues(raw, openStack = []) {
-  if (!raw || typeof raw !== "object") return {};
-  const openOps = new Set();
-  for (const id of normalizeOpenStack(openStack)) {
-    if (isOpIndex(id)) openOps.add(id);
-    else {
-      const opId = opIndexFromResp(id);
-      if (opId) openOps.add(opId);
-    }
-  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const openOps = collectOpenOpIndexes(openStack);
   const out = {};
   for (const [k, v] of Object.entries(raw)) {
-    if (!isOpIndex(k)) continue;
-    if (openOps.size && !openOps.has(k)) continue;
-    if (!v || typeof v !== "object") continue;
+    const id = String(k ?? "").trim();
+    if (!isOpIndex(id)) continue;
+    if (openOps.size && !openOps.has(id)) continue;
+    if (!v || typeof v !== "object" || Array.isArray(v)) continue;
     const next = {};
     for (const [pk, pv] of Object.entries(v)) {
       if (pv == null) continue;
       const str = String(pv);
       if (!str) continue;
-      if (str.length > 200) continue;
+      if (str.length > PARAM_VALUE_MAX) continue;
       next[String(pk)] = str;
     }
-    if (Object.keys(next).length) out[k] = next;
+    if (Object.keys(next).length) out[id] = next;
   }
   return out;
 }
+
+function collectOpenOpIndexes(openStack) {
+  const out = new Set();
+  for (const id of normalizeOpenStack(openStack)) {
+    if (isOpIndex(id)) out.add(id);
+    else {
+      const opId = opIndexFromResp(id);
+      if (opId) out.add(opId);
+    }
+  }
+  return out;
+}
+
+let _api = null;
 
 export function getSwaggerExpandUrlState() {
   return _api;
@@ -76,75 +80,85 @@ export function initSwaggerExpandUrlState() {
   const urlState = createUrlState({
     param: "s",
     debounceMs: 300,
-    initial: () => ({ v: STATE_VERSION, open: [], tabs: {}, params: {} }),
+    initial: () => ({ v: STATE_VERSION, open: [], tab: "", opTabs: {}, params: {} }),
     normalize(raw) {
       const open = normalizeOpenStack(raw?.open);
       return {
         v: STATE_VERSION,
         open,
-        tabs: normalizeOpTabs(raw?.tabs, open),
+        tab: String(raw?.tab ?? "").trim(),
+        opTabs: normalizeOpTabs(raw?.opTabs, open),
         params: normalizeParamValues(raw?.params, open),
       };
     },
     slimForUrl(state) {
-      const open = normalizeOpenStack(state?.open);
-      const tabs = normalizeOpTabs(state?.tabs, open);
-      const params = normalizeParamValues(state?.params, open);
-      const out = { v: STATE_VERSION, open };
-      if (Object.keys(tabs).length) out.tabs = tabs;
-      if (Object.keys(params).length) out.params = params;
+      const tab = String(state?.tab ?? "").trim();
+      const opTabs = normalizeOpTabs(state?.opTabs, state?.open);
+      const params = normalizeParamValues(state?.params, state?.open);
+      const out = {
+        v: STATE_VERSION,
+        open: normalizeOpenStack(state?.open),
+        ...(tab ? { tab } : {}),
+        ...(Object.keys(opTabs).length ? { opTabs } : {}),
+        ...(Object.keys(params).length ? { params } : {}),
+      };
       return out;
+    },
+    onInit(state, api) {
+      const legacyNav = readLegacyNavParam();
+      if (!legacyNav) return;
+      stripLegacyNavParam();
+      if (!String(state?.tab ?? "").trim()) api.mergePartial({ tab: legacyNav });
     },
   });
 
   _api = {
     getOpenStack: () => urlState.getSnapshot().open || [],
+    getNavTab: () => String(urlState.getSnapshot().tab ?? "").trim(),
     getSnapshot: urlState.getSnapshot,
     subscribe: urlState.subscribe,
     mergePartial: urlState.mergePartial,
     mostRecent: () => mostRecentOpen(urlState.getSnapshot().open),
-    getOpTab(id) {
-      const tabs = urlState.getSnapshot().tabs || {};
-      return normalizeOpTabId(tabs[id]);
-    },
-    setOpTab(id, tabId) {
-      if (!isOpIndex(id)) return;
-      const next = normalizeOpTabId(tabId);
-      const tabs = { ...(urlState.getSnapshot().tabs || {}), [id]: next };
-      urlState.mergePartial({ tabs });
-    },
-    getOpParams(id) {
-      if (!isOpIndex(id)) return {};
-      const all = urlState.getSnapshot().params || {};
-      return all[id] ? { ...all[id] } : {};
-    },
-    setOpParam(id, name, value) {
-      if (!isOpIndex(id)) return;
-      const snap = urlState.getSnapshot();
-      const all = { ...(snap.params || {}) };
-      const cur = { ...(all[id] || {}) };
-      if (value == null || String(value) === "") delete cur[name];
-      else cur[name] = String(value);
-      if (Object.keys(cur).length) all[id] = cur;
-      else delete all[id];
-      urlState.mergePartial({ params: all });
-    },
     isOpenDerived(id) {
       return isOpenDerived(urlState.getSnapshot().open, id);
     },
     toggle(id, expanded) {
-      const snap = urlState.getSnapshot();
-      const stack = toggleInStack(snap.open, id, expanded);
-      const tabs = { ...(snap.tabs || {}) };
-      const params = { ...(snap.params || {}) };
-      if (!expanded) {
-        const opId = isOpIndex(id) ? id : opIndexFromResp(id);
-        if (opId && !isOpenDerived(stack, opId)) {
-          delete tabs[opId];
-          delete params[opId];
-        }
+      const stack = toggleInStack(urlState.getSnapshot().open, id, expanded);
+      urlState.mergePartial({ open: stack });
+    },
+    getOpTab(expandId) {
+      if (!expandId) return "";
+      const opTabs = urlState.getSnapshot().opTabs || {};
+      return opTabs[String(expandId)] || "";
+    },
+    setOpTab(expandId, tabId) {
+      if (!expandId) return;
+      const tab = normalizeOpTabId(tabId);
+      const opTabs = { ...(urlState.getSnapshot().opTabs || {}) };
+      if (tab === "try") delete opTabs[String(expandId)];
+      else opTabs[String(expandId)] = tab;
+      urlState.mergePartial({ opTabs });
+    },
+    getOpParams(expandId) {
+      if (!expandId) return {};
+      const params = urlState.getSnapshot().params || {};
+      return params[String(expandId)] || {};
+    },
+    setOpParam(expandId, paramName, value) {
+      if (!expandId || !paramName) return;
+      const id = String(expandId);
+      const pk = String(paramName);
+      const all = { ...(urlState.getSnapshot().params || {}) };
+      const entry = { ...(all[id] || {}) };
+      const str = value == null ? "" : String(value);
+      if (!str || str.length > PARAM_VALUE_MAX) {
+        delete entry[pk];
+      } else {
+        entry[pk] = str;
       }
-      urlState.mergePartial({ open: stack, tabs, params });
+      if (Object.keys(entry).length) all[id] = entry;
+      else delete all[id];
+      urlState.mergePartial({ params: all });
     },
     boot: urlState.boot,
   };
