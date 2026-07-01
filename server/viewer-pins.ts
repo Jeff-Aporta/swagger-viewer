@@ -2,7 +2,7 @@
 
 export const SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
 
-export const SWAGGER_VIEWER_REF = "8b71995";
+export const SWAGGER_VIEWER_REF = "fa7f74c";
 
 export const SWAGGER_FRONT_SHARED_REF = "6177587";
 
