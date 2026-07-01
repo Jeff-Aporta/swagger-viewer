@@ -164,7 +164,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   const shellToolbarEnd = (
     <Box className="isa-sw-toolbar-tools" sx={{ display: "inline-flex", alignItems: "center", gap: { xs: 1.75, sm: 2.25 }, flexShrink: 0, minWidth: 0 }}>
       <SwaggerFrontLinks frontLinks={config?.frontLinks || []} brandIcon={brandIcon} ns={ns} dense />
-      {spec ? <ServerUrlField ns={ns} compact dense fixed={fixedServer} /> : null}
+      {spec ? <ServerUrlField ns={ns} compact dense fixed={fixedServer} value={configProp?.apiBase} /> : null}
       <SwaggerReloadBtn onReload={onReload} busy={reloadBusy} ns={ns} />
       <SwaggerOpenGhPagesBtn config={config} ns={ns} />
       {authToolbarEnd}

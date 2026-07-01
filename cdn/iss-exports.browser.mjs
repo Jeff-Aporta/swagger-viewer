@@ -1022,7 +1022,7 @@ function stripIsaExtensionsForExport(openApi) {
 
 // ../../components/swagger/server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "8b71995";
+var SWAGGER_VIEWER_REF = "04d0411";
 var SWAGGER_FRONT_SHARED_REF = "6177587";
 
 // ../../components/swagger/server/orchestrator-auth.ts
