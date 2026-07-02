@@ -1,130 +1,169 @@
 /**
- * Client test runner — agnóstico, ejecuta tests `insoft.client-testing`.
+ * Client test runner — agnóstico, ejecuta tests `testing`.
  * Server solo datos (SYS_VALUES.swagger/testing); el runner es 100% cliente.
  *
- * Modelo declarativo:
- *   - test.protocol       nombre lógico (icono/color opcional, no cambia ejecución)
- *   - test.requiresAuth   bool (def. true si algún step es conv)
- *   - test.metrics[]      métricas declarativas con showWhen/compute
- *   - test.tools[]        herramientas declarativas (timeline, histogram, table)
- *   - test.table          config de tabla (columns[] + getRows)
- *   - test.hooks          { onStart, onUpdate, onEnd, onRegister }
- *   - test.steps[]        conv | http | raw | script
+ * Interface agnóstica (multi-server + JWT por apiRef + cases + hooks + register/emit):
+ *
+ *   test.requires.apis.<name>  → { base?, public?: string[], auth?: string[], jwtRef?: "login"|"override"|string }
+ *   test.setup.fetch[]         → GET públicos antes del primer step → ctx.vars[var]
+ *   test.setup.init            → js expr con (ctx)
+ *   test.steps[]               → stream | http | raw | script
+ *   test.cases[]               → si está, runner instancia el test N veces (casesMode "each"|"matrix"|"single")
+ *   test.metrics[]             → cards UI (compute / showWhen / format)
+ *   test.tools[]               → visualizaciones (timeline | histogram | sparkline)
+ *   test.table                 → tabla declarativa (columns[] con get() sobre ctx.rows)
+ *   test.hooks                 → onStart | onStep | onCaseStart | onCaseEnd | onEnd | onRegister | onEmit
+ *   test.verdict               → { pass?: js→bool, summary?: js→string } evaluado en onEnd
+ *
+ * Step kinds (generalizados):
+ *   - stream   POST SSE (default path: /conversacion) — antes "conv"
+ *   - http / raw HTTP genérico
+ *   - script   código libre con `with (ctx)`
  *
  * Contexto `ctx` compartido:
- *   - vars        outputs explícitos para {{interpolación}}
- *   - trace       runtime libre del test
- *   - _trace      convenciones (messages, titleChangesSoFar, iconversacion, ...)
+ *   - apiBase                  base global (back-compat)
+ *   - apis        <name> → base override por apiRef
+ *   - jwt         <name> → bearer token por apiRef ("login", "override", o string)
+ *   - case        caso activo (si test.cases[])
+ *   - casesSummary  resumen de todos los cases corridos
+ *   - vars        outputs de setup.fetch y extract → {{interpolación}}
+ *   - trace       runtime libre
+ *   - _trace      convenciones del runner
  *   - steps       StepResult[] acumulados
- *   - rows        buffer de filas registradas por steps con `record`
- *   - toolsData   mapa { [toolId]: any } (poblado por hooks.onUpdate)
- *   - metrics     mapa { [metricKey]: value } (poblado por hooks.onEnd)
- *
- * Step kinds:
- *   - conv        POST /api/conversacion (SSE)
- *   - http / raw  HTTP genérico contra opts.apiBase
- *   - script      código libre con `with (ctx)`, devuelve valor o setea ctx.vars.verdict
+ *   - rows        buffer global (poblado por ctx.register o step.record)
+ *   - toolsData   mapa { [toolId]: any } (poblado por onStep/onUpdate)
+ *   - metrics     mapa { [metricKey]: value } (poblado por onEnd o declarativas)
+ *   - helpers     register(as, row), emit(event, payload)
  */
 
-import { runHook, normalizeMetrics, normalizeTools, normalizeTable } from "./hooks.mjs";
+import {
+    runHook,
+    normalizeMetrics,
+    normalizeTools,
+    normalizeTable,
+    normalizeRequires,
+    normalizeCases,
+} from "./hooks.mjs";
 import { getTool } from "./tools.mjs";
 import { computeMetric } from "./metrics.mjs";
 
-/** @typedef {{ kind: "conv", description?: string, prompt?: string, record?: RecordSpec }} RunnerStepConv */
-/** @typedef {{ kind: "http"|"raw", description?: string, method?: string, path?: string, body?: unknown, expectStatus?: number, expectField?: string, expectMatches?: string, extract?: string, timeoutMs?: number, record?: RecordSpec }} RunnerStepHttp */
-/** @typedef {{ kind: "script", description?: string, run?: string, timeoutMs?: number }} RunnerStepScript */
-/** @typedef RunnerStep */
-
-/** @typedef {{ as?: string, columns?: Record<string, string> }} RecordSpec */
-/** Step con `record` agrega fila(s) a ctx.rows al finalizar. Las `columns` son
- *  expresiones `with (ctx)` que producen strings para cada columna. */
-
-/**
- * @typedef RunnerContext
- * @property {Record<string, unknown>} vars
- * @property {Record<string, unknown>} trace
- * @property {Record<string, unknown>} _trace
- * @property {Array<any>} steps
- * @property {Array<Record<string, unknown>>} rows
- * @property {Record<string, unknown>} toolsData
- * @property {Record<string, unknown>} metrics
- * @property {number|null} iconversacion
- * @property {string|null} lastTitulo
- */
-
-const DEFAULT_RECALCULAR_TITULO_CADA_MENSAJES_USUARIO = 3;
+const DEFAULT_API_REF = "default";
+const DEFAULT_STREAM_PATH = "/conversacion";
+const DEFAULT_STREAM_RESPONSE_PATH = "/respuesta";
+const PLACEHOLDER_RX = /\{\{\s*([\w$.[\]]+)\s*\}\}/g;
+const TIMEOUT_DEFAULT_MS = 5_000;
 
 export async function loadConversacionConfigFromApi(apiBase, fetchImpl) {
     const f = fetchImpl ?? fetch;
     const url = `${String(apiBase ?? "").replace(/\/$/, "")}/system/config/conversacion`;
     try {
-        const res = await f(url, { headers: { Accept: "application/json" } });
+        const res = await f(url);
         if (!res.ok) {
-            return {
-                recalcularTituloCadaMensajesUsuario: DEFAULT_RECALCULAR_TITULO_CADA_MENSAJES_USUARIO,
-                source: "default",
-                httpStatus: res.status,
-            };
+            return { source: `HTTP ${res.status}`, recalcularTituloCadaMensajesUsuario: 3 };
         }
-        const data = await res.json();
-        const cfg = data?.respuesta?.config ?? data?.config ?? {};
-        const n = Number(cfg.recalcularTituloCadaMensajesUsuario);
-        const interval = Number.isFinite(n) && n >= 1 ? Math.round(n) : DEFAULT_RECALCULAR_TITULO_CADA_MENSAJES_USUARIO;
+        const text = await res.text();
+        const env = JSON.parse(text);
+        const cfg = env?.respuesta?.config ?? env?.config ?? env ?? {};
         return {
-            recalcularTituloCadaMensajesUsuario: interval,
             source: "api",
-            key: data?.respuesta?.key ?? data?.key ?? "config/conversacion",
+            recalcularTituloCadaMensajesUsuario: Number(cfg.recalcularTituloCadaMensajesUsuario) || 3,
+            raw: env,
         };
     } catch (e) {
-        return {
-            recalcularTituloCadaMensajesUsuario: DEFAULT_RECALCULAR_TITULO_CADA_MENSAJES_USUARIO,
-            source: "default",
-            error: e?.message ?? String(e),
-        };
+        return { source: "error", recalcularTituloCadaMensajesUsuario: 3, error: e?.message ?? String(e) };
     }
 }
 
-const PLACEHOLDER_RX = /\{\{\s*([a-zA-Z_][\w.-]*)\s*\}\}/g;
-
-function interpolate(input, vars) {
+function interpolate(input, vars, extras) {
+    if (input == null) return input;
     if (typeof input === "string") {
         if (!input.includes("{{")) return input;
         return input.replace(PLACEHOLDER_RX, (_m, k) => {
-            const v = vars[k];
+            // 1) Path-based lookup en extras (ej: "case.params.prompt" → extras.case.params.prompt)
+            if (extras) {
+                const ev = resolvePath(extras, k);
+                if (ev !== undefined) return String(ev);
+            }
+            // 2) Path-based lookup en vars
+            const v = resolvePath(vars, k);
             return v == null ? "" : String(v);
         });
     }
-    if (Array.isArray(input)) return input.map((x) => interpolate(x, vars));
+    if (Array.isArray(input)) return input.map((x) => interpolate(x, vars, extras));
     if (input && typeof input === "object") {
         const out = {};
-        for (const [k, v] of Object.entries(input)) out[k] = interpolate(v, vars);
+        for (const [k, v] of Object.entries(input)) out[k] = interpolate(v, vars, extras);
         return out;
     }
     return input;
 }
 
-function newContext() {
-    return {
-        vars: {},
-        trace: {},
-        _trace: { messages: 0, titleChangesSoFar: [], iconversacion: null, lastTitulo: null },
-        steps: [],
-        rows: [],
-        toolsData: {},
-        metrics: {},
-        iconversacion: null,
-        lastTitulo: null,
-    };
+/** Devuelve un objeto interpolable donde `{{case.X}}` y `{{case.params.X}}` resuelven via ctx.case. */
+function interpolationScope(ctx) {
+    return ctx?.case ? { case: ctx.case } : undefined;
+}
+
+/** Resuelve "a.b.c" o "a[0].b" sobre un objeto. */
+function resolvePath(obj, path) {
+    if (!obj || !path) return undefined;
+    const parts = String(path).replace(/\[(\d+)\]/g, ".$1").split(".").filter(Boolean);
+    let cur = obj;
+    for (const p of parts) {
+        if (cur == null) return undefined;
+        cur = cur[p];
+    }
+    return cur;
 }
 
 function nowIso() { return new Date().toISOString(); }
 
-function inferTitleChange(ctx, newTitulo) {
-    if (!newTitulo || newTitulo === ctx.lastTitulo) return null;
-    const change = { afterMessage: ctx._trace.messages, from: ctx.lastTitulo, to: newTitulo };
-    ctx._trace.titleChangesSoFar.push(change);
-    ctx.lastTitulo = newTitulo;
-    return change;
+function apiBaseFor(opts, apiRef) {
+    const ref = apiRef ?? DEFAULT_API_REF;
+    const bases = opts.apis || {};
+    if (bases[ref]) return String(bases[ref]).replace(/\/$/, "");
+    if (opts.apiBase) return String(opts.apiBase).replace(/\/$/, "");
+    return "";
+}
+
+function jwtFor(opts, apiRef) {
+    const ref = apiRef ?? DEFAULT_API_REF;
+    const tokens = opts.jwt;
+    if (!tokens) return undefined;
+    if (typeof tokens === "string") return tokens; // back-compat: jwt global
+    return tokens[ref] || tokens[DEFAULT_API_REF] || undefined;
+}
+
+function newContext(test) {
+    return {
+        test,
+        apiBase: undefined,
+        apis: undefined,
+        jwt: undefined,
+        case: undefined,
+        vars: {},
+        trace: {},
+        _trace: {},
+        steps: [],
+        rows: [],
+        toolsData: {},
+        metrics: {},
+        helpers: undefined, // se asigna después con register/emit
+    };
+}
+
+function makeHelpers(ctx) {
+    const registerFn = (as, row) => {
+        const obj = { _as: String(as ?? "row"), ...row };
+        ctx.rows.push(obj);
+        const hook = ctx.test?.hooks?.onRegister;
+        if (hook) runHook("onRegister", hook, ctx, [obj, as], 2000).catch(() => {});
+        return obj;
+    };
+    const emitFn = (event, payload) => {
+        const hook = ctx.test?.hooks?.onEmit;
+        if (hook) runHook("onEmit", hook, ctx, [event, payload], 2000).catch(() => {});
+    };
+    return { register: registerFn, emit: emitFn };
 }
 
 function parseSseStream(text) {
@@ -145,56 +184,60 @@ function parseSseStream(text) {
     return events;
 }
 
-/** Evalúa `columns` de un step.record y agrega fila(s) al ctx.rows. */
+/** Evalúa `columns` de un step.record y agrega fila(s) al ctx.rows via ctx.register(as, ...). */
 async function recordStep(step, stepResult, ctx) {
     const rec = step.record;
-    if (!rec) return;
+    if (!rec || !ctx.helpers) return;
     const columns = rec.columns && typeof rec.columns === "object" ? rec.columns : {};
     const as = String(rec.as ?? "row");
     const row = { _as: as, _stepIndex: stepResult.index };
     for (const [key, expr] of Object.entries(columns)) {
         try {
             // eslint-disable-next-line no-new-func
-            const fn = new Function("ctx", "step", `with (ctx) { return (function(step){ ${expr} })(); }`);
+            const source = `with (ctx) { return (function(step){ return (${expr}); })(step); }`;
+            const fn = new Function("ctx", "step", source);
             const v = fn(ctx, stepResult);
             row[key] = v == null ? "" : typeof v === "string" ? v : JSON.stringify(v);
         } catch (e) {
             row[key] = `error: ${e?.message ?? String(e)}`;
         }
     }
-    if (ctx.rows) ctx.rows.push(row);
-    // Hook onRegister(row, ctx)
-    if (ctx.hooks?.onRegister) {
-        await runHook("onRegister", ctx.hooks.onRegister, ctx, [row], 2000);
-    }
+    ctx.helpers.register(as, row);
 }
 
-async function executeConv(step, ctx, opts) {
+/** Step `stream`: POST SSE. Antes "conv". */
+async function executeStream(step, ctx, opts) {
     const startedAt = nowIso();
     const t0 = performance.now();
     const f = opts.fetchImpl ?? fetch;
-    const prompt = interpolate(step.prompt ?? "", ctx.vars);
+    const scope = interpolationScope(ctx);
+    const prompt = interpolate(step.prompt ?? "", ctx.vars, scope);
+    const apiRef = step.apiRef ?? DEFAULT_API_REF;
+    const apiBase = apiBaseFor(opts, apiRef);
+    const streamPath = step.streamPath ?? DEFAULT_STREAM_PATH;
+    const responsePath = step.responsePath ?? DEFAULT_STREAM_RESPONSE_PATH;
     const body = { prompt };
-    if (ctx.iconversacion != null) body.iconversacion = ctx.iconversacion;
-    if (ctx.iconversacion != null) await new Promise((r) => setTimeout(r, opts.stepDelayMs ?? 250));
+    if (ctx.vars.iconversacion != null) body.iconversacion = ctx.vars.iconversacion;
+    if (step.systemPrompt) body.systemPrompt = interpolate(step.systemPrompt, ctx.vars, scope);
     let res;
     try {
-        res = await f(`${opts.apiBase}/conversacion`, {
+        const token = jwtFor(opts, apiRef);
+        res = await f(`${apiBase}${streamPath}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 Connection: "close",
-                ...(opts.jwt ? { Authorization: `Bearer ${opts.jwt}` } : {}),
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 ...(opts.origin ? { Origin: opts.origin } : {}),
             },
             body: JSON.stringify(body),
         });
     } catch (e) {
-        return { index: ctx.steps.length, kind: "conv", description: step.description, prompt, ok: false, error: e?.message ?? String(e), duration: performance.now() - t0, startedAt, endedAt: nowIso() };
+        return { index: ctx.steps.length, kind: "stream", description: step.description, prompt, ok: false, error: e?.message ?? String(e), duration: performance.now() - t0, startedAt, endedAt: nowIso() };
     }
     const text = await res.text();
     if (!res.ok) {
-        return { index: ctx.steps.length, kind: "conv", description: step.description, prompt, ok: false, error: `HTTP ${res.status}: ${text.slice(0, 240)}`, duration: performance.now() - t0, startedAt, endedAt: nowIso() };
+        return { index: ctx.steps.length, kind: "stream", description: step.description, prompt, ok: false, error: `HTTP ${res.status}: ${text.slice(0, 240)}`, duration: performance.now() - t0, startedAt, endedAt: nowIso() };
     }
     const events = parseSseStream(text);
     let lastEnd = null;
@@ -203,30 +246,29 @@ async function executeConv(step, ctx, opts) {
         if (ev.event === "message") {
             try {
                 const obj = JSON.parse(ev.data);
-                if (typeof obj.respuesta === "string") delta = obj.respuesta;
+                const respPath = responsePath.startsWith("/") ? responsePath.slice(1) : responsePath;
+                if (typeof obj === "object" && obj) {
+                    const v = resolvePath(obj, respPath);
+                    if (typeof v === "string") delta = v;
+                }
             } catch { /* ignore */ }
         } else if (ev.event === "end") {
             try { lastEnd = JSON.parse(ev.data); } catch { lastEnd = null; }
         }
     }
-    ctx._trace.messages += 1;
-    let iconversacion = ctx.iconversacion;
-    let titulo = null;
-    if (lastEnd) {
-        const ic = Number(lastEnd.iconversacion);
-        if (Number.isFinite(ic) && ic > 0) iconversacion = ic;
-        if (typeof lastEnd.titulo === "string") titulo = lastEnd.titulo;
+    const endOk = lastEnd ?? {};
+    if (endOk.iconversacion != null) ctx.vars.iconversacion = endOk.iconversacion;
+    if (endOk.titulo) ctx.vars.titulo = endOk.titulo;
+
+    if (step.extract) {
+        for (const [name, path] of Object.entries(step.extract)) {
+            const v = resolvePath(endOk, path);
+            if (v != null) ctx.vars[name] = v;
+        }
     }
-    if (iconversacion != null) {
-        ctx.iconversacion = iconversacion;
-        ctx._trace.iconversacion = iconversacion;
-    }
-    if (titulo) ctx.vars.titulo = titulo;
-    if (iconversacion != null) ctx.vars.iconversacion = iconversacion;
-    const titleChange = titulo ? inferTitleChange(ctx, titulo) : null;
     return {
         index: ctx.steps.length,
-        kind: "conv",
+        kind: "stream",
         description: step.description,
         prompt,
         ok: true,
@@ -234,9 +276,7 @@ async function executeConv(step, ctx, opts) {
         startedAt,
         endedAt: nowIso(),
         delta: delta || undefined,
-        titulo: titulo ?? undefined,
-        iconversacion: iconversacion ?? undefined,
-        titleChange: titleChange ?? undefined,
+        output: endOk,
     };
 }
 
@@ -245,9 +285,13 @@ async function executeHttp(step, ctx, opts) {
     const t0 = performance.now();
     const f = opts.fetchImpl ?? fetch;
     const method = (step.method ?? "GET").toUpperCase();
-    const path = interpolate(step.path ?? "/", ctx.vars);
-    const url = `${opts.apiBase}${path.startsWith("/") ? path : `/${path}`}`;
-    const body = step.body != null ? JSON.stringify(interpolate(step.body, ctx.vars)) : undefined;
+    const scope = interpolationScope(ctx);
+    const path = interpolate(step.path ?? "/", ctx.vars, scope);
+    const apiRef = step.apiRef ?? DEFAULT_API_REF;
+    const apiBase = apiBaseFor(opts, apiRef);
+    const url = `${apiBase}${path.startsWith("/") ? path : `/${path}`}`;
+    const body = step.body != null ? JSON.stringify(interpolate(step.body, ctx.vars, scope)) : undefined;
+    const token = jwtFor(opts, apiRef);
     let res;
     try {
         res = await f(url, {
@@ -255,7 +299,7 @@ async function executeHttp(step, ctx, opts) {
             headers: {
                 "Content-Type": "application/json",
                 Accept: "application/json",
-                ...(opts.jwt ? { Authorization: `Bearer ${opts.jwt}` } : {}),
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
             body: method === "GET" || method === "HEAD" ? undefined : body,
         });
@@ -269,7 +313,34 @@ async function executeHttp(step, ctx, opts) {
     }
     let ok = res.ok;
     let error;
-    if (step.expectStatus != null && res.status !== step.expectStatus) {
+    const expect = step.expect ?? {};
+    if (expect.status != null && res.status !== expect.status) {
+        ok = false;
+        error = `status esperado ${expect.status}, recibido ${res.status}`;
+    }
+    if (ok && expect.fieldEquals) {
+        for (const [path, expected] of Object.entries(expect.fieldEquals)) {
+            const actual = resolvePath(parsed, path);
+            if (actual !== expected) {
+                ok = false;
+                error = `${path}: esperado ${JSON.stringify(expected)}, recibido ${JSON.stringify(actual)}`;
+                break;
+            }
+        }
+    }
+    if (ok && expect.matches) {
+        for (const [path, pattern] of Object.entries(expect.matches)) {
+            const actual = resolvePath(parsed, path);
+            const rx = pattern instanceof RegExp ? pattern : new RegExp(pattern);
+            if (actual == null || !rx.test(String(actual))) {
+                ok = false;
+                error = `${path}: ${JSON.stringify(actual)} no coincide /${rx.source}/`;
+                break;
+            }
+        }
+    }
+    // backward-compat: expectStatus como campo plano
+    if (ok && step.expectStatus != null && res.status !== step.expectStatus) {
         ok = false;
         error = `status esperado ${step.expectStatus}, recibido ${res.status}`;
     }
@@ -279,6 +350,12 @@ async function executeHttp(step, ctx, opts) {
         else if (step.expectMatches) {
             const rx = step.expectMatches instanceof RegExp ? step.expectMatches : new RegExp(step.expectMatches);
             if (!rx.test(String(v))) { ok = false; error = `campo ${step.expectField}=${JSON.stringify(v)} no coincide /${rx.source}/`; }
+        }
+    }
+    if (ok && step.extract) {
+        for (const [name, path] of Object.entries(step.extract)) {
+            const v = resolvePath(parsed, path);
+            if (v != null) ctx.vars[name] = v;
         }
     }
     return {
@@ -307,10 +384,8 @@ function executeScript(step, ctx) {
         rows: ctx.rows,
         toolsData: ctx.toolsData,
         metrics: ctx.metrics,
-        get iconversacion() { return ctx.iconversacion; },
-        set iconversacion(v) { ctx.iconversacion = v; },
-        get lastTitulo() { return ctx.lastTitulo; },
-        set lastTitulo(v) { ctx.lastTitulo = v; },
+        helpers: ctx.helpers,
+        case: ctx.case,
     };
     let output;
     let verdict;
@@ -343,108 +418,227 @@ function executeScript(step, ctx) {
     };
 }
 
-/** Aplica el hook `onUpdate` después de cada step, alimentando `toolsData`/`metrics`. */
-async function runUpdateHook(test, stepResult, ctx) {
-    if (!test?.hooks?.onUpdate) return;
-    const r = await runHook("onUpdate", test.hooks.onUpdate, ctx, [stepResult, ctx], 3000);
+/** Aplica el hook `onStep` después de cada step, alimenta `toolsData`/`metrics`. */
+async function runStepHook(test, stepResult, ctx) {
+    if (!test?.hooks?.onStep && !test?.hooks?.onUpdate) return;
+    const code = test.hooks.onStep ?? test.hooks.onUpdate;
+    const r = await runHook("onStep", code, ctx, [stepResult, ctx], 3000);
     if (!r.ok) {
         ctx.trace.hookErrors = ctx.trace.hookErrors || [];
-        ctx.trace.hookErrors.push({ where: "onUpdate", stepIndex: stepResult.index, error: r.error });
+        ctx.trace.hookErrors.push({ where: "onStep", stepIndex: stepResult.index, error: r.error });
     }
     await recordStep(stepResult._step, stepResult, ctx);
 }
 
+/** Setup: resuelve apis declaradas, ejecuta fetch[] + init, configurable por test. */
+async function runSetup(test, ctx, opts) {
+    const normalizedReqs = normalizeRequires(test.requires);
+    // Pasa opts.apis / opts.jwt al ctx para referencia en scripts
+    ctx.apis = opts.apis || (opts.apiBase ? { default: opts.apiBase } : {});
+    ctx.jwt = opts.jwt;
+    ctx.apiBase = opts.apiBase;
+    ctx.requires = normalizedReqs;
+
+    // Llamar hooks/setup si los tests declaran requires.apis.<ref>.preflight? Por ahora no.
+    if (test.setup?.fetch?.length) {
+        const f = opts.fetchImpl ?? fetch;
+        const timeoutMs = Number(test.setup.timeoutMs ?? opts.setupTimeoutMs ?? 5000);
+        const scope = interpolationScope(ctx);
+        for (const item of test.setup.fetch) {
+            const apiRef = item.apiRef ?? DEFAULT_API_REF;
+            const base = apiBaseFor(opts, apiRef);
+            const url = `${base}${interpolate(item.path, ctx.vars, scope)}`;
+            const token = jwtFor(opts, apiRef);
+            try {
+                const ctl = new AbortController();
+                const t = setTimeout(() => ctl.abort(new Error(`setup.fetch ${item.var} timeout ${timeoutMs}ms`)), timeoutMs);
+                const res = await f(url, {
+                    method: item.method ?? "GET",
+                    headers: {
+                        Accept: "application/json",
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    signal: ctl.signal,
+                });
+                clearTimeout(t);
+                const text = await res.text();
+                let parsed = null;
+                if (text) { try { parsed = JSON.parse(text); } catch { /* ignore */ } }
+                ctx.vars[item.var] = parsed ?? text;
+            } catch (e) {
+                ctx.vars[item.var] = null;
+                ctx.trace.setupErrors = ctx.trace.setupErrors || [];
+                ctx.trace.setupErrors.push({ where: "setup.fetch", var: item.var, error: e?.message ?? String(e) });
+            }
+        }
+    }
+    if (test.setup?.init) {
+        await runHook("setup.init", test.setup.init, ctx, [], test.setup.timeoutMs ?? 3000);
+    }
+}
+
 /**
- * @param {{id?: string, title?: string, protocol?: string, metrics?: any[], tools?: any[], table?: any, hooks?: any, steps: RunnerStep[]}} test
- * @param {{apiBase: string, jwt?: string, origin?: string, fetchImpl?: typeof fetch, stepDelayMs?: number, onStep?: (s: any, ctx?: any) => void}} opts
- * @returns {Promise<Verdict>}
+ * Corre UN test (un caso o todos si no hay cases[]).
+ * @param {any} test
+ * @param {{apiBase?: string, apis?: Record<string,string>, jwt?: string|Record<string,string>, origin?: string, fetchImpl?: typeof fetch, stepDelayMs?: number, onStep?: Function, case?: any}} opts
  */
 export async function runTest(test, opts) {
     const startedAt = nowIso();
     const t0 = performance.now();
-    const ctx = newContext();
-    if (opts.jwt) ctx.vars.jwt = opts.jwt;
-
-    const conversacionConfig = await loadConversacionConfigFromApi(opts.apiBase, opts.fetchImpl);
-    ctx.vars.recalcularTituloCadaMensajesUsuario = conversacionConfig.recalcularTituloCadaMensajesUsuario;
-    ctx.trace.conversacionConfig = conversacionConfig;
-
-    // Metadata declarativa
-    ctx.test = {
-        id: test.id,
-        title: test.title,
-        protocol: test.protocol,
-        metrics: normalizeMetrics(test.metrics),
-        tools: normalizeTools(test.tools),
-        table: normalizeTable(test.table),
-        hooks: test.hooks || {},
-    };
-
-    // Hook onStart
-    if (test.hooks?.onStart) {
-        await runHook("onStart", test.hooks.onStart, ctx, [test], 3000);
-    }
-
-    let lastScript = null;
-    for (const step of (test.steps ?? [])) {
-        let r;
-        if (step.kind === "conv") r = await executeConv(step, ctx, opts);
-        else if (step.kind === "http" || step.kind === "raw") r = await executeHttp(step, ctx, opts);
-        else if (step.kind === "script") r = executeScript(step, ctx);
-        else r = { index: ctx.steps.length, kind: step.kind, ok: false, error: `kind desconocido: ${step.kind}`, duration: 0, startedAt: nowIso(), endedAt: nowIso() };
-        r._step = step;
-        ctx.steps.push(r);
-        if (step.kind === "script") lastScript = r;
-        await runUpdateHook(test, r, ctx);
-        if (opts.onStep) try { opts.onStep(r, ctx); } catch { /* ignore */ }
-    }
-
-    // Hook onEnd → puede devolver verdict y/o metrics adicionales
-    let verdictFromEnd = null;
-    let metricsFromEnd = null;
-    if (test.hooks?.onEnd) {
-        const r = await runHook("onEnd", test.hooks.onEnd, ctx, [ctx.steps, test], 5000);
-        if (r.ok) {
-            if (r.value && typeof r.value === "object") {
+    const declaredMetrics = normalizeMetrics(test.metrics);
+    const tools = normalizeTools(test.tools);
+    const table = normalizeTable(test.table);
+    const cases = normalizeCases(test.cases);
+    const setupFn = (c) => runSetup(test, c, opts);
+    const runOne = async (caseRef) => {
+        const ctx = newContext(test);
+        ctx.helpers = makeHelpers(ctx);
+        ctx.case = caseRef;
+        ctx.test = {
+            id: test.id,
+            title: test.title,
+            protocol: test.protocol,
+            metrics: declaredMetrics,
+            tools,
+            table,
+            hooks: test.hooks || {},
+        };
+        await setupFn(ctx);
+        if (test.hooks?.onStart) {
+            await runHook("onStart", test.hooks.onStart, ctx, [test], 3000);
+        }
+        if (caseRef && test.hooks?.onCaseStart) {
+            await runHook("onCaseStart", test.hooks.onCaseStart, ctx, [caseRef, ctx], 3000);
+        }
+        let lastScript = null;
+        for (const step of (test.steps ?? [])) {
+            if (step.skipIf) {
+                try {
+                    // eslint-disable-next-line no-new-func
+                    const fn = new Function("ctx", `with (ctx) { return (function(){ ${step.skipIf} })(); }`);
+                    if (fn(ctx)) continue;
+                } catch { /* ignore */ }
+            }
+            let r;
+            if (step.kind === "stream" || step.kind === "conv") r = await executeStream(step, ctx, opts);
+            else if (step.kind === "http" || step.kind === "raw") r = await executeHttp(step, ctx, opts);
+            else if (step.kind === "script") r = executeScript(step, ctx);
+            else r = { index: ctx.steps.length, kind: step.kind, ok: false, error: `kind desconocido: ${step.kind}`, duration: 0, startedAt: nowIso(), endedAt: nowIso() };
+            r._step = step;
+            ctx.steps.push(r);
+            if (step.kind === "script") lastScript = r;
+            await runStepHook(test, r, ctx);
+            if (opts.onStep) try { opts.onStep(r, ctx, caseRef); } catch { /* ignore */ }
+        }
+        let caseVerdict;
+        if (caseRef && test.hooks?.onCaseEnd) {
+            await runHook("onCaseEnd", test.hooks.onCaseEnd, ctx, [caseRef, ctx], 3000);
+        }
+        // onEnd → puede devolver {verdict, metrics}
+        let verdictFromEnd = null;
+        let metricsFromEnd = null;
+        if (test.hooks?.onEnd) {
+            const r = await runHook("onEnd", test.hooks.onEnd, ctx, [ctx.steps, test], 5000);
+            if (r.ok && r.value && typeof r.value === "object") {
                 if (r.value.verdict) verdictFromEnd = r.value.verdict;
                 if (r.value.metrics) metricsFromEnd = r.value.metrics;
+            } else if (!r.ok) {
+                ctx.trace.hookErrors = ctx.trace.hookErrors || [];
+                ctx.trace.hookErrors.push({ where: "onEnd", error: r.error });
             }
-        } else if (!r.ok) {
-            ctx.trace.hookErrors = ctx.trace.hookErrors || [];
-            ctx.trace.hookErrors.push({ where: "onEnd", error: r.error });
         }
-    }
+        if (!verdictFromEnd && lastScript && lastScript.verdict) {
+            verdictFromEnd = lastScript.verdict;
+        }
+        if (!verdictFromEnd && test.verdict?.pass) {
+            try {
+                // eslint-disable-next-line no-new-func
+                const fn = new Function("ctx", `with (ctx) { return (function(){ return (${test.verdict.pass}); })(); }`);
+                const pass = !!fn(ctx);
+                let summary = "";
+                if (test.verdict.summary) {
+                    // eslint-disable-next-line no-new-func
+                    const sfn = new Function("ctx", `with (ctx) { return (function(){ return (${test.verdict.summary}); })(); }`);
+                    try { summary = String(sfn(ctx)); } catch { summary = ""; }
+                }
+                verdictFromEnd = { pass, summary };
+            } catch (e) {
+                verdictFromEnd = { pass: false, reason: `verdict.pass eval error: ${e?.message ?? String(e)}` };
+            }
+        }
+        if (!verdictFromEnd) {
+            verdictFromEnd = {
+                pass: false,
+                reason: "El test no produjo un verdict (sin hook onEnd y sin step kind=script con verdict, ni verdict.pass).",
+            };
+        }
+        const verdict = { ...verdictFromEnd };
+        if (metricsFromEnd) verdict.metrics = { ...(verdict.metrics || {}), ...metricsFromEnd };
+        // Metrics declarativas computadas
+        const computedMetrics = [];
+        for (const m of declaredMetrics) {
+            const r = await computeMetric(m, ctx, verdict, ctx.steps);
+            if (r) computedMetrics.push(r);
+        }
+        if (computedMetrics.length) {
+            verdict.metrics = verdict.metrics || {};
+            for (const cm of computedMetrics) verdict.metrics[cm.key] = { value: cm.value, sub: cm.sub, accent: cm.accent, icon: cm.icon, label: cm.label };
+        }
+        if (caseRef) {
+            ctx.casesSummary = ctx.casesSummary || [];
+            ctx.casesSummary.push({ case: caseRef, verdict });
+        }
+        return { ctx, verdict };
+    };
 
-    // Pre-resolver verdict
-    let verdict;
-    if (verdictFromEnd) {
-        verdict = { ...verdictFromEnd };
-    } else if (lastScript && lastScript.verdict) {
-        verdict = { ...lastScript.verdict };
-    } else {
-        // Default mínimo: depende del test (sin lógica dura).
-        verdict = {
-            pass: false,
-            reason: "El test no produjo un verdict (sin hook onEnd y sin step kind=script con verdict).",
+    // Multi-case
+    if (cases.length > 0) {
+        const summary = [];
+        let allRows = [];
+        let aggregateVerdict = { pass: true, summary: "" };
+        for (const c of cases) {
+            const { ctx, verdict } = await runOne(c);
+            summary.push({ case: c, verdict });
+            allRows = allRows.concat(ctx.rows);
+        }
+        // Determina pass global
+        const failed = summary.filter((s) => !s.verdict?.pass);
+        aggregateVerdict = {
+            pass: failed.length === 0,
+            summary: failed.length === 0
+                ? `Todos los ${summary.length} casos pasaron`
+                : `${failed.length}/${summary.length} casos fallaron`,
+            perCase: summary.map((s) => ({ id: s.case.id, pass: !!s.verdict?.pass, summary: s.verdict?.summary ?? "" })),
+        };
+        // Mezclar metrics (sumarización opcional sobre per-case)
+        const mergedRows = allRows;
+        const endedAt = nowIso();
+        const duration = performance.now() - t0;
+        const lastCtx = (await runOne.__lastCtx?.()) || null;
+        return {
+            ...aggregateVerdict,
+            steps: [],
+            cases: summary,
+            startedAt,
+            endedAt,
+            duration,
+            ctx: {
+                rows: mergedRows,
+                toolsData: {},
+                metrics: {},
+                trace: {},
+                _trace: {},
+                vars: {},
+                declaracion: { metrics: declaredMetrics, tools, table, cases },
+                casesSummary: summary,
+            },
         };
     }
-    if (metricsFromEnd) verdict.metrics = { ...(verdict.metrics || {}), ...metricsFromEnd };
 
-    // Mezclar metrics declarativas computadas
-    const declaredMetrics = ctx.test.metrics;
-    const computedMetrics = [];
-    for (const m of declaredMetrics) {
-        const r = await computeMetric(m, ctx, verdict, ctx.steps);
-        if (r) computedMetrics.push(r);
-    }
-    if (computedMetrics.length) {
-        verdict.metrics = verdict.metrics || {};
-        for (const cm of computedMetrics) verdict.metrics[cm.key] = { value: cm.value, sub: cm.sub, accent: cm.accent, icon: cm.icon, label: cm.label };
-    }
-
+    // Single-case: un solo run
+    const { ctx, verdict } = await runOne(null);
     const endedAt = nowIso();
     const duration = performance.now() - t0;
-
     return {
         ...verdict,
         steps: ctx.steps,
@@ -458,11 +652,7 @@ export async function runTest(test, opts) {
             trace: ctx.trace,
             _trace: ctx._trace,
             vars: ctx.vars,
-            declaracion: {
-                metrics: declaredMetrics,
-                tools: ctx.test.tools,
-                table: ctx.test.table,
-            },
+            declaracion: { metrics: declaredMetrics, tools, table },
         },
     };
 }

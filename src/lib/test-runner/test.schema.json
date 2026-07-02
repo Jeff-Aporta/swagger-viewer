@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://insoft.co/schemas/test-runner/test.schema.json",
+  "title": "Test agnóstico (visor IS-Swagger)",
+  "description": "Forma canónica de un test declarativo para el runner del visor. Server-agnóstico: el test declara qué necesita, qué corre y qué muestra, sin acoplarse a endpoints ni modelos.",
+  "type": "object",
+  "required": ["id", "title", "description", "steps"],
+  "additionalProperties": true,
+  "$defs": {
+    "expr": {
+      "type": "string",
+      "description": "Expresión JavaScript evaluada con new Function('ctx', 'with(ctx){...}')"
+    },
+    "apiRef": {
+      "type": "string",
+      "description": "Nombre del apiRef declarado en requires.apis (default: 'default')"
+    },
+    "streamPath": {
+      "type": "string",
+      "description": "Path del endpoint POST SSE. Default runner: /conversacion"
+    },
+    "responsePath": {
+      "type": "string",
+      "description": "JSON path al texto de la respuesta SSE. Default runner: /respuesta"
+    },
+    "fetchSpec": {
+      "type": "object",
+      "required": ["method", "path", "var"],
+      "additionalProperties": false,
+      "properties": {
+        "apiRef": { "$ref": "#/$defs/apiRef" },
+        "method": { "const": "GET" },
+        "path": { "type": "string" },
+        "var": { "type": "string", "description": "ctx.vars[var] destino" },
+        "timeoutMs": { "type": "number", "minimum": 100 }
+      }
+    },
+    "recordSpec": {
+      "type": "object",
+      "required": ["as", "columns"],
+      "additionalProperties": false,
+      "properties": {
+        "as": { "type": "string" },
+        "columns": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/expr" }
+        }
+      }
+    },
+    "streamStep": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "stream" },
+        "description": { "type": "string" },
+        "prompt": { "type": "string" },
+        "apiRef": { "$ref": "#/$defs/apiRef" },
+        "streamPath": { "$ref": "#/$defs/streamPath" },
+        "responsePath": { "$ref": "#/$defs/responsePath" },
+        "systemPrompt": { "type": "string" },
+        "typewriterMsPerToken": { "type": "number", "minimum": 0 },
+        "expect": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "firstChunkMs": { "type": "number", "minimum": 0 },
+            "lastChunkMs": { "type": "number", "minimum": 0 }
+          }
+        },
+        "extract": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "description": "JSON path sobre el evento 'end' del SSE" }
+        },
+        "assert": { "$ref": "#/$defs/expr" },
+        "skipIf": { "$ref": "#/$defs/expr" },
+        "onlyIf": { "$ref": "#/$defs/expr" },
+        "record": { "$ref": "#/$defs/recordSpec" },
+        "timeoutMs": { "type": "number", "minimum": 100 }
+      }
+    },
+    "httpStep": {
+      "type": "object",
+      "required": ["kind", "method", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "http" },
+        "description": { "type": "string" },
+        "apiRef": { "$ref": "#/$defs/apiRef" },
+        "method": { "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"] },
+        "path": { "type": "string" },
+        "body": {},
+        "headers": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "expect": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": { "type": "number" },
+            "fieldEquals": { "type": "object" },
+            "matches": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        },
+        "extract": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "assert": { "$ref": "#/$defs/expr" },
+        "skipIf": { "$ref": "#/$defs/expr" },
+        "onlyIf": { "$ref": "#/$defs/expr" },
+        "record": { "$ref": "#/$defs/recordSpec" },
+        "retry": {
+          "type": "object",
+          "required": ["attempts", "delayMs"],
+          "additionalProperties": false,
+          "properties": {
+            "attempts": { "type": "number", "minimum": 1 },
+            "delayMs": { "type": "number", "minimum": 0 }
+          }
+        },
+        "timeoutMs": { "type": "number", "minimum": 100 }
+      }
+    },
+    "rawStep": {
+      "type": "object",
+      "required": ["kind", "method", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "raw" },
+        "description": { "type": "string" },
+        "apiRef": { "$ref": "#/$defs/apiRef" },
+        "method": { "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"] },
+        "path": { "type": "string" },
+        "body": {},
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+        "extract": { "type": "object", "additionalProperties": { "type": "string" } },
+        "assert": { "$ref": "#/$defs/expr" },
+        "skipIf": { "$ref": "#/$defs/expr" },
+        "onlyIf": { "$ref": "#/$defs/expr" },
+        "record": { "$ref": "#/$defs/recordSpec" },
+        "timeoutMs": { "type": "number", "minimum": 100 }
+      }
+    },
+    "scriptStep": {
+      "type": "object",
+      "required": ["kind", "run"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "script" },
+        "description": { "type": "string" },
+        "run": { "$ref": "#/$defs/expr" },
+        "assert": { "$ref": "#/$defs/expr" },
+        "record": { "$ref": "#/$defs/recordSpec" },
+        "timeoutMs": { "type": "number", "minimum": 100 }
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+        "params": { "type": "object" },
+        "skipIf": { "$ref": "#/$defs/expr" },
+        "onlyIf": { "$ref": "#/$defs/expr" }
+      }
+    },
+    "metricSpec": {
+      "type": "object",
+      "required": ["key", "label", "compute"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "label": { "type": "string" },
+        "icon": { "type": "string" },
+        "accent": { "type": "string" },
+        "compute": { "$ref": "#/$defs/expr" },
+        "showWhen": { "$ref": "#/$defs/expr" },
+        "format": { "enum": ["number", "percent", "duration", "count", "ratio"] },
+        "unit": { "type": "string" },
+        "order": { "type": "number" }
+      }
+    },
+    "toolSpec": {
+      "type": "object",
+      "required": ["kind", "id", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["timeline", "histogram", "sparkline"] },
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "source": { "type": "string" },
+        "groupBy": { "type": "string" },
+        "bin": { "type": "number" },
+        "order": { "type": "number" }
+      }
+    },
+    "tableSpec": {
+      "type": "object",
+      "required": ["columns"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "source": { "type": "string" },
+        "emptyMessage": { "type": "string" },
+        "groupBy": { "type": "string" },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["key", "label", "get"],
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string" },
+              "label": { "type": "string" },
+              "get": { "$ref": "#/$defs/expr" },
+              "width": { "type": "string" },
+              "align": { "enum": ["left", "right", "center"] }
+            }
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "subgroup": { "type": "string" },
+    "docs": { "type": "string" },
+    "docsPath": { "type": "string" },
+    "protocol": { "type": "string" },
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "apis": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "base": { "type": "string" },
+              "public": { "type": "array", "items": { "type": "string" } },
+              "auth": { "type": "array", "items": { "type": "string" } },
+              "jwtRef": { "enum": ["login", "override"] }
+            }
+          }
+        },
+        "config": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "setup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "timeoutMs": { "type": "number", "minimum": 100 },
+        "fetch": { "type": "array", "items": { "$ref": "#/$defs/fetchSpec" } },
+        "init": { "$ref": "#/$defs/expr" }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/streamStep" },
+          { "$ref": "#/$defs/httpStep" },
+          { "$ref": "#/$defs/rawStep" },
+          { "$ref": "#/$defs/scriptStep" }
+        ]
+      }
+    },
+    "cases": { "type": "array", "items": { "$ref": "#/$defs/case" } },
+    "casesMode": { "enum": ["each", "matrix", "single"] },
+    "metrics": { "type": "array", "items": { "$ref": "#/$defs/metricSpec" } },
+    "tools": { "type": "array", "items": { "$ref": "#/$defs/toolSpec" } },
+    "table": { "$ref": "#/$defs/tableSpec" },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "onStart": { "$ref": "#/$defs/expr" },
+        "onStep": { "$ref": "#/$defs/expr" },
+        "onUpdate": { "$ref": "#/$defs/expr", "description": "Alias legacy de onStep" },
+        "onCaseStart": { "$ref": "#/$defs/expr" },
+        "onCaseEnd": { "$ref": "#/$defs/expr" },
+        "onEnd": { "$ref": "#/$defs/expr" },
+        "onRegister": { "$ref": "#/$defs/expr" },
+        "onEmit": { "$ref": "#/$defs/expr" }
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pass": { "$ref": "#/$defs/expr" },
+        "summary": { "$ref": "#/$defs/expr" }
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 /**
- * Sistema de hooks agnóstico para tests `insoft.client-testing`.
+ * Sistema de hooks agnóstico para tests `testing`.
  *
  * Cada test puede declarar `hooks: { onStart, onUpdate, onEnd, onRegister }`
  * como código JavaScript que el runner evalúa con `new Function` y un `ctx`
@@ -125,5 +125,51 @@ export function normalizeTable(tbl) {
         emptyMessage: String(tbl.emptyMessage ?? "Sin filas registradas").trim(),
         columns: cols,
         order: Number(tbl.order ?? 200),
+        source: typeof tbl.source === "string" ? tbl.source : "rows",
+        groupBy: typeof tbl.groupBy === "string" ? tbl.groupBy : null,
     };
+}
+
+/**
+ * Normaliza `requires` — descripción de APIs externas y sus permisos.
+ * Salida:
+ *   { apis: Record<name, { base?, public?: string[], auth?: string[], jwtRef?: string }> }
+ */
+export function normalizeRequires(req) {
+    if (!req || typeof req !== "object") return { apis: {}, config: [] };
+    const apis = {};
+    if (req.apis && typeof req.apis === "object") {
+        for (const [name, val] of Object.entries(req.apis)) {
+            if (!val || typeof val !== "object") continue;
+            apis[name] = {
+                base: typeof val.base === "string" ? val.base : undefined,
+                public: Array.isArray(val.public) ? val.public.map(String) : undefined,
+                auth: Array.isArray(val.auth) ? val.auth.map(String) : undefined,
+                jwtRef: typeof val.jwtRef === "string" ? val.jwtRef : undefined,
+            };
+        }
+    }
+    const config = Array.isArray(req.config) ? req.config.map(String) : [];
+    return { apis, config };
+}
+
+/**
+ * Normaliza `cases[]` — array de casos parametrizados.
+ * Cada case: { id, params, skipIf, onlyIf }. Devuelve [] si no hay.
+ */
+export function normalizeCases(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr
+        .map((c) => {
+            if (!c || typeof c !== "object") return null;
+            const id = String(c.id ?? "").trim();
+            if (!id) return null;
+            return {
+                id,
+                params: c.params && typeof c.params === "object" ? { ...c.params } : undefined,
+                skipIf: typeof c.skipIf === "string" ? c.skipIf : undefined,
+                onlyIf: typeof c.onlyIf === "string" ? c.onlyIf : undefined,
+            };
+        })
+        .filter(Boolean);
 }

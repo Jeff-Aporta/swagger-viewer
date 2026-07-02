@@ -69,8 +69,8 @@ export function extractTryItPutBodyFromGet(data, putOp) {
     if (fromRows) return fromRows;
   }
 
-  if (r.kind === "insoft.client-testing" && Array.isArray(r.tests)) {
-    return { kind: r.kind, version: r.version ?? 1, tests: r.tests };
+  if (r.kind === "testing" && Array.isArray(r.tests)) {
+    return { kind: r.kind, tests: r.tests };
   }
 
   const rest = {};

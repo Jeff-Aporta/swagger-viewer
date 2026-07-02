@@ -1,6 +1,6 @@
 /** Rutas del visor IS-Swagger inferidas desde la base `/api` del host. */
 
-export const OPENAPI_CONFIG_KIND = "insoft.openapi-config";
+export const OPENAPI_CONFIG_KIND = "config";
 
 export function normalizeApiBase(input) {
   let s = String(input ?? "").trim();
@@ -125,7 +125,7 @@ async function readJsonResponse(res, url) {
   }
 }
 
-/** GET público — insoft.openapi-config (fuente BD; par PUT). */
+/** GET público — config (fuente BD; par PUT). */
 export async function fetchRemoteOpenApiConfig(apiBase) {
   const urls = inferSwaggerUrls(apiBase);
   if (!urls.config) throw new Error("Base API inválida");
@@ -144,7 +144,7 @@ export async function fetchRemoteOpenApiConfig(apiBase) {
   return { doc, urls };
 }
 
-/** PUT insoft.openapi-config — requiere JWT (swagger_editors). */
+/** PUT config — requiere JWT (swagger_editors). */
 export async function putRemoteOpenApiConfig(apiBase, config, jwt) {
   const token = String(jwt || "").trim().replace(/^bearer\s+/i, "");
   if (!token) throw new Error("Inicie sesión para guardar la config IS en BD (PUT /swagger.json).");

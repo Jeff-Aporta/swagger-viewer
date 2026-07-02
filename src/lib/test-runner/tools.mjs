@@ -1,5 +1,5 @@
 /**
- * Registry de herramientas de visualización para tests `insoft.client-testing`.
+ * Registry de herramientas de visualización para tests `testing`.
  *
  * Cada tool es un módulo con:
  *   - id: string único ('timeline', 'histogram', ...)

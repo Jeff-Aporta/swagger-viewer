@@ -167,8 +167,8 @@ export function App() {
       setParseErr(e?.message || "JSON inválido.");
       return;
     }
-    if (doc?.kind !== "insoft.openapi-config") {
-      setParseErr("PUT requiere kind «insoft.openapi-config» (use Obtener config).");
+    if (doc?.kind !== "config") {
+      setParseErr("PUT requiere kind «config» (use Obtener config).");
       return;
     }
     const jwt = getStoredJwt()?.token;
