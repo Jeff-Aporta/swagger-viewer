@@ -126,7 +126,7 @@ export function TestingAccordion({ config, ns, onNeedLogin, authEnabled, session
     );
 }
 
-function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin, startTest, running, results }) {
+function TestingTestCard({ test, apiBase, ns, authEnabled, session, startTest, running, results }) {
     const c = useGlassColors();
     const id = test.id ?? "?";
     const isRunning = !!running[id];
@@ -247,16 +247,11 @@ function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin,
             {/* Acciones */}
             <Stack direction="row" spacing={1} sx={{ p: 2, borderBottom: `1px solid ${c.border}`, flexWrap: "wrap" }}>
                 {blockedByAuth ? (
-                    <Tooltip title="Inicie sesión para ejecutar este test" arrow>
+                    <Tooltip title="Requiere iniciar sesión" arrow>
                         <span>{runBtn}</span>
                     </Tooltip>
                 ) : (
                     runBtn
-                )}
-                {needsAuth && blockedByAuth && (
-                    <Button variant="outlined" onClick={() => onNeedLogin?.("Este test requiere JWT (POST /conversacion).")} size="small" disabled={isRunning}>
-                        Iniciar sesión
-                    </Button>
                 )}
                 <Button
                     variant="text"
@@ -267,12 +262,6 @@ function TestingTestCard({ test, apiBase, ns, authEnabled, session, onNeedLogin,
                     {expanded ? "Ocultar detalle" : "Mostrar detalle"}
                 </Button>
             </Stack>
-
-            {blockedByAuth && (
-                <Alert severity="info" sx={{ mx: 2, my: 1, py: 0 }}>
-                    Requiere sesión activa — use <strong>Iniciar sesión</strong> en la barra superior o el botón junto a Ejecutar.
-                </Alert>
-            )}
 
             <Collapse in={expanded}>
                 {/* Steps */}

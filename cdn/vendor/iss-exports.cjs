@@ -23,6 +23,7 @@ __export(build_exports_exports, {
   IS_DOCUMENT_VERSION: () => IS_DOCUMENT_VERSION,
   OPENAPI_CONFIG_KIND: () => OPENAPI_CONFIG_KIND,
   OPENAPI_CONFIG_VERSION: () => OPENAPI_CONFIG_VERSION,
+  OPENAPI_META_KIND: () => OPENAPI_META_KIND,
   buildIssExportsFromConfig: () => buildIssExportsFromConfig,
   normalizeOpenApiConfig: () => normalizeOpenApiConfig,
   openApiProtocolPaths: () => openApiProtocolPaths,
@@ -1054,8 +1055,8 @@ function stripIsaExtensionsForExport(openApi) {
 
 // server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "859035b";
-var SWAGGER_FRONT_SHARED_REF = "6177587";
+var SWAGGER_VIEWER_REF = "9e8d3d4";
+var SWAGGER_FRONT_SHARED_REF = "a13fc29";
 
 // server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
@@ -1070,7 +1071,12 @@ function resolveAuthAppId(app) {
 }
 
 // server/build-exports.ts
-var OPENAPI_CONFIG_KIND = "insoft.openapi-config";
+var OPENAPI_CONFIG_KIND = "config";
+var OPENAPI_META_KIND = "meta";
+var LEGACY_OPENAPI_CONFIG_KIND = "insoft.openapi-config";
+function isSwaggerConfigKind(kind) {
+  return kind === OPENAPI_CONFIG_KIND || kind === LEGACY_OPENAPI_CONFIG_KIND;
+}
 var OPENAPI_CONFIG_VERSION = 1;
 var IS_DOCUMENT_KIND = "insoft.swagger-viewer";
 var IS_DOCUMENT_VERSION = 1;
@@ -1184,7 +1190,7 @@ function buildIsDocument(viewer, spec) {
 function normalizeOpenApiConfig(raw) {
   if (!raw || typeof raw !== "object") throw new Error("iss-swagger: documento inv\xE1lido");
   const cfg = raw;
-  if (cfg.kind && cfg.kind !== OPENAPI_CONFIG_KIND) {
+  if (cfg.kind && !isSwaggerConfigKind(cfg.kind)) {
     throw new Error(`iss-swagger: kind esperado \xAB${OPENAPI_CONFIG_KIND}\xBB, recibido \xAB${cfg.kind}\xBB`);
   }
   if (!cfg.info?.title) throw new Error("iss-swagger: info.title es requerido");
@@ -1214,6 +1220,7 @@ function buildIssExportsFromConfig(raw, opts = {}) {
   IS_DOCUMENT_VERSION,
   OPENAPI_CONFIG_KIND,
   OPENAPI_CONFIG_VERSION,
+  OPENAPI_META_KIND,
   buildIssExportsFromConfig,
   normalizeOpenApiConfig,
   openApiProtocolPaths,

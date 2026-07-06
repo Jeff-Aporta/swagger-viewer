@@ -1,6 +1,8 @@
 /** Rutas del visor IS-Swagger inferidas desde la base `/api` del host. */
 
-export const OPENAPI_CONFIG_KIND = "config";
+import { isSwaggerConfigKind, OPENAPI_CONFIG_KIND } from "../openapi/swagger-kinds.js";
+
+export { OPENAPI_CONFIG_KIND };
 
 export function normalizeApiBase(input) {
   let s = String(input ?? "").trim();
@@ -138,8 +140,8 @@ export async function fetchRemoteOpenApiConfig(apiBase) {
   if (!res.ok) throw new Error(`GET ${urls.config} → ${res.status} ${res.statusText || ""}`.trim());
   const doc = await readJsonResponse(res, urls.config);
   if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new Error("Config vacía o con formato inesperado");
-  if (doc.kind && doc.kind !== OPENAPI_CONFIG_KIND) {
-    throw new Error(`Config con kind «${doc.kind}»; se espera «${OPENAPI_CONFIG_KIND}».`);
+  if (doc.kind && !isSwaggerConfigKind(doc.kind)) {
+    throw new Error(`Config con kind «${doc.kind}»; se espera «${OPENAPI_CONFIG_KIND}» (o legacy «insoft.openapi-config»).`);
   }
   return { doc, urls };
 }

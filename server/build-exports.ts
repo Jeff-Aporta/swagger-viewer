@@ -11,7 +11,18 @@ import { DEFAULT_AUTH_LOGIN_PATH, resolveOrchestratorBase, resolveAuthAppId } fr
 
 export type { IsOpenApiConfig } from "./build-spec.js";
 
-export const OPENAPI_CONFIG_KIND = "insoft.openapi-config";
+export const OPENAPI_CONFIG_KIND = "config";
+export const OPENAPI_META_KIND = "meta";
+const LEGACY_OPENAPI_CONFIG_KIND = "insoft.openapi-config";
+const LEGACY_OPENAPI_META_KIND = "insoft.openapi-meta";
+
+function isSwaggerConfigKind(kind: unknown): boolean {
+    return kind === OPENAPI_CONFIG_KIND || kind === LEGACY_OPENAPI_CONFIG_KIND;
+}
+
+function isSwaggerMetaKind(kind: unknown): boolean {
+    return kind === OPENAPI_META_KIND || kind === LEGACY_OPENAPI_META_KIND;
+}
 export const OPENAPI_CONFIG_VERSION = 1;
 export const IS_DOCUMENT_KIND = "insoft.swagger-viewer";
 export const IS_DOCUMENT_VERSION = 1;
@@ -180,11 +191,11 @@ function buildIsDocument(viewer: Record<string, unknown>, spec: Record<string, u
     return { kind: IS_DOCUMENT_KIND, version: IS_DOCUMENT_VERSION, viewer: viewerConfigFromBoot(viewer), spec };
 }
 
-/** Normaliza y valida documento insoft.openapi-config (opcional). */
+/** Normaliza y valida documento openapi config (kind «config» o legacy). */
 export function normalizeOpenApiConfig(raw: unknown): IsOpenApiConfig {
     if (!raw || typeof raw !== "object") throw new Error("iss-swagger: documento inválido");
     const cfg = raw as IsOpenApiConfig;
-    if (cfg.kind && cfg.kind !== OPENAPI_CONFIG_KIND) {
+    if (cfg.kind && !isSwaggerConfigKind(cfg.kind)) {
         throw new Error(`iss-swagger: kind esperado «${OPENAPI_CONFIG_KIND}», recibido «${cfg.kind}»`);
     }
     if (!cfg.info?.title) throw new Error("iss-swagger: info.title es requerido");
