@@ -1,5 +1,5 @@
 /** Pin jsDelivr front-shared + rutas del paquete swagger-viewer. */
-export const PIN = "6177587";
+export const PIN = "a13fc29";
 
 /** Demo embebido vía ISS (/api/swagger/demo). */
 function isIssSwaggerDemoHost() {
@@ -48,7 +48,7 @@ export const bootHelperUrl = `${joinCdn("boot-helper.mjs")}?v=${PIN}`;
 
 /* @isa-swagger-boot:start */
 /** Jeff-Aporta/swagger-viewer — pin CDN git (sync-component-refs.mjs) */
-export const SWAGGER_VIEWER_REF = "5890223";
+export const SWAGGER_VIEWER_REF = "859035b";
 
 export function swaggerViewerBase() {
   const base = document.querySelector("base")?.href || location.href;
@@ -93,7 +93,14 @@ export async function ensureSwaggerViewer(base = swaggerViewerBase()) {
 export function demoAppUrl() {
   const base = document.querySelector("base")?.href || location.href;
   if (globalThis.__ISA_DIST__) {
-    return new URL("_dist/app.min.js", base).href;
+    // Cachebust forzado por nombre de archivo hasheado (escrito por build-meta.json).
+    // El browser SIEMPRE pide una URL nueva en cada build.
+    const fallback = new URL("_dist/app.min.js", base).href;
+    const ref = String(SWAGGER_VIEWER_REF || "").trim();
+    const isHex = /^[0-9a-f]{6,}$/i.test(ref);
+    // Si el SWAGGER_VIEWER_REF es texto (no hex), lo usamos como cachebust.
+    if (!isHex && ref) return `${fallback}?v=${encodeURIComponent(ref)}`;
+    return fallback;
   }
   return new URL("js/app/main.jsx", base).href;
 }

@@ -18,6 +18,9 @@ import {
     ISS_REQUEST_BODY_EXAMPLES_EXTENSION,
     ISS_SUBGROUP_EXTENSION,
     ISS_SUBGROUPS_EXTENSION,
+    ISS_TRYIT_ATTACHMENTS_EXTENSION,
+    ISS_CATALOG_DOC_KEYS_EXTENSION,
+    ISS_ENUM_FROM_EXTENSION,
     bearerComponents,
     bearerSecurity,
     issRspAuth,
@@ -43,7 +46,8 @@ function resolveFPreset(catalog: IsOpenApiConfig["catalog"], key?: string): Reco
     if (!key) return undefined;
     const p = catalog.fPresets?.[key];
     if (!p || typeof p !== "object" || Array.isArray(p)) {
-        throw new Error(`openapi-config: fPreset «${key}» no definido`);
+        if (typeof console !== "undefined") console.warn(`[iss-swagger] fPreset «${key}» no definido — usando vacío.`);
+        return { fields: [] };
     }
     return { ...(p as Record<string, unknown>) };
 }
@@ -51,7 +55,8 @@ function resolveFPreset(catalog: IsOpenApiConfig["catalog"], key?: string): Reco
 function resolveInputRecommendation(catalog: IsOpenApiConfig["catalog"], key: string): Record<string, unknown> {
     const rec = catalog.inputRecommendations?.[key];
     if (!rec || typeof rec !== "object" || Array.isArray(rec)) {
-        throw new Error(`openapi-config: inputRecommendations «${key}» no definido`);
+        if (typeof console !== "undefined") console.warn(`[iss-swagger] inputRecommendations «${key}» no definido — usando vacío.`);
+        return {};
     }
     const out: Record<string, unknown> = { ...(rec as Record<string, unknown>) };
     if (typeof out.fPreset === "string") {
@@ -135,6 +140,8 @@ export type IsOpenApiOperationConfig = {
     security?: "bearer" | "none" | string;
     /** Modal Try it out (solo con security bearer + POST/PUT/PATCH/DELETE). String = catalog.tryitConfirm.templates[id]. */
     tryitConfirm?: string | Record<string, unknown> | false;
+    /** Adjuntos Try it out (imagen/audio/archivo). String = catalog.tryitAttachments.templates[id]. */
+    tryitAttachments?: string | Record<string, unknown> | false;
     doc?: string;
     parameters?: IsOpenApiParamConfig[];
     requestBody?: IsOpenApiRequestBodyConfig;
@@ -157,6 +164,7 @@ export type IsOpenApiConfig = {
         inputRecommendations?: Record<string, unknown>;
         requestBodies?: Record<string, Record<string, unknown>>;
         requestBodyExamples?: Record<string, unknown[]>;
+        tryitAttachments?: { templates?: Record<string, Record<string, unknown>>; byPath?: Record<string, Record<string, unknown>> };
         docs?: Record<string, string>;
     };
     /** Config del visor IS-Swagger (auth, brand, exports). URLs se resuelven en build-exports. */
@@ -177,14 +185,20 @@ function sg(id: string) {
 
 function resolvePayload(catalog: IsOpenApiConfig["catalog"], key: string): unknown {
     const p = catalog.payloads?.[key];
-    if (p === undefined) throw new Error(`openapi-config: payload «${key}» no definido`);
+    if (p === undefined) {
+        if (typeof console !== "undefined") console.warn(`[iss-swagger] payload «${key}» no definido en catalog.payloads — usando fallback {}.`);
+        return { ok: true, data: {}, note: `payload «${key}» no definido` };
+    }
     return exampleOk(p);
 }
 
 function resolveSchema(catalog: IsOpenApiConfig["catalog"], key?: string): Record<string, unknown> | undefined {
     if (!key) return undefined;
     const s = catalog.schemas?.[key];
-    if (!s) throw new Error(`openapi-config: schema «${key}» no definido`);
+    if (!s) {
+        if (typeof console !== "undefined") console.warn(`[iss-swagger] schema «${key}» no definido en catalog.schemas — usando schema genérico.`);
+        return { type: "object" };
+    }
     return s;
 }
 
@@ -197,33 +211,54 @@ function resolveExample(catalog: IsOpenApiConfig["catalog"], item: { example?: u
 function buildResponses(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiResponseConfig): Record<string, unknown> {
     switch (def.template as OpenApiResponseTemplate) {
         case "health":
-            if (!def.payload) throw new Error("openapi-config: health requiere payload");
+            if (!def.payload) {
+                if (typeof console !== "undefined") console.warn("[iss-swagger] health requiere payload — usando fallback.");
+                return issRspHealth({ ok: true, data: {}, note: "payload faltante" } as unknown);
+            }
             return issRspHealth(resolvePayload(catalog, def.payload));
         case "auth":
-            if (!def.description || !def.payload) throw new Error("openapi-config: auth requiere description y payload");
+            if (!def.description || !def.payload) {
+                if (typeof console !== "undefined") console.warn("[iss-swagger] auth requiere description y payload — usando fallback.");
+                return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+            }
             return issRspAuth(def.description, resolvePayload(catalog, def.payload), resolveSchema(catalog, def.schema));
         case "authForbidden":
-            if (!def.description || !def.payload) throw new Error("openapi-config: authForbidden requiere description y payload");
+            if (!def.description || !def.payload) {
+                if (typeof console !== "undefined") console.warn("[iss-swagger] authForbidden requiere description y payload — usando fallback.");
+                return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+            }
             return issRspAuthForbidden(
                 def.description,
                 resolvePayload(catalog, def.payload),
                 resolveSchema(catalog, def.schema),
             );
         case "authNotFound":
-            if (!def.description || !def.payload) throw new Error("openapi-config: authNotFound requiere description y payload");
+            if (!def.description || !def.payload) {
+                if (typeof console !== "undefined") console.warn("[iss-swagger] authNotFound requiere description y payload — usando fallback.");
+                return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+            }
             return issRspAuthNotFound(
                 def.description,
                 resolvePayload(catalog, def.payload),
                 resolveSchema(catalog, def.schema),
             );
         case "sse":
-            if (!def.description || !def.payload) throw new Error("openapi-config: sse requiere description y payload");
+            if (!def.description || !def.payload) {
+                if (typeof console !== "undefined") console.warn("[iss-swagger] sse requiere description y payload — usando fallback.");
+                return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+            }
             return issRspSseDoc(def.description, resolvePayload(catalog, def.payload));
         case "ok":
-            if (!def.description || !def.payload) throw new Error("openapi-config: ok requiere description y payload");
+            if (!def.description || !def.payload) {
+                if (typeof console !== "undefined") console.warn("[iss-swagger] ok requiere description y payload — usando fallback.");
+                return { "200": issRspOk(def.description || "OK", def.payload ? resolvePayload(catalog, def.payload) : {}) };
+            }
             return { "200": issRspOk(def.description, resolvePayload(catalog, def.payload)) };
         case "deleteEnvelope": {
-            if (!def.description || !def.payload) throw new Error("openapi-config: deleteEnvelope requiere description y payload");
+            if (!def.description || !def.payload) {
+                if (typeof console !== "undefined") console.warn("[iss-swagger] deleteEnvelope requiere description y payload — usando fallback.");
+                return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+            }
             const rowSchema = resolveSchema(catalog, def.schema ?? "conversacionRow");
             return {
                 "200": jsonResponse(
@@ -242,7 +277,10 @@ function buildResponses(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiRespo
             };
         }
         case "raw": {
-            if (!def.items) throw new Error("openapi-config: raw requiere items");
+            if (!def.items) {
+                if (typeof console !== "undefined") console.warn("[iss-swagger] raw requiere items — usando 200 vacío.");
+                return { "200": jsonResponse("OK", { type: "object" }, {}) };
+            }
             const out: Record<string, unknown> = {};
             for (const [code, item] of Object.entries(def.items)) {
                 out[code] = jsonResponse(item.description, item.schema ?? { type: "object" }, resolveExample(catalog, item));
@@ -250,7 +288,8 @@ function buildResponses(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiRespo
             return out;
         }
         default:
-            throw new Error(`openapi-config: template de respuesta desconocido «${def.template}»`);
+            if (typeof console !== "undefined") console.warn(`[iss-swagger] template de respuesta desconocido «${def.template}» — usando 200 vacío.`);
+            return { "200": jsonResponse("OK", { type: "object" }, {}) };
     }
 }
 
@@ -283,7 +322,32 @@ function resolveParam(catalog: IsOpenApiConfig["catalog"], p: IsOpenApiParamConf
             raw.schema = { type: "string", example: encodeIssFilterB64(rec.listFilter as Record<string, unknown>) };
         }
     }
+    const enumFrom = raw.enumFrom;
+    if (typeof enumFrom === "string") {
+        delete raw.enumFrom;
+        let keys: string[] = [];
+        if (enumFrom === "catalog.docs") keys = Object.keys(catalog.docs || {}).sort();
+        else {
+            if (typeof console !== "undefined") console.warn(`[iss-swagger] enumFrom «${enumFrom}» no soportado — usando [].`);
+        }
+        const schema = { ...(typeof raw.schema === "object" && raw.schema ? (raw.schema as Record<string, unknown>) : {}), type: "string", enum: keys };
+        if (schema.example == null && keys.length) schema.example = keys.includes("health") ? "health" : keys[0];
+        raw.schema = schema;
+        raw[ISS_ENUM_FROM_EXTENSION] = enumFrom;
+    }
     return raw;
+}
+
+function resolveTryItAttachmentsDef(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiOperationConfig): Record<string, unknown> | false | undefined {
+    const raw = def.tryitAttachments;
+    if (raw === false) return false;
+    if (typeof raw === "string") {
+        const t = catalog.tryitAttachments?.templates?.[raw];
+        if (t) return t;
+        return undefined;
+    }
+    if (raw && typeof raw === "object") return raw;
+    return undefined;
 }
 
 function buildOperation(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiOperationConfig): Record<string, unknown> {
@@ -296,6 +360,9 @@ function buildOperation(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiOpera
     if (def.subgroup) Object.assign(op, sg(def.subgroup));
     if (def.security === "bearer") op.security = bearerSecurity;
     if (def.tryitConfirm !== undefined) op.tryitConfirm = def.tryitConfirm;
+    const attachDef = resolveTryItAttachmentsDef(catalog, def);
+    if (attachDef === false) op[ISS_TRYIT_ATTACHMENTS_EXTENSION] = false;
+    else if (attachDef) op[ISS_TRYIT_ATTACHMENTS_EXTENSION] = attachDef;
     if (def.doc) {
         const md = catalog.docs?.[def.doc];
         if (md) op[ISS_DOC_MD_EXTENSION] = md;
@@ -350,5 +417,6 @@ export function buildOpenApiFromConfig(config: IsOpenApiConfig, serverUrl?: stri
         tags,
         components: { ...bearerComponents() },
         paths,
+        [ISS_CATALOG_DOC_KEYS_EXTENSION]: Object.keys(catalog.docs || {}).sort(),
     };
 }

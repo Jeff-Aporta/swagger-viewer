@@ -18,9 +18,12 @@ import {
 import { getStoredJwt, clearJwt } from "./lib/auth/auth.js";
 import { resolveAuthConfig } from "./lib/auth/orchestrator-base.js";
 import { applyBrandToDocument, resolveViewerBrand } from "./lib/brand/viewer-brand.js";
-import { buildNavRows, filterGroupsByNavTab, activeSectionTabId } from "./lib/nav/viewer-nav.js";
+import { buildNavRows, filterGroupsByNavTab, activeSectionTabId, resolveVisibleNavTabs, isTestingNavSectionActive } from "./lib/nav/viewer-nav.js";
+import { initSwaggerExpandUrlState } from "./lib/nav/swagger-url-state.js";
+import { resolveInitialNavTab } from "./lib/nav/viewer-nav-url.js";
+import { TestingAccordion } from "./components/testing/TestingAccordion.jsx";
 
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useCallback } = React;
 const { Box, Typography, Alert } = MaterialUI;
 
 export function SwaggerViewer({ config: configProp, spec: specProp, onReload, reloadBusy = false, fixedServer = false }) {
@@ -36,7 +39,30 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   const [spec, setSpec] = useState(specProp || null);
   const [err, setErr] = useState("");
   const [session, setSession] = useState(() => (authEnabled ? getStoredJwt() : null));
-  const [navTab, setNavTab] = useState("");
+  const [navTab, setNavTabState] = useState(() =>
+    resolveInitialNavTab(() => initSwaggerExpandUrlState()?.getNavTab?.()),
+  );
+  const setNavTab = useCallback((v) => {
+    const tab = String(v ?? "").trim();
+    setNavTabState(tab);
+    initSwaggerExpandUrlState()?.mergePartial({ tab });
+  }, []);
+
+  useEffect(() => {
+    const api = initSwaggerExpandUrlState();
+    if (!api?.subscribe) return undefined;
+    return api.subscribe((snap) => {
+      const tab = String(snap?.tab ?? "").trim();
+      setNavTabState((prev) => (prev === tab ? prev : tab));
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!config || !navTab) return;
+    const allowed = resolveVisibleNavTabs(config, session).some((t) => t.id === navTab);
+    if (!allowed) return;
+    initSwaggerExpandUrlState()?.mergePartial({ tab: navTab });
+  }, [config, session, navTab]);
 
   useEffect(() => {
     if (specProp) {
@@ -77,6 +103,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
     if (!active) return groups;
     return filterGroupsByNavTab(groups, config, active);
   }, [groups, config, navRows]);
+  const showTestingRunner = useMemo(() => isTestingNavSectionActive(navRows, config), [navRows, config]);
   const docIndex = useMemo(() => (spec ? buildDocIndex(spec) : {}), [spec]);
   const lookupIndex = useMemo(() => (spec ? buildLookupIndex(spec) : {}), [spec]);
   const brand = useMemo(() => resolveViewerBrand(config, spec), [config, spec]);
@@ -137,7 +164,7 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
   const shellToolbarEnd = (
     <Box className="isa-sw-toolbar-tools" sx={{ display: "inline-flex", alignItems: "center", gap: { xs: 1.75, sm: 2.25 }, flexShrink: 0, minWidth: 0 }}>
       <SwaggerFrontLinks frontLinks={config?.frontLinks || []} brandIcon={brandIcon} ns={ns} dense />
-      {spec ? <ServerUrlField ns={ns} compact dense fixed={fixedServer} /> : null}
+      {spec ? <ServerUrlField ns={ns} compact dense fixed={fixedServer} value={configProp?.apiBase} /> : null}
       <SwaggerReloadBtn onReload={onReload} busy={reloadBusy} ns={ns} />
       <SwaggerOpenGhPagesBtn config={config} ns={ns} />
       {authToolbarEnd}
@@ -170,6 +197,15 @@ export function SwaggerViewer({ config: configProp, spec: specProp, onReload, re
               ns={ns}
             />
           ))}
+          {showTestingRunner ? (
+            <TestingAccordion
+              config={config}
+              ns={ns}
+              onNeedLogin={onNeedLogin}
+              authEnabled={authEnabled}
+              session={session}
+            />
+          ) : null}
         </>
       ) : !err ? (
         <Typography color="text.secondary">Cargando especificación OpenAPI…</Typography>

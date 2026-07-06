@@ -2,13 +2,15 @@ import { MethodChip, TryItOutPanel } from "../try-it-out/TryItOutPanel.jsx";
 import { ResponsesSection } from "../try-it-out/ResponsesSection.jsx";
 import { DocPanel } from "../doc/DocPanel.jsx";
 import { ApiPathLabel } from "./ApiPathLabel.jsx";
+import { ClientTestRunnerPanel } from "../tester/ClientTestRunnerPanel.jsx";
 import { operationRequiresBearer } from "../../lib/openapi/openapi.js";
 import { SwIcon, tabLabel } from "../../lib/ui/sw-icon.jsx";
 import { opExpandIndex } from "../../lib/nav/expand-stack.js";
+import { OP_TAB_DEFAULT, OP_TAB_IDS, readOpTabFromUrl, subscribeOpTabUrl, writeOpTabToUrl } from "../../lib/nav/operation-tab-url.js";
 import { useExpandStack } from "../../context/ExpandStackContext.jsx";
 import { useGlassColors, glassAccordionSx, methodAccent } from "../../lib/ui/glass.jsx";
 
-const { useState } = React;
+const { useState, useEffect } = React;
 const {
   Accordion,
   AccordionSummary,
@@ -30,23 +32,43 @@ export function OperationCard({
   spec,
   docMd,
   lookupIndex,
+  catalogDocKeys,
   authEnabled,
   onNeedLogin,
   ns = "ISA",
 }) {
-  const [tab, setTab] = useState("try");
   const { isOpen, toggle } = useExpandStack();
   const expandId = opExpandIndex(tagIndex, opIndex);
   const expanded = isOpen(expandId);
+  const [tab, setTab] = useState(() => readOpTabFromUrl(expandId) || OP_TAB_DEFAULT);
   const glassC = useGlassColors();
   const accent = methodAccent(op.method);
   const needsAuth = authEnabled && operationRequiresBearer(op, spec);
 
-  const tabs = [
-    { id: "try", label: "Probar", icon: "mdi:play-circle-outline" },
-    { id: "overview", label: "Ejemplos", icon: "mdi:file-document-outline" },
-    { id: "doc", label: "Doc", icon: "mdi:book-open-page-variant" },
-  ];
+  useEffect(() => {
+    return subscribeOpTabUrl(() => {
+      const next = readOpTabFromUrl(expandId);
+      setTab(OP_TAB_IDS.includes(next) ? next : OP_TAB_DEFAULT);
+    });
+  }, [expandId]);
+
+  function onTabChange(_e, v) {
+    const safe = OP_TAB_IDS.includes(v) ? v : OP_TAB_DEFAULT;
+    setTab(safe);
+    writeOpTabToUrl(expandId, safe);
+  }
+
+  const isClientTest = !!(op?._clientTest || op?.["x-iss-client-test"] || op?._clientProtocol || op?.["x-iss-client-protocol"]);
+  const tabs = isClientTest
+    ? [
+        { id: "test", label: "Tester", icon: "mdi:test-tube" },
+        { id: "doc", label: "Doc", icon: "mdi:book-open-page-variant" },
+      ]
+    : [
+        { id: "try", label: "Probar", icon: "mdi:play-circle-outline" },
+        { id: "overview", label: "Ejemplos", icon: "mdi:file-document-outline" },
+        { id: "doc", label: "Doc", icon: "mdi:book-open-page-variant" },
+      ];
 
   return (
     <Accordion
@@ -58,11 +80,13 @@ export function OperationCard({
       className={`isa-sw-operation isa-sw-operation--${op.method}`}
       data-sw-expand={expandId}
       disableGutters
+      elevation={0}
       slotProps={{ transition: { unmountOnExit: true } }}
       sx={{
         ...glassAccordionSx(glassC, { accent }),
         mb: 1,
         overflow: "hidden",
+        "--Paper-shadow": "none",
         "&:before": { display: "none" },
       }}
     >
@@ -88,21 +112,21 @@ export function OperationCard({
             sx={{ flex: 1, minWidth: 0, opacity: 0.5 }}
             noWrap
           >
-            {op.summary || op.description || ""}
+            {[op.summary, op.description].filter(Boolean).join(" · ") || ""}
           </Typography>
         </Box>
       </AccordionSummary>
       <AccordionDetails>
         {expanded ? (
           <>
-            {op.description ? (
+            {op.description && !op.summary ? (
               <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, opacity: 0.5, display: "block" }}>
                 {op.description}
               </Typography>
             ) : null}
             <Tabs
               value={tab}
-              onChange={(_e, v) => setTab(v)}
+              onChange={onTabChange}
               variant="scrollable"
               scrollButtons="auto"
               sx={{ mb: 1.5, minHeight: 36, "& .MuiTab-root": { minHeight: 36, textTransform: "none" } }}
@@ -112,18 +136,30 @@ export function OperationCard({
               ))}
             </Tabs>
 
-            {tab === "try" ? (
+            {tab === "try" && !isClientTest ? (
               <TryItOutPanel
                 op={op}
                 spec={spec}
                 lookupIndex={lookupIndex}
+                catalogDocKeys={catalogDocKeys}
+                expandId={expandId}
                 authEnabled={authEnabled}
                 onNeedLogin={onNeedLogin}
                 ns={ns}
               />
             ) : null}
 
-            {tab === "overview" ? (
+            {tab === "test" && isClientTest ? (
+              <ClientTestRunnerPanel
+                test={op?._clientTest}
+                docMd={docMd}
+                authEnabled={authEnabled}
+                onNeedLogin={onNeedLogin}
+                ns={ns}
+              />
+            ) : null}
+
+            {tab === "overview" && !isClientTest ? (
               <Box>
                 <Typography variant="overline" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.5 }}>
                   <SwIcon icon="mdi:reply-outline" size={14} ns={ns} />

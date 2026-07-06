@@ -3,6 +3,16 @@
 import { normalizeApiBase } from "./swagger-api.js";
 import { ISS_LOCAL_API_BASE, ISS_WEB_API_BASE } from "./api-presets.js";
 
+function isRemoteApiBase(base) {
+  const b = normalizeApiBase(base);
+  if (!b) return false;
+  try {
+    return !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(new URL(b).hostname);
+  } catch {
+    return false;
+  }
+}
+
 export { ISS_LOCAL_API_BASE, ISS_WEB_API_BASE };
 
 export function isLocalViewerHost() {
@@ -27,7 +37,6 @@ export function resolveConnectBases({ connApiBase = "", apiParam = "", storedBas
   const stored = storedBase ? normalizeApiBase(storedBase) : "";
   const explicit = conn || param || stored;
   const web = normalizeApiBase(ISS_WEB_API_BASE);
-  const local = normalizeApiBase(ISS_LOCAL_API_BASE);
 
   const push = (list, base) => {
     const b = normalizeApiBase(base);
@@ -35,10 +44,15 @@ export function resolveConnectBases({ connApiBase = "", apiParam = "", storedBas
     return list;
   };
 
+  const local = normalizeApiBase(ISS_LOCAL_API_BASE);
+
   if (explicit && isLocalApiBase(explicit)) return push(push([], explicit), web);
-  if (explicit) return push([], explicit);
+  if (explicit) {
+    if (isLocalViewerHost() && isRemoteApiBase(explicit)) return push(push([], local), explicit);
+    return push([], explicit);
+  }
   if (isLocalViewerHost()) return push(push([], local), web);
-  return push([], web);
+  return [];
 }
 
 export async function connectWithFallback(fetchFn, bases) {

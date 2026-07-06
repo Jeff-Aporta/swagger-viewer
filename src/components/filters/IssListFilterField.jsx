@@ -10,6 +10,7 @@ import {
   sortColumnOptions,
   parseSortParts,
   formatSortValue,
+  isIssListFilterParam,
 } from "../../lib/filter/iss-list-filter.js";
 import { IssDistinctCompoundEqField, IssDistinctEqField } from "./IssDistinctEqField.jsx";
 import { IssFusedSelectField } from "./IssFusedSelectField.jsx";
@@ -382,6 +383,4 @@ export function IssListFilterField({
   );
 }
 
-export function isIssListFilterParam(p) {
-  return p?.in === "query" && p?.name === ISS_LIST_FILTER_QUERY_PARAM && !!p?.[ISS_LIST_FILTER_EXT];
-}
+export { isIssListFilterParam };

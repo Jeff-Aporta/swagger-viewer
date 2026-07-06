@@ -1,6 +1,8 @@
-/** Rutas OpenAPI inferidas desde la base `/api` del host. */
+/** Rutas del visor IS-Swagger inferidas desde la base `/api` del host. */
 
-export const OPENAPI_CONFIG_KIND = "insoft.openapi-config";
+import { isSwaggerConfigKind, OPENAPI_CONFIG_KIND } from "../openapi/swagger-kinds.js";
+
+export { OPENAPI_CONFIG_KIND };
 
 export function normalizeApiBase(input) {
   let s = String(input ?? "").trim();
@@ -31,7 +33,86 @@ export function inferSwaggerUrls(apiBase) {
     apiBase: root,
     get: `${root}/swagger.json`,
     put: `${root}/swagger.json`,
-    config: `${root}/swagger/config.json`,
+    config: `${root}/system/swagger/config.json`,
+  };
+}
+
+export const DEFAULT_PAYLOAD_PATHS = {
+  // Config unificada (meta + paths + config) — endpoint atómico del ISS.
+  config: "/system/swagger/config.json",
+  meta: "/system/swagger/meta.json",
+  paths: "/system/swagger/paths.json",
+  docsConfig: "/system/swagger/docs-config.json",
+  testing: "/system/testing.json",
+};
+
+function payloadPath(base, segment) {
+  const s = String(segment ?? "").trim();
+  if (!s) return "";
+  return `${base}${s.startsWith("/") ? s : `/${s}`}`;
+}
+
+/** Rutas GET usadas al conectar el visor (config + meta + paths + testing). */
+export function inferSwaggerPayloadUrls(apiBase, connPaths) {
+  const root = normalizeApiBase(apiBase).replace(/\/$/, "");
+  if (!root) {
+    return { apiBase: "", config: "", meta: "", paths: "", docsConfig: "", testing: "" };
+  }
+  const p = { ...DEFAULT_PAYLOAD_PATHS, ...(connPaths && typeof connPaths === "object" ? connPaths : {}) };
+  return {
+    apiBase: root,
+    config: payloadPath(root, p.config),
+    meta: payloadPath(root, p.meta),
+    paths: payloadPath(root, p.paths),
+    docsConfig: payloadPath(root, p.docsConfig),
+    testing: payloadPath(root, p.testing),
+  };
+}
+
+async function fetchJsonOptional(url) {
+  if (!url) return { ok: false, error: "URL vacía", data: null, status: 0 };
+  let res;
+  try {
+    res = await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } });
+  } catch (e) {
+    return { ok: false, error: `No se pudo conectar con ${url}: ${e?.message || e}`, data: null, status: 0 };
+  }
+  if (!res.ok) {
+    return { ok: false, error: `GET ${url} → ${res.status} ${res.statusText || ""}`.trim(), data: null, status: res.status };
+  }
+  try {
+    const data = await readJsonResponse(res, url);
+    return { ok: true, data, error: null, status: res.status };
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e), data: null, status: res.status };
+  }
+}
+
+/** Descarga paralela de todos los JSON de carga IS-Swagger desde la API conectada. */
+export async function fetchRemoteSwaggerPayloads(apiBase, connPaths) {
+  const urls = inferSwaggerPayloadUrls(apiBase, connPaths);
+  if (!urls.config) throw new Error("Base API inválida");
+  const [configR, metaR, pathsR, testingR] = await Promise.all([
+    fetchJsonOptional(urls.config),
+    fetchJsonOptional(urls.meta),
+    fetchJsonOptional(urls.paths),
+    fetchJsonOptional(urls.testing),
+  ]);
+  if (!configR.ok && !metaR.ok) {
+    throw new Error(configR.error || metaR.error || "No se pudo cargar config ni meta desde la API");
+  }
+  return {
+    urls,
+    config: configR.data,
+    meta: metaR.data,
+    paths: pathsR.data,
+    testing: testingR.data,
+    errors: {
+      config: configR.ok ? null : configR.error,
+      meta: metaR.ok ? null : metaR.error,
+      paths: pathsR.ok ? null : pathsR.error,
+      testing: testingR.ok ? null : testingR.error,
+    },
   };
 }
 
@@ -46,7 +127,7 @@ async function readJsonResponse(res, url) {
   }
 }
 
-/** GET público — insoft.openapi-config (fuente BD; par PUT). */
+/** GET público — config (fuente BD; par PUT). */
 export async function fetchRemoteOpenApiConfig(apiBase) {
   const urls = inferSwaggerUrls(apiBase);
   if (!urls.config) throw new Error("Base API inválida");
@@ -59,13 +140,13 @@ export async function fetchRemoteOpenApiConfig(apiBase) {
   if (!res.ok) throw new Error(`GET ${urls.config} → ${res.status} ${res.statusText || ""}`.trim());
   const doc = await readJsonResponse(res, urls.config);
   if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new Error("Config vacía o con formato inesperado");
-  if (doc.kind && doc.kind !== OPENAPI_CONFIG_KIND) {
-    throw new Error(`Config con kind «${doc.kind}»; se espera «${OPENAPI_CONFIG_KIND}».`);
+  if (doc.kind && !isSwaggerConfigKind(doc.kind)) {
+    throw new Error(`Config con kind «${doc.kind}»; se espera «${OPENAPI_CONFIG_KIND}» (o legacy «insoft.openapi-config»).`);
   }
   return { doc, urls };
 }
 
-/** PUT insoft.openapi-config — requiere JWT (swagger_editors). */
+/** PUT config — requiere JWT (swagger_editors). */
 export async function putRemoteOpenApiConfig(apiBase, config, jwt) {
   const token = String(jwt || "").trim().replace(/^bearer\s+/i, "");
   if (!token) throw new Error("Inicie sesión para guardar la config IS en BD (PUT /swagger.json).");

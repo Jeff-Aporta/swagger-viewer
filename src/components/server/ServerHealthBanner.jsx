@@ -19,7 +19,7 @@ function mssqlWarningMessage(db) {
 }
 
 export function ServerHealthBanner({ ns = "ISA" }) {
-  const { serverBase } = useServerBase();
+  const { serverBase, healthPath } = useServerBase();
   const [message, setMessage] = useState(null);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export function ServerHealthBanner({ ns = "ISA" }) {
     async function check() {
       if (cancelled) return;
       try {
-        const { data } = await fetchApiJson(joinApiUrl(serverBase, INFO_PATH), { auth: false });
+        const { data } = await fetchApiJson(joinApiUrl(serverBase, healthPath), { auth: false });
         if (cancelled) return;
         const db = data?.respuesta?.datos?.database;
         if (db?.bconnected === false) {
@@ -49,7 +49,7 @@ export function ServerHealthBanner({ ns = "ISA" }) {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [serverBase]);
+  }, [serverBase, healthPath]);
 
   if (!message) return null;
   return (

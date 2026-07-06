@@ -69,6 +69,15 @@ export function resolveVisibleNavTabs(config, session) {
   return resolveNavTabDefs(config).filter((t) => canAccessNavTab(t, session));
 }
 
+/** Tab inicial: ?nav= si es visible; si no, primera sección accesible. */
+export function resolveInitialNavTab(config, session, urlTabId = "") {
+  const tabs = resolveVisibleNavTabs(config, session);
+  if (!tabs.length) return "";
+  const hint = String(urlTabId || "").trim();
+  if (hint && tabs.some((t) => t.id === hint)) return hint;
+  return tabs[0].id;
+}
+
 export function filterGroupsByNavTab(groups, config, activeTabId) {
   const tabs = resolveNavTabDefs(config);
   if (!tabs.length) return groups;
@@ -108,4 +117,13 @@ export function activeSectionTabId(navRows, config) {
   if (sectionRow?.value) return sectionRow.value;
   const tabs = resolveNavTabDefs(config);
   return tabs[0]?.id || "";
+}
+
+/** Runner cliente (TestingAccordion) solo en la pestaña nav cuyo tags incluye "Testing". */
+export function isTestingNavSectionActive(navRows, config) {
+  const tabs = resolveNavTabDefs(config);
+  if (!tabs.length) return true;
+  const activeId = activeSectionTabId(navRows, config);
+  const tab = tabs.find((t) => t.id === activeId);
+  return tab?.tags?.includes("Testing") ?? false;
 }

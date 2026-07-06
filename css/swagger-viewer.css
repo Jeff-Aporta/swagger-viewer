@@ -516,6 +516,13 @@ html[data-mui-color-scheme="light"] .isa-sw-resp-card .MuiAccordionSummary-root 
   flex-direction: column;
 }
 
+.isa-sw-json-block--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+}
+
 .isa-sw-json-block .isa-cm-panel--bounded {
   flex: 1 1 auto;
   min-height: 0;
@@ -959,16 +966,22 @@ html[data-mui-color-scheme="light"] .isa-sw-toolbar--docked {
   overflow-y: auto !important;
 }
 
-.isa-sw-tryit-url {
-  flex: 1;
-  min-width: 0;
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 0.8125rem;
-  line-height: 1.4;
-  opacity: 0.88;
-  cursor: default;
+/* === Testing panel === */
+
+@keyframes isa-sw-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.isa-sw-spin {
+  animation: isa-sw-spin 1s linear infinite;
+  display: inline-block;
+}
+
+.isa-sw-testing .MuiChip-root {
+  font-feature-settings: "tnum" 1;
+}
+
+.isa-sw-testing-driver-row pre {
+  font-feature-settings: "tnum" 1;
 }

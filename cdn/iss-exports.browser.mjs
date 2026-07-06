@@ -66,27 +66,34 @@ var EXAMPLE_503 = {
 // server/api-presets.ts
 var ISS_LOCAL_API_BASE = "http://127.0.0.1:8802/api";
 var ISS_WEB_API_BASE = "https://ayudascp-ia-staging.azurewebsites.net/api";
-var DEFAULT_API_SCOPES = [
-  { id: "web", label: "Web (staging)", base: ISS_WEB_API_BASE, icon: "mdi:web" },
-  { id: "local", label: "Local", base: ISS_LOCAL_API_BASE, icon: "mdi:laptop" }
-];
 function normApiBase(url) {
-  return String(url || "").replace(/\/$/, "");
+  let s = String(url ?? "").trim();
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
+  try {
+    const u = new URL(s);
+    let path = u.pathname.replace(/\/+$/, "");
+    if (!path.endsWith("/api")) path = path ? `${path}/api` : "/api";
+    u.pathname = path;
+    u.search = "";
+    u.hash = "";
+    return `${u.origin}${u.pathname}`;
+  } catch {
+    return "";
+  }
 }
 function buildOpenApiServers(activeBase) {
   const active = normApiBase(activeBase || ISS_WEB_API_BASE);
-  const presets = [
-    [active, "API activa (contexto actual)"],
+  const candidates = [
     [ISS_LOCAL_API_BASE, "Local (ISS Functions)"],
     [ISS_WEB_API_BASE, "Web (staging Azure)"]
   ];
-  const seen = /* @__PURE__ */ new Set();
   const out = [];
-  for (const [url, description] of presets) {
-    const u = normApiBase(url);
-    if (seen.has(u)) continue;
-    seen.add(u);
-    out.push({ url: u, description });
+  if (active) out.push({ url: active, description: "Activo" });
+  for (const [base, desc] of candidates) {
+    const u = normApiBase(base);
+    if (!u || u === active) continue;
+    out.push({ url: u, description: desc });
   }
   return out;
 }
@@ -99,6 +106,10 @@ var ISS_SUBGROUP_EXTENSION = "x-isa-subgroup";
 var ISS_SUBGROUPS_EXTENSION = "x-isa-subgroups";
 var ISS_REQUEST_BODY_EXAMPLES_EXTENSION = "x-iss-request-body-examples";
 var ISS_INPUT_RECOMMENDATION_EXTENSION = "x-iss-input-recommendation";
+var ISS_TRYIT_ATTACHMENTS_EXTENSION = "x-iss-tryit-attachments";
+var ISS_CATALOG_DOC_KEYS_EXTENSION = "x-iss-catalog-doc-keys";
+var ISS_ENUM_FROM_EXTENSION = "x-iss-enum-from";
+var ISS_ELEVATED_ONLY_EXTENSION = "x-iss-elevated-only";
 var jsonResponse = (description, schema = { type: "object" }, example) => {
   const media = { schema };
   if (example !== void 0) media.example = example;
@@ -289,14 +300,16 @@ function resolveFPreset(catalog, key) {
   if (!key) return void 0;
   const p = catalog.fPresets?.[key];
   if (!p || typeof p !== "object" || Array.isArray(p)) {
-    throw new Error(`openapi-config: fPreset \xAB${key}\xBB no definido`);
+    if (typeof console !== "undefined") console.warn(`[iss-swagger] fPreset \xAB${key}\xBB no definido \u2014 usando vac\xEDo.`);
+    return { fields: [] };
   }
   return { ...p };
 }
 function resolveInputRecommendation(catalog, key) {
   const rec = catalog.inputRecommendations?.[key];
   if (!rec || typeof rec !== "object" || Array.isArray(rec)) {
-    throw new Error(`openapi-config: inputRecommendations \xAB${key}\xBB no definido`);
+    if (typeof console !== "undefined") console.warn(`[iss-swagger] inputRecommendations \xAB${key}\xBB no definido \u2014 usando vac\xEDo.`);
+    return {};
   }
   const out = { ...rec };
   if (typeof out.fPreset === "string") {
@@ -340,13 +353,19 @@ function sg(id) {
 }
 function resolvePayload(catalog, key) {
   const p = catalog.payloads?.[key];
-  if (p === void 0) throw new Error(`openapi-config: payload \xAB${key}\xBB no definido`);
+  if (p === void 0) {
+    if (typeof console !== "undefined") console.warn(`[iss-swagger] payload \xAB${key}\xBB no definido en catalog.payloads \u2014 usando fallback {}.`);
+    return { ok: true, data: {}, note: `payload \xAB${key}\xBB no definido` };
+  }
   return exampleOk(p);
 }
 function resolveSchema(catalog, key) {
   if (!key) return void 0;
   const s = catalog.schemas?.[key];
-  if (!s) throw new Error(`openapi-config: schema \xAB${key}\xBB no definido`);
+  if (!s) {
+    if (typeof console !== "undefined") console.warn(`[iss-swagger] schema \xAB${key}\xBB no definido en catalog.schemas \u2014 usando schema gen\xE9rico.`);
+    return { type: "object" };
+  }
   return s;
 }
 function resolveExample(catalog, item) {
@@ -357,33 +376,54 @@ function resolveExample(catalog, item) {
 function buildResponses(catalog, def) {
   switch (def.template) {
     case "health":
-      if (!def.payload) throw new Error("openapi-config: health requiere payload");
+      if (!def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] health requiere payload \u2014 usando fallback.");
+        return issRspHealth({ ok: true, data: {}, note: "payload faltante" });
+      }
       return issRspHealth(resolvePayload(catalog, def.payload));
     case "auth":
-      if (!def.description || !def.payload) throw new Error("openapi-config: auth requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] auth requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return issRspAuth(def.description, resolvePayload(catalog, def.payload), resolveSchema(catalog, def.schema));
     case "authForbidden":
-      if (!def.description || !def.payload) throw new Error("openapi-config: authForbidden requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] authForbidden requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return issRspAuthForbidden(
         def.description,
         resolvePayload(catalog, def.payload),
         resolveSchema(catalog, def.schema)
       );
     case "authNotFound":
-      if (!def.description || !def.payload) throw new Error("openapi-config: authNotFound requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] authNotFound requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return issRspAuthNotFound(
         def.description,
         resolvePayload(catalog, def.payload),
         resolveSchema(catalog, def.schema)
       );
     case "sse":
-      if (!def.description || !def.payload) throw new Error("openapi-config: sse requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] sse requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return issRspSseDoc(def.description, resolvePayload(catalog, def.payload));
     case "ok":
-      if (!def.description || !def.payload) throw new Error("openapi-config: ok requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] ok requiere description y payload \u2014 usando fallback.");
+        return { "200": issRspOk(def.description || "OK", def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       return { "200": issRspOk(def.description, resolvePayload(catalog, def.payload)) };
     case "deleteEnvelope": {
-      if (!def.description || !def.payload) throw new Error("openapi-config: deleteEnvelope requiere description y payload");
+      if (!def.description || !def.payload) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] deleteEnvelope requiere description y payload \u2014 usando fallback.");
+        return { "200": jsonResponse(def.description || "OK", { type: "object" }, def.payload ? resolvePayload(catalog, def.payload) : {}) };
+      }
       const rowSchema = resolveSchema(catalog, def.schema ?? "conversacionRow");
       return {
         "200": jsonResponse(
@@ -402,7 +442,10 @@ function buildResponses(catalog, def) {
       };
     }
     case "raw": {
-      if (!def.items) throw new Error("openapi-config: raw requiere items");
+      if (!def.items) {
+        if (typeof console !== "undefined") console.warn("[iss-swagger] raw requiere items \u2014 usando 200 vac\xEDo.");
+        return { "200": jsonResponse("OK", { type: "object" }, {}) };
+      }
       const out = {};
       for (const [code, item] of Object.entries(def.items)) {
         out[code] = jsonResponse(item.description, item.schema ?? { type: "object" }, resolveExample(catalog, item));
@@ -410,7 +453,8 @@ function buildResponses(catalog, def) {
       return out;
     }
     default:
-      throw new Error(`openapi-config: template de respuesta desconocido \xAB${def.template}\xBB`);
+      if (typeof console !== "undefined") console.warn(`[iss-swagger] template de respuesta desconocido \xAB${def.template}\xBB \u2014 usando 200 vac\xEDo.`);
+      return { "200": jsonResponse("OK", { type: "object" }, {}) };
   }
 }
 function resolveParam(catalog, p) {
@@ -442,7 +486,31 @@ function resolveParam(catalog, p) {
       raw.schema = { type: "string", example: encodeIssFilterB64(rec.listFilter) };
     }
   }
+  const enumFrom = raw.enumFrom;
+  if (typeof enumFrom === "string") {
+    delete raw.enumFrom;
+    let keys = [];
+    if (enumFrom === "catalog.docs") keys = Object.keys(catalog.docs || {}).sort();
+    else {
+      if (typeof console !== "undefined") console.warn(`[iss-swagger] enumFrom \xAB${enumFrom}\xBB no soportado \u2014 usando [].`);
+    }
+    const schema = { ...typeof raw.schema === "object" && raw.schema ? raw.schema : {}, type: "string", enum: keys };
+    if (schema.example == null && keys.length) schema.example = keys.includes("health") ? "health" : keys[0];
+    raw.schema = schema;
+    raw[ISS_ENUM_FROM_EXTENSION] = enumFrom;
+  }
   return raw;
+}
+function resolveTryItAttachmentsDef(catalog, def) {
+  const raw = def.tryitAttachments;
+  if (raw === false) return false;
+  if (typeof raw === "string") {
+    const t = catalog.tryitAttachments?.templates?.[raw];
+    if (t) return t;
+    return void 0;
+  }
+  if (raw && typeof raw === "object") return raw;
+  return void 0;
 }
 function buildOperation(catalog, def) {
   const op = {
@@ -454,6 +522,9 @@ function buildOperation(catalog, def) {
   if (def.subgroup) Object.assign(op, sg(def.subgroup));
   if (def.security === "bearer") op.security = bearerSecurity;
   if (def.tryitConfirm !== void 0) op.tryitConfirm = def.tryitConfirm;
+  const attachDef = resolveTryItAttachmentsDef(catalog, def);
+  if (attachDef === false) op[ISS_TRYIT_ATTACHMENTS_EXTENSION] = false;
+  else if (attachDef) op[ISS_TRYIT_ATTACHMENTS_EXTENSION] = attachDef;
   if (def.doc) {
     const md = catalog.docs?.[def.doc];
     if (md) op[ISS_DOC_MD_EXTENSION] = md;
@@ -505,7 +576,8 @@ function buildOpenApiFromConfig(config, serverUrl) {
     servers: buildOpenApiServers(base),
     tags,
     components: { ...bearerComponents() },
-    paths
+    paths,
+    [ISS_CATALOG_DOC_KEYS_EXTENSION]: Object.keys(catalog.docs || {}).sort()
   };
 }
 
@@ -579,7 +651,7 @@ Las operaciones marcadas con seguridad en OpenAPI heredan **Bearer {{token}}** d
 // server/postman.ts
 var POSTMAN_SCHEMA = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
 var HTTP_METHODS = ["get", "post", "put", "patch", "delete", "options", "head"];
-var SKIP_PATHS = /* @__PURE__ */ new Set(["/swagger", "/swagger.json", "/swagger/postman.json", "/swagger/is.json"]);
+var SKIP_PATHS = /* @__PURE__ */ new Set(["/swagger", "/system/swagger.json", "/system/swagger/config.json", "/swagger/postman.json", "/swagger/is.json"]);
 var STATUS_PHRASE = {
   "200": "OK",
   "201": "Created",
@@ -927,6 +999,11 @@ var STRIP_KEYS = /* @__PURE__ */ new Set([
   ISS_SUBGROUPS_EXTENSION,
   ISS_REQUEST_BODY_EXAMPLES_EXTENSION,
   ISS_INPUT_RECOMMENDATION_EXTENSION,
+  ISS_TRYIT_ATTACHMENTS_EXTENSION,
+  ISS_CATALOG_DOC_KEYS_EXTENSION,
+  ISS_ENUM_FROM_EXTENSION,
+  ISS_ELEVATED_ONLY_EXTENSION,
+  "tryitAttachments",
   "subgroups"
 ]);
 function stripNode(value) {
@@ -945,8 +1022,8 @@ function stripIsaExtensionsForExport(openApi) {
 
 // server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "5890223";
-var SWAGGER_FRONT_SHARED_REF = "6177587";
+var SWAGGER_VIEWER_REF = "9e8d3d4";
+var SWAGGER_FRONT_SHARED_REF = "a13fc29";
 
 // server/orchestrator-auth.ts
 var ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
@@ -997,9 +1074,20 @@ function resolveApiBase(serverUrl, absoluteBaseUrl) {
 function buildViewerRuntimeConfig(config, apiBase) {
   const v = config.viewer ?? {};
   const base = apiBase.replace(/\/$/, "");
+  const sp = v.swaggerPaths ?? {};
+  const configPath = sp.config ?? "/system/swagger/config.json";
+  const configUrl = v.configUrl ?? (configPath.startsWith("http") ? configPath : configPath.startsWith("/api/") ? `${new URL(base).origin}${configPath}` : `${base}${configPath.startsWith("/") ? configPath : `/${configPath}`}`);
   return {
     apiBase: base,
-    configUrl: `${base}/swagger/config.json`,
+    configUrl,
+    swaggerPaths: {
+      config: sp.config ?? "/system/swagger/config.json",
+      swaggerJson: sp.swaggerJson ?? "/system/swagger.json",
+      meta: sp.meta ?? "/system/swagger/meta.json",
+      paths: sp.paths ?? "/system/swagger/paths.json",
+      health: sp.health ?? "/system/health",
+      ...sp.doc ? { doc: sp.doc } : { doc: "/system/swagger/docs/{key}" }
+    },
     ns: v.ns ?? "ISA",
     app: v.app ?? "swagger-viewer",
     shell: v.shell ?? true,
@@ -1020,7 +1108,8 @@ function buildViewerRuntimeConfig(config, apiBase) {
     viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
     frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
     ...Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {},
-    ...Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : { scopes: DEFAULT_API_SCOPES }
+    // Preserva protocolos cliente (e.g. tests agnósticos) definidos en viewer.client.protocols.
+    ...v.client ? { client: v.client } : {}
   };
 }
 function buildEmbedOpts(config, apiBase, viewer) {

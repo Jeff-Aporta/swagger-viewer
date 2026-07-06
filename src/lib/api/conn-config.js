@@ -1,6 +1,15 @@
-/** Param ?conn= — JSON en base64url para autoconexión embed (ISS → demo GH Pages). */
+/** Param ?conn= — JSON en base64url para autoconexión embed (ISS → demo GH Pages).
+ *
+ * Campos habituales:
+ *   apiBase  — …/api (obligatorio para autoconnect)
+ *   auto     — conectar al cargar (default true)
+ *   embed    — modo iframe
+ *   paths    — override rutas swagger relativas a apiBase (opcional):
+ *     config, swaggerJson, meta, paths, doc, health
+ *   Si paths se omite, defaults ISS: /system/swagger/config.json, /system/swagger.json, …
+ */
 
-import { normalizeApiBase } from "./swagger-api.js";
+import { normalizeApiBase, DEFAULT_PAYLOAD_PATHS } from "./swagger-api.js";
 
 export const GH_PAGES_SWAGGER_DEMO = "https://jeff-aporta.github.io/swagger-viewer/index.html";
 
@@ -23,11 +32,19 @@ export function parseConnParam(raw) {
   }
 }
 
-/** ?conn= o ?s= (b64url JSON); prioriza conn. */
+/** ?conn= o ?s= solo si parece embed conn (no estado ?s= del visor con v/tab/open). */
 export function parseEmbedParams(searchParams) {
   const connRaw = searchParams?.get?.("conn");
+  if (connRaw) {
+    const conn = parseConnParam(connRaw);
+    if (conn) return conn;
+  }
   const sRaw = searchParams?.get?.("s");
-  return parseConnParam(connRaw) || parseConnParam(sRaw);
+  if (!sRaw) return null;
+  const s = parseConnParam(sRaw);
+  if (!s || typeof s !== "object") return null;
+  if (s.apiBase || s.embed != null || s.auto != null || s.paths || s.title || s.icon) return s;
+  return null;
 }
 
 /** Marca temprana desde conn (?title/?name + ?icon o brand.*). */
@@ -46,18 +63,33 @@ export function encodeConnParam(obj) {
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/** URL GH Pages con ?conn= para abrir el visor conectado a la API actual. */
-export function buildGhPagesSwaggerUrl(apiBase, extra = {}) {
+/** Payload ?conn= (apiBase + paths sistema + marca). */
+export function buildConnPayload(apiBase, extra = {}) {
   const base = normalizeApiBase(apiBase);
-  if (!base) return "";
+  if (!base) return null;
   const brand = resolveConnBrand(extra) || (extra.brand ? resolveConnBrand({ brand: extra.brand }) : null);
-  const conn = { apiBase: base, auto: true, embed: false };
+  const conn = {
+    apiBase: base,
+    auto: extra.auto !== false,
+    embed: extra.embed === true,
+    paths: { ...DEFAULT_PAYLOAD_PATHS, ...(extra.paths && typeof extra.paths === "object" ? extra.paths : {}) },
+  };
+  if (extra.fixedServer) conn.fixedServer = true;
   if (brand?.title) conn.title = brand.title;
   if (brand?.icon) conn.icon = brand.icon;
-  const u = new URL(GH_PAGES_SWAGGER_DEMO);
+  return conn;
+}
+
+/** URL GH Pages con ?conn= para abrir el visor conectado a la API actual. */
+export function buildGhPagesSwaggerUrl(apiBase, extra = {}) {
+  const conn = buildConnPayload(apiBase, { auto: true, embed: false, ...extra });
+  if (!conn) return "";
+  const u = new URL(extra.viewerUrl || GH_PAGES_SWAGGER_DEMO);
   u.searchParams.set("conn", encodeConnParam(conn));
   const s = extra.s ?? extra.uiState;
   if (s) u.searchParams.set("s", String(s).trim());
+  const nav = extra.nav ?? (typeof location !== "undefined" ? new URLSearchParams(location.search).get("nav") : "");
+  if (nav) u.searchParams.set("nav", String(nav).trim());
   return u.href;
 }
 

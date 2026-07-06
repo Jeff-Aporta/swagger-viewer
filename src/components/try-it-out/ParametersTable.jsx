@@ -1,4 +1,5 @@
 import { ParamLookupField } from "../filters/ParamLookupField.jsx";
+import { IssFusedSelectField } from "../filters/IssFusedSelectField.jsx";
 import { GlassTableWrap } from "../../lib/ui/glass.jsx";
 import { paramInputMode, paramSchemaType, sanitizeParamInputValue } from "../../lib/openapi/param-schema.js";
 
@@ -23,7 +24,16 @@ function paramPlaceholder(p) {
 }
 
 function paramTypeLabel(p) {
+  if (p.schema?.enum?.length) return "enum";
   return p.schema?.type || p.schema?.format || "—";
+}
+
+function paramEnumOptions(p) {
+  const labels = p.schema?.enumLabels;
+  return (p.schema?.enum || []).map((opt) => {
+    const value = String(opt);
+    return { value, label: labels?.[opt] ?? labels?.[value] ?? value };
+  });
 }
 
 export function ParametersTable({ parameters = [], values, onChange, lookupIndex = {}, disabled, authEnabled, onNeedLogin }) {
@@ -44,6 +54,7 @@ export function ParametersTable({ parameters = [], values, onChange, lookupIndex
           {pathParams.map((p) => {
             const name = p.name || "";
             const lookup = lookupIndex[name] || p["x-iss-lookup"];
+            const enumOptions = paramEnumOptions(p);
             const typeLabel = paramTypeLabel(p);
             const schemaType = paramSchemaType(p.schema);
             return (
@@ -55,7 +66,16 @@ export function ParametersTable({ parameters = [], values, onChange, lookupIndex
                 </TableCell>
                 <TableCell className="isa-sw-param-type">{typeLabel}</TableCell>
                 <TableCell className="isa-sw-param-value">
-                  {lookup ? (
+                  {enumOptions.length ? (
+                    <IssFusedSelectField
+                      value={values[name] || ""}
+                      onChange={(v) => onChange(name, v)}
+                      disabled={disabled}
+                      allowEmpty={!p.required}
+                      options={enumOptions}
+                      emptyLabel={paramPlaceholder(p) || "(elegir clave)"}
+                    />
+                  ) : lookup ? (
                     <ParamLookupField
                       lookup={lookup}
                       paramName={name}

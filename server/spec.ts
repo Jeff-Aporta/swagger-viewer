@@ -19,6 +19,10 @@ export const ISS_SUBGROUP_EXTENSION = "x-isa-subgroup";
 export const ISS_SUBGROUPS_EXTENSION = "x-isa-subgroups";
 export const ISS_REQUEST_BODY_EXAMPLES_EXTENSION = "x-iss-request-body-examples";
 export const ISS_INPUT_RECOMMENDATION_EXTENSION = "x-iss-input-recommendation";
+export const ISS_TRYIT_ATTACHMENTS_EXTENSION = "x-iss-tryit-attachments";
+export const ISS_CATALOG_DOC_KEYS_EXTENSION = "x-iss-catalog-doc-keys";
+export const ISS_ENUM_FROM_EXTENSION = "x-iss-enum-from";
+export const ISS_ELEVATED_ONLY_EXTENSION = "x-iss-elevated-only";
 
 export const jsonResponse = (
     description: string,

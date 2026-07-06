@@ -4,13 +4,13 @@ import { buildIssExportsFromConfig } from "../../../cdn/iss-exports.browser.mjs"
 import { fetchRemoteOpenApiConfig } from "./swagger-api.js";
 import { parseIsDocument } from "../openapi/is-document.js";
 
-export async function fetchRemoteIsDocument(apiBase) {
-  const { doc: rawConfig, urls } = await fetchRemoteOpenApiConfig(apiBase);
+export async function fetchRemoteIsDocument(apiBase, pathOverrides = null) {
+  const { doc: rawConfig, urls } = await fetchRemoteOpenApiConfig(apiBase, pathOverrides);
   let built;
   try {
     built = buildIssExportsFromConfig(rawConfig, { absoluteBaseUrl: urls.apiBase });
   } catch (e) {
-    throw new Error(`No se pudo generar OpenAPI/IS desde la config: ${e?.message || e}`);
+    throw new Error(`No se pudo generar el documento del visor IS-Swagger desde la config: ${e?.message || e}`);
   }
   if (!built?.is) throw new Error("La config no produjo documento IS (revisar paths y viewer en SYSTEM.swagger).");
   const parsed = parseIsDocument(built.is);

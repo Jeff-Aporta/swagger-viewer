@@ -4,7 +4,7 @@ import { JsonCodeBlock } from "./JsonCodeBlock.jsx";
 import { SwIcon } from "../../lib/ui/sw-icon.jsx";
 
 const { useState, useEffect, useRef } = React;
-const { Box, Typography, Chip } = MaterialUI;
+const { Box, Typography, Chip, CircularProgress } = MaterialUI;
 
 const BODY_EDITOR_MIN = "11rem";
 const BODY_EDITOR_MAX = "40vh";
@@ -18,6 +18,7 @@ export function RequestBodySection({
   bodyText,
   onBodyChange,
   disabled,
+  loading = false,
   ns = "ISA",
 }) {
   const bodyOp = op || { requestBody, method, path };
@@ -81,13 +82,14 @@ export function RequestBodySection({
           </Box>
         )}
         <InputRecommendationHints schema={bodySchema} ns={ns} />
+        {loading ? <CircularProgress size={14} sx={{ ml: 0.5 }} aria-label="Cargando body desde GET" /> : null}
       </Box>
       <JsonCodeBlock
         className="isa-sw-request-body__editor"
         value={raw}
         onChange={handleChange}
         readOnly={false}
-        disabled={disabled}
+        disabled={disabled || loading}
         minHeight={BODY_EDITOR_MIN}
         maxHeight={BODY_EDITOR_MAX}
         placeholder='{ "campo": "valor" }'

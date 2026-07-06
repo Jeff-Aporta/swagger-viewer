@@ -14,6 +14,7 @@ const RUNTIME_KEYS = new Set([
   "root",
   "exports",
   "loadMarked",
+  "scopes",
 ]);
 
 /** Config de vista sin URLs de arranque CDN ni spec embebido duplicado. */

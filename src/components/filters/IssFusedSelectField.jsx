@@ -12,7 +12,7 @@ function matchOption(options, value) {
   return options.find((o) => String(o.value) === String(value)) ?? null;
 }
 
-export function IssFusedSelectField({ label, value, options, onChange, disabled, helperText, emptyLabel = "(vacío)", allowEmpty = true }) {
+export function IssFusedSelectField({ label, value, options, onChange, disabled, helperText, emptyLabel = "(vacío)", allowEmpty = true, placeholder = "" }) {
   const [open, setOpen] = useState(false);
   const allOptions = !allowEmpty || options[0]?.value === "" ? options : [{ value: "", label: emptyLabel }, ...options];
   const selected = matchOption(allOptions, value);
@@ -25,6 +25,7 @@ export function IssFusedSelectField({ label, value, options, onChange, disabled,
       fullWidth
       disabled={disabled}
       disableClearable
+      openOnFocus
       open={open}
       onOpen={() => setOpen(true)}
       onClose={() => setOpen(false)}
@@ -35,7 +36,7 @@ export function IssFusedSelectField({ label, value, options, onChange, disabled,
       isOptionEqualToValue={(a, b) => String(a?.value) === String(b?.value)}
       renderInput={(params) => {
         const inputProps = params.InputProps || {};
-        return <TextField {...params} label={label} helperText={helperText} InputProps={inputProps} />;
+        return <TextField {...params} label={label} helperText={helperText} placeholder={placeholder} InputProps={inputProps} onClick={() => !disabled && setOpen(true)} />;
       }}
     />
   );

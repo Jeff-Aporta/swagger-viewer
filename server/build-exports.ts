@@ -8,11 +8,21 @@ import { openApiToPostmanCollection, type PostmanExportOpts } from "./postman.js
 import { stripIsaExtensionsForExport } from "./strip-export-extensions.js";
 import { SWAGGER_FRONT_SHARED_REF, SWAGGER_VIEWER_GH_REPO, SWAGGER_VIEWER_REF } from "./viewer-pins.js";
 import { DEFAULT_AUTH_LOGIN_PATH, resolveOrchestratorBase, resolveAuthAppId } from "./orchestrator-auth.js";
-import { DEFAULT_API_SCOPES } from "./api-presets.js";
 
 export type { IsOpenApiConfig } from "./build-spec.js";
 
-export const OPENAPI_CONFIG_KIND = "insoft.openapi-config";
+export const OPENAPI_CONFIG_KIND = "config";
+export const OPENAPI_META_KIND = "meta";
+const LEGACY_OPENAPI_CONFIG_KIND = "insoft.openapi-config";
+const LEGACY_OPENAPI_META_KIND = "insoft.openapi-meta";
+
+function isSwaggerConfigKind(kind: unknown): boolean {
+    return kind === OPENAPI_CONFIG_KIND || kind === LEGACY_OPENAPI_CONFIG_KIND;
+}
+
+function isSwaggerMetaKind(kind: unknown): boolean {
+    return kind === OPENAPI_META_KIND || kind === LEGACY_OPENAPI_META_KIND;
+}
 export const OPENAPI_CONFIG_VERSION = 1;
 export const IS_DOCUMENT_KIND = "insoft.swagger-viewer";
 export const IS_DOCUMENT_VERSION = 1;
@@ -33,7 +43,6 @@ export type IssOpenApiViewerConfig = {
     };
     embed?: { title?: string; authKind?: string; localCdnBase?: string };
     nav?: Array<{ id: string; label: string; icon?: string; tags?: string[]; access?: unknown }>;
-    scopes?: Array<{ id: string; label: string; base: string; icon?: string }>;
     viewerRef?: string;
     frontSharedRef?: string;
 };
@@ -96,11 +105,22 @@ function resolveApiBase(serverUrl: string | undefined, absoluteBaseUrl?: string)
 }
 
 function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Record<string, unknown> {
-    const v = (config.viewer ?? {}) as IssOpenApiViewerConfig;
+    const v = (config.viewer ?? {}) as IssOpenApiViewerConfig & { swaggerPaths?: Record<string, string>; configUrl?: string };
     const base = apiBase.replace(/\/$/, "");
+    const sp = v.swaggerPaths ?? {};
+    const configPath = sp.config ?? "/system/swagger/config.json";
+    const configUrl = v.configUrl ?? (configPath.startsWith("http") ? configPath : configPath.startsWith("/api/") ? `${new URL(base).origin}${configPath}` : `${base}${configPath.startsWith("/") ? configPath : `/${configPath}`}`);
     return {
         apiBase: base,
-        configUrl: `${base}/swagger/config.json`,
+        configUrl,
+        swaggerPaths: {
+            config: sp.config ?? "/system/swagger/config.json",
+            swaggerJson: sp.swaggerJson ?? "/system/swagger.json",
+            meta: sp.meta ?? "/system/swagger/meta.json",
+            paths: sp.paths ?? "/system/swagger/paths.json",
+            health: sp.health ?? "/system/health",
+            ...(sp.doc ? { doc: sp.doc } : { doc: "/system/swagger/docs/{key}" }),
+        },
         ns: v.ns ?? "ISA",
         app: v.app ?? "swagger-viewer",
         shell: v.shell ?? true,
@@ -123,7 +143,8 @@ function buildViewerRuntimeConfig(config: IsOpenApiConfig, apiBase: string): Rec
         viewerRef: v.viewerRef ?? SWAGGER_VIEWER_REF,
         frontSharedRef: v.frontSharedRef ?? SWAGGER_FRONT_SHARED_REF,
         ...(Array.isArray(v.nav) && v.nav.length ? { nav: v.nav } : {}),
-        ...(Array.isArray(v.scopes) && v.scopes.length ? { scopes: v.scopes } : { scopes: DEFAULT_API_SCOPES }),
+        // Preserva protocolos cliente (e.g. tests agnósticos) definidos en viewer.client.protocols.
+        ...(v as Record<string, unknown>).client ? { client: (v as Record<string, unknown>).client } : {},
     };
 }
 
@@ -185,15 +206,15 @@ function buildIsDocument(viewer: Record<string, unknown>, spec: Record<string, u
     return { kind: IS_DOCUMENT_KIND, version: IS_DOCUMENT_VERSION, viewer: viewerConfigFromBoot(viewer), spec };
 }
 
-/** Normaliza y valida documento insoft.openapi-config (opcional). */
+/** Normaliza y valida documento openapi config (kind «config» o legacy). */
 export function normalizeOpenApiConfig(raw: unknown): IsOpenApiConfig {
-    if (!raw || typeof raw !== "object") throw new Error("openapi-config: documento inválido");
+    if (!raw || typeof raw !== "object") throw new Error("iss-swagger: documento inválido");
     const cfg = raw as IsOpenApiConfig;
-    if (cfg.kind && cfg.kind !== OPENAPI_CONFIG_KIND) {
-        throw new Error(`openapi-config: kind esperado «${OPENAPI_CONFIG_KIND}», recibido «${cfg.kind}»`);
+    if (cfg.kind && !isSwaggerConfigKind(cfg.kind)) {
+        throw new Error(`iss-swagger: kind esperado «${OPENAPI_CONFIG_KIND}», recibido «${cfg.kind}»`);
     }
-    if (!cfg.info?.title) throw new Error("openapi-config: info.title es requerido");
-    if (!cfg.paths || typeof cfg.paths !== "object") throw new Error("openapi-config: paths es requerido");
+    if (!cfg.info?.title) throw new Error("iss-swagger: info.title es requerido");
+    if (!cfg.paths || typeof cfg.paths !== "object") throw new Error("iss-swagger: paths es requerido");
     return prepareOpenApiConfig(cfg);
 }
 

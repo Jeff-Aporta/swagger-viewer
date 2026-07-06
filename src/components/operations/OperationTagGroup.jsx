@@ -11,6 +11,7 @@ export function OperationTagGroup({
   spec,
   docIndex,
   lookupIndex,
+  catalogDocKeys,
   authEnabled,
   onNeedLogin,
   ns = "ISA",
@@ -35,6 +36,7 @@ export function OperationTagGroup({
         spec={spec}
         docMd={docIndex[op.operationId]}
         lookupIndex={lookupIndex}
+        catalogDocKeys={catalogDocKeys}
         authEnabled={authEnabled}
         onNeedLogin={onNeedLogin}
         ns={ns}

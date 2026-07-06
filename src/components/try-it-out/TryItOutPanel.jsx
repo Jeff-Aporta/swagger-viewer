@@ -5,6 +5,13 @@ import { QueryFiltersPanel } from "./QueryFiltersPanel.jsx";
 import { IssListFilterField, isIssListFilterParam } from "../filters/IssListFilterField.jsx";
 import { jsonPretty, operationRequiresBearer, resolveServerUrl } from "../../lib/openapi/openapi.js";
 import { defaultTryItBodyText, opUsesRequestBody, resolveTryItBodyExample, shouldShowTryItBody } from "../../lib/openapi/tryit-body.js";
+import {
+  extractTryItPutBodyFromGet,
+  findMatchingGetOp,
+  formatTryItResultBody,
+  tryItPrefillDeniedBody,
+  tryItPrefillLoadingBody,
+} from "../../lib/openapi/tryit-prefill.js";
 import { getStoredJwt } from "../../lib/auth/auth.js";
 import { joinApiUrl } from "../../lib/lookup/server-base.js";
 import { fetchApiRaw, extractEnvelopeError } from "../../lib/http/api-fetch.js";
@@ -18,7 +25,7 @@ import { DangerousOpConfirmDialog } from "../dialogs/DangerousOpConfirmDialog.js
 import { HttpErrorAlert } from "./HttpErrorAlert.jsx";
 
 const { useState, useMemo, useEffect } = React;
-const { Box, Button, Typography, CircularProgress, Chip, TextField, Tooltip } = MaterialUI;
+const { Box, Button, Typography, CircularProgress, Chip, TextField } = MaterialUI;
 
 const METHOD_COLORS = { get: "info", post: "success", put: "warning", patch: "secondary", delete: "error" };
 const CONFIRM_BTN_COLOR = { delete: "error", put: "warning", patch: "secondary", post: "success" };
@@ -62,9 +69,11 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
   const needsConfirm = needsTryItConfirm(op, spec, authEnabled);
   const specExample = resolveTryItBodyExample(op);
   const defaultBody = useMemo(() => defaultTryItBodyText(op), [op.path, op.method, op.requestBody]);
+  const getPrefillOp = useMemo(() => findMatchingGetOp(spec, op), [spec, op.path, op.method]);
   const { serverBase } = useServerBase();
   const [values, setValues] = useState({});
   const [body, setBody] = useState(defaultBody);
+  const [prefillLoading, setPrefillLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
@@ -75,20 +84,58 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
     () => buildTryItOutUrl({ op, values, serverBase, spec, packQueryQ, queryParams }),
     [op, values, serverBase, spec, packQueryQ, queryParams],
   );
-  const previewLabel = `${op.method.toUpperCase()} ${previewUrl}`;
   const confirmCopy = useMemo(() => {
     if (!needsConfirm) return null;
     return buildTryItConfirmCopy(op, spec, { session: getStoredJwt(), values, url: previewUrl });
   }, [needsConfirm, op, spec, previewUrl, confirmOpen, values]);
 
   useEffect(() => {
-    setBody(defaultBody);
     setValues({});
     setConfirmOpen(false);
     setResult(null);
     setErr("");
     setApiErr("");
-  }, [op.path, op.method, defaultBody]);
+
+    if (!getPrefillOp) {
+      setPrefillLoading(false);
+      setBody(defaultBody);
+      return;
+    }
+
+    let cancelled = false;
+    setPrefillLoading(true);
+    setBody(tryItPrefillLoadingBody());
+
+    (async () => {
+      try {
+        const url = buildTryItOutUrl({
+          op: getPrefillOp,
+          values: {},
+          serverBase,
+          spec,
+          packQueryQ: !!getPrefillOp["x-iss-query-q"],
+          queryParams: (getPrefillOp.parameters || []).filter((p) => p.in === "query"),
+        });
+        const { data, res, ok } = await fetchApiRaw(url, { method: "GET" });
+        if (cancelled) return;
+        if (!ok) {
+          if (res.status === 401 || res.status === 403) setBody(tryItPrefillDeniedBody(res.status));
+          else setBody(defaultBody);
+          return;
+        }
+        const payload = extractTryItPutBodyFromGet(data, op);
+        setBody(payload !== undefined ? jsonPretty(payload) : defaultBody);
+      } catch {
+        if (!cancelled) setBody(defaultBody);
+      } finally {
+        if (!cancelled) setPrefillLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [op.path, op.method, op.requestBody, defaultBody, getPrefillOp, serverBase, spec]);
 
   function onParamChange(name, v) {
     setValues((prev) => ({ ...prev, [name]: v }));
@@ -141,7 +188,8 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
       }
       let pretty = text;
       try {
-        pretty = jsonPretty(typeof data === "object" ? data : JSON.parse(text));
+        const parsed = typeof data === "object" ? data : JSON.parse(text);
+        pretty = formatTryItResultBody(parsed);
       } catch {
         /* plain */
       }
@@ -174,36 +222,33 @@ export function TryItOutPanel({ op, spec, lookupIndex, onNeedLogin, authEnabled,
 
   return (
     <Box className="isa-sw-tryit">
-      <ParametersTable parameters={pathParams} values={values} onChange={onParamChange} lookupIndex={lookupIndex} disabled={busy} authEnabled={authEnabled} onNeedLogin={onNeedLogin} />
-      {packQueryQ ? <QueryFiltersPanel ext={queryQExt} disabled={busy} onChange={(encoded) => onParamChange("q", encoded)} /> : null}
+      <ParametersTable parameters={pathParams} values={values} onChange={onParamChange} lookupIndex={lookupIndex} disabled={busy || prefillLoading} authEnabled={authEnabled} onNeedLogin={onNeedLogin} />
+      {packQueryQ ? <QueryFiltersPanel ext={queryQExt} disabled={busy || prefillLoading} onChange={(encoded) => onParamChange("q", encoded)} /> : null}
       {extraParams.length ? (
         <Box className="isa-sw-extra-params" sx={{ mt: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
           {extraParams.map((p) => {
             const name = p.name || "";
             if (isIssListFilterParam(p)) {
               return (
-                <IssListFilterField key={`${p.in}-${name}`} param={p} value={values[name] || ""} onChange={(v) => onParamChange(name, v)} disabled={busy} ns={ns} endpointLabel={`${op.method.toUpperCase()} ${op.path}`} authEnabled={authEnabled} onNeedLogin={onNeedLogin} />
+                <IssListFilterField key={`${p.in}-${name}`} param={p} value={values[name] || ""} onChange={(v) => onParamChange(name, v)} disabled={busy || prefillLoading} ns={ns} endpointLabel={`${op.method.toUpperCase()} ${op.path}`} authEnabled={authEnabled} onNeedLogin={onNeedLogin} />
               );
             }
             const ph = p.description || (p.example != null ? String(p.example) : name);
-            return <TextField key={`${p.in}-${name}`} size="small" fullWidth disabled={busy} label={`${name} (${p.in})`} value={values[name] || ""} onChange={(e) => onParamChange(name, e.target.value)} placeholder={ph} />;
+            return <TextField key={`${p.in}-${name}`} size="small" fullWidth disabled={busy || prefillLoading} label={`${name} (${p.in})`} value={values[name] || ""} onChange={(e) => onParamChange(name, e.target.value)} placeholder={ph} />;
           })}
         </Box>
       ) : null}
       {shouldShowTryItBody(op) ? (
-        <RequestBodySection op={op} example={specExample} bodyText={body} onBodyChange={setBody} disabled={busy} ns={ns} />
+        <RequestBodySection op={op} example={specExample} bodyText={body} onBodyChange={setBody} disabled={busy} loading={prefillLoading} ns={ns} />
       ) : op.method === "delete" ? (
         <Typography variant="caption" color="text.secondary" className="isa-sw-tryit-no-body" sx={{ display: "block", mt: 1.5 }}>
           DELETE — no requiere body; use el parámetro de ruta arriba.
         </Typography>
       ) : null}
-      <Box className="isa-sw-tryit-actions" sx={{ mt: 2, display: "flex", gap: 1.5, alignItems: "center", pl: 0.5, minWidth: 0 }}>
-        <Button variant="contained" onClick={requestExecute} disabled={busy} color={btnColor} sx={{ flexShrink: 0 }} startIcon={busy ? null : <SwIcon icon="mdi:play-circle-outline" size={18} ns={ns} style={{ color: "inherit" }} />}>
+      <Box className="isa-sw-tryit-actions" sx={{ mt: 2, pl: 0.5 }}>
+        <Button variant="contained" onClick={requestExecute} disabled={busy || prefillLoading} color={btnColor} startIcon={busy ? null : <SwIcon icon="mdi:play-circle-outline" size={18} ns={ns} style={{ color: "inherit" }} />}>
           {busy ? <CircularProgress size={18} sx={{ color: "inherit" }} /> : "Ejecutar"}
         </Button>
-        <Tooltip title={previewLabel} enterDelay={400} placement="top-start">
-          <Typography component="code" variant="body2" className="isa-sw-tryit-url">{previewLabel}</Typography>
-        </Tooltip>
       </Box>
       <DangerousOpConfirmDialog open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={execute} copy={confirmCopy} busy={busy} ns={ns} />
       {err ? <HttpErrorAlert severity="error" message={err} sx={{ mt: 1.5 }} /> : null}

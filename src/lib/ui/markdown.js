@@ -75,15 +75,22 @@ function wrapTables(html) {
     .replace(/<\/table>/g, "</table></div>");
 }
 
+function normalizeDocMarkdown(src) {
+  return String(src ?? "")
+    .replace(/\\`\\`\\`/g, "```")
+    .replace(/\\`/g, "`");
+}
+
 export function renderMarkdown(md) {
   if (!md) return "";
+  const text = normalizeDocMarkdown(md);
   const g = typeof globalThis !== "undefined" ? globalThis : window;
   if (typeof g?.ISAFront?.mdToHtml === "function") {
-    return g.ISAFront.mdToHtml(md);
+    return g.ISAFront.mdToHtml(text);
   }
   try {
     if (typeof marked !== "undefined" && marked.parse) {
-      const prepared = preprocessGfmTables(md);
+      const prepared = preprocessGfmTables(text);
       const html = marked.parse(String(prepared), { gfm: true, breaks: false });
       return wrapTables(html);
     }
@@ -92,7 +99,7 @@ export function renderMarkdown(md) {
   }
   return (
     '<pre class="isa-sw-doc-fallback">' +
-    escHtml(md) +
+    escHtml(text) +
     "</pre>"
   );
 }
