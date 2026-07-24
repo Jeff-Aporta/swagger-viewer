@@ -29,4 +29,4 @@ export async function mountSwaggerViewer(config, target = "#root") {
 }
 
 export { SwaggerViewer } from "./SwaggerViewer.jsx";
-export { resolveViewerBrand, readBrandFromMeta, applyBrandToDocument } from "./lib/brand/viewer-brand.js";
+export { resolveViewerBrand, readBrandFromMeta, applyBrandToDocument, formatSwaggerDocumentTitle, IS_SWAGGER_TAB_SUFFIX } from "./lib/brand/viewer-brand.js";

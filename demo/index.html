@@ -70,7 +70,7 @@
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.26.9/babel.min.js"></script>
   <script defer src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
-  <script type="module" src="_dist/js/boot/loader.mjs?v=c67b24f"></script>
+  <script type="module" src="_dist/js/boot/loader.mjs?v=b52b1be"></script>
 </head>
 
 <body>
@@ -388,11 +388,15 @@
             if (t && titleEl) {
               titleEl.textContent = String(t);
               if (labelEl) labelEl.textContent = "Cargando " + String(t) + "\u2026";
-              document.title = String(t);
+              var tabTitle = String(t).trim() || "API";
+              if (tabTitle !== "IS-Swagger" && !String.prototype.endsWith.call(tabTitle, " | IS-Swagger")) {
+                tabTitle = tabTitle + " | IS-Swagger";
+              }
+              document.title = tabTitle;
               var appName = document.querySelector('meta[name="application-name"]');
               if (appName) appName.setAttribute("content", String(t));
               var og = document.querySelector('meta[property="og:title"]');
-              if (og) og.setAttribute("content", String(t));
+              if (og) og.setAttribute("content", tabTitle);
             }
             if (ic && iconEl) iconEl.setAttribute("icon", String(ic));
             if (ic) {
