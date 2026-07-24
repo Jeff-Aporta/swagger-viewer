@@ -27,9 +27,9 @@ var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
 var import_node_url = require("node:url");
 
-// ../front-shared/cdn/isa/js/core/config/constants.js
+// ../apps/isa-patyia/frontend/vendor/front-shared/isa/js/core/config/constants.js
 var MAIN_ORCHESTRATOR_URL_PROD = "https://main-orchestrator.jeffaporta.workers.dev";
-var FRONT_SHARED_REF = "a13fc29";
+var FRONT_SHARED_REF = "f8ce806";
 var CDN_BASE = "https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@" + FRONT_SHARED_REF + "/cdn/isa";
 var UI_CDN_BASE = "https://cdn.jsdelivr.net/gh/Jeff-Aporta/front-shared@" + FRONT_SHARED_REF + "/cdn/ui";
 var FEEDBACK_CSS_URL = CDN_BASE + "/css/feedback.css";

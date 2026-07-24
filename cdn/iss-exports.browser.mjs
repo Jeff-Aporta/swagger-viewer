@@ -334,6 +334,7 @@ function resolveLookup(catalog, key) {
   return out;
 }
 function enrichSchemaProperties(catalog, schema) {
+  if (!schema || typeof schema !== "object") return { type: "object" };
   const props = schema.properties;
   if (!props) return schema;
   const nextProps = {};
@@ -542,7 +543,12 @@ function buildOperation(catalog, def) {
     if (rb.bodyKey && catalog.requestBodies?.[rb.bodyKey]) {
       example = catalog.requestBodies[rb.bodyKey];
     }
-    op.requestBody = jsonRequestBody(rb.description, enrichSchemaProperties(catalog, rb.schema), example ?? {});
+    const schema = rb.schema && typeof rb.schema === "object" ? rb.schema : { type: "object", description: "JSON body" };
+    op.requestBody = jsonRequestBody(
+      rb.description || "Cuerpo de la petici\xF3n",
+      enrichSchemaProperties(catalog, schema),
+      example ?? {}
+    );
   }
   op.responses = buildResponses(catalog, def.responses);
   return op;
@@ -1022,7 +1028,7 @@ function stripIsaExtensionsForExport(openApi) {
 
 // server/viewer-pins.ts
 var SWAGGER_VIEWER_GH_REPO = "Jeff-Aporta/swagger-viewer";
-var SWAGGER_VIEWER_REF = "9e8d3d4";
+var SWAGGER_VIEWER_REF = "c67b24f";
 var SWAGGER_FRONT_SHARED_REF = "a13fc29";
 
 // server/orchestrator-auth.ts

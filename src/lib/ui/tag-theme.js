@@ -6,6 +6,7 @@ const DEFAULT = { icon: "mdi:api", accent: "100, 116, 139" };
 const BY_NAME = {
   conversaciones: { icon: "mdi:chat-processing-outline", accent: "30, 144, 255" },
   sistema: { icon: "mdi:heart-pulse", accent: "16, 185, 129" },
+  permisos: { icon: "mdi:shield-account-outline", accent: "234, 88, 12" },
   testing: { icon: "mdi:flask-outline", accent: "168, 85, 247" },
   auth: { icon: "mdi:shield-key-outline", accent: "245, 158, 11" },
   autenticacion: { icon: "mdi:shield-key-outline", accent: "245, 158, 11" },
@@ -13,6 +14,16 @@ const BY_NAME = {
   tickets: { icon: "mdi:ticket-outline", accent: "6, 182, 212" },
   metricas: { icon: "mdi:chart-timeline-variant", accent: "99, 102, 241" },
   commits: { icon: "mdi:source-commit", accent: "34, 197, 94" },
+  spaces: { icon: "mdi:folder-multiple-outline", accent: "59, 130, 246" },
+  documentos: { icon: "mdi:file-document-outline", accent: "14, 165, 233" },
+  rag: { icon: "mdi:chat-question-outline", accent: "99, 102, 241" },
+  youtube: { icon: "mdi:youtube", accent: "239, 68, 68" },
+  recursos: { icon: "mdi:puzzle-outline", accent: "20, 184, 166" },
+  estadisticas: { icon: "mdi:chart-bar", accent: "139, 92, 246" },
+  catalogo: { icon: "mdi:view-list-outline", accent: "6, 182, 212" },
+  pedidos: { icon: "mdi:cart-outline", accent: "249, 115, 22" },
+  identidad: { icon: "mdi:palette-outline", accent: "236, 72, 153" },
+  administracion: { icon: "mdi:shield-crown-outline", accent: "234, 88, 12" },
 };
 
 function tagKey(name) {

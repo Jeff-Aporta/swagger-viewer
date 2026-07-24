@@ -20,5 +20,30 @@ export const ISS_PATYIA_PRESETS = [
 export const ISS_LOCAL_API_BASE = "http://127.0.0.1:8802/api";
 export const ISS_WEB_API_BASE = "https://ayudascp-ia-staging.azurewebsites.net/api";
 
+/** Workers públicos (CF) — atajos del welcome / ejemplos `?conn=`. Siempre URL online. */
+export const WORKER_API_PRESETS = [
+    {
+        id: "isa-rag",
+        label: "ISA RAG",
+        base: "https://worker-isa-rag.jeffaporta.workers.dev/api",
+        icon: "mdi:bookshelf",
+        description: "Spaces, RAG, YouTube y recursos",
+    },
+    {
+        id: "jagudeloe2",
+        label: "jagudeloe2",
+        base: "https://worker-jagudeloe2.jeffaporta.workers.dev/api",
+        icon: "mdi:ticket-outline",
+        description: "Tickets ContaPyme (solo lectura)",
+    },
+    {
+        id: "rio-go",
+        label: "Rio Go",
+        base: "https://rio-go-clon.jeffaporta.workers.dev/api",
+        icon: "mdi:storefront-outline",
+        description: "Storefront multi-tenant (QUERY catalog)",
+    },
+];
+
 /** Scopes vacíos: el select "Otro" está prohibido — la conn siempre es por URL real. */
 export const DEFAULT_API_SCOPES = [];

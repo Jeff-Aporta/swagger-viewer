@@ -1,7 +1,7 @@
 import { SwIcon } from "../../../src/lib/ui/sw-icon.jsx";
 import { GlassCard, NEON_COLORS } from "../../../src/lib/ui/glass.jsx";
 import { encodeConnParam, resolveConnBrand } from "../../../src/lib/api/conn-config.js";
-import { ISS_PATYIA_PRESETS } from "../../../src/lib/api/api-presets.js";
+import { ISS_PATYIA_PRESETS, WORKER_API_PRESETS } from "../../../src/lib/api/api-presets.js";
 import { normalizeApiBase } from "../../../src/lib/api/swagger-api.js";
 import { PatyIaEnvDialog } from "./PatyIaEnvDialog.jsx";
 
@@ -44,6 +44,18 @@ export function WelcomeScreen({ ns = "ISS" }) {
         openWithConn(conn);
     }
 
+    function connectWorker(preset) {
+        if (!preset) return;
+        openWithConn({
+            apiBase: preset.base,
+            auto: true,
+            embed: true,
+            fixedServer: true,
+            title: preset.label,
+            icon: preset.icon || "mdi:cloud-outline",
+        });
+    }
+
     function connectCustom() {
         const base = normalizeApiBase(customBase.trim());
         if (!base) return;
@@ -83,6 +95,26 @@ export function WelcomeScreen({ ns = "ISS" }) {
                     >
                         Conectar con ISS PatyIA
                     </Button>
+
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 0.5 }}>Workers (producción)</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: -0.5 }}>
+                        APIs Cloudflare ya publicadas — sin localhost.
+                    </Typography>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap flexWrap="wrap">
+                        {WORKER_API_PRESETS.map((p) => (
+                            <Button
+                                key={p.id}
+                                variant="outlined"
+                                color="info"
+                                onClick={() => connectWorker(p)}
+                                startIcon={<SwIcon icon={p.icon || "mdi:cloud-outline"} size={18} ns={ns} />}
+                                data-testid={`welcome-worker-${p.id}`}
+                                sx={{ flex: { sm: "1 1 0" }, justifyContent: "flex-start" }}
+                            >
+                                {p.label}
+                            </Button>
+                        ))}
+                    </Stack>
 
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, my: 0.5 }}>
                         <Divider sx={{ flex: 1 }} />

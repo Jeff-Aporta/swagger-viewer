@@ -83,6 +83,7 @@ function resolveLookup(catalog: IsOpenApiConfig["catalog"], key: string): Record
 }
 
 function enrichSchemaProperties(catalog: IsOpenApiConfig["catalog"], schema: Record<string, unknown>): Record<string, unknown> {
+    if (!schema || typeof schema !== "object") return { type: "object" };
     const props = schema.properties as Record<string, Record<string, unknown>> | undefined;
     if (!props) return schema;
     const nextProps: Record<string, unknown> = {};
@@ -380,7 +381,15 @@ function buildOperation(catalog: IsOpenApiConfig["catalog"], def: IsOpenApiOpera
         if (rb.bodyKey && catalog.requestBodies?.[rb.bodyKey]) {
             example = catalog.requestBodies[rb.bodyKey];
         }
-        op.requestBody = jsonRequestBody(rb.description, enrichSchemaProperties(catalog, rb.schema), example ?? {});
+        const schema =
+            rb.schema && typeof rb.schema === "object"
+                ? rb.schema
+                : { type: "object", description: "JSON body" };
+        op.requestBody = jsonRequestBody(
+            rb.description || "Cuerpo de la petición",
+            enrichSchemaProperties(catalog, schema),
+            example ?? {},
+        );
     }
     op.responses = buildResponses(catalog, def.responses);
     return op;
